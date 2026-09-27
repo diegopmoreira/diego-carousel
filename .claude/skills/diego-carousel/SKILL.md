@@ -83,24 +83,34 @@ arquivo da família. Revisar a direção inicial do draft/import: família (heur
 `art-direction.md`), composição por função, densidade (nunca todos HIGH), ritmo, conceito de
 imagem por slide (`image.concept`, `mood`, `negative_space`, `focal_point`).
 
-**Fase 8 — Assets.** `visual/image-policy.md`. Prioridade: fornecido por Diego → biblioteca →
-frame do próprio vídeo → licenciado → gerado. Registrar com
-`asset add <projeto> <arquivo> --rights <origem> --slide <id>`. Sem imagem, fica placeholder e o
-export espera.
+**Fase 8 — Assets.** `visual/image-policy.md` e a ficha do provider em `visual/providers/`.
+Prioridade: fornecido por Diego → biblioteca → frame do próprio vídeo (`asset frame <projeto>
+<video> --at mm:ss --slide <id>`) → licenciado → gerado. Registrar arquivo com
+`asset add <projeto> <arquivo> --rights <origem> --slide <id>`.
+Para gerar: `asset request <projeto> <slide-id> [--concept "…"]` (prompt canônico, negativo, tamanho,
+3 variantes na capa, teto de gerações) → gerar com o MCP do provider usando exatamente o prompt do
+pedido → conferir cada imagem (sem texto, sem pessoa real) → registrar na hora com
+`asset add <projeto> --request <pedido> --url <url> [--model …] [--seed …]`. Escolher entre as
+variantes com `asset candidates <projeto> <slide-id>` (abrir `qa/candidates/<slide>.png`) e
+`asset choose <projeto> <slide-id> <asset-id> --score n --rationale "…"`. Sem imagem, fica
+placeholder e o export espera.
 
 **Fase 9 — Render e QA visual.** `render <projeto>` (exige lint limpo). Abrir
-`qa/contact-sheet.png` e TODOS os PNGs de `qa/render/`; comparar com a direção de arte
-(`visual/visual-qa.md`). Se algo não cabe: `fit/<id>.json` → `needs` diz se falta trocar
-composição ou comprimir; `chars_that_fit` diz quanto cabe. Em `full`, comprimir a copy; em
-`design-only`, só com autorização. Nunca descer abaixo dos pisos. Corrigir com edições pontuais e
-renderizar de novo. Registrar cada inspeção real:
-`review <projeto> --reviewer Claude --note "<o que vi>" [--approved]` (ciclo automático; no limite
-de `config.json` a revisão passa a ser humana). Nunca usar `--human`.
+`qa/contact-sheet.png`, TODOS os PNGs de `qa/render/` e os mapas de tinta de `qa/ink/`; ler os
+avisos do render (tinta, contraste, espaço vazio, ritmo) e comparar com a direção de arte
+(`visual/visual-qa.md`). Se algo não cabe: `fit-probe <projeto> <slide-id>` mostra que composições
+cabem e quanto cortar; `autofit <projeto>` troca a composição dos que não cabem (como tweak) e
+renderiza. Se ainda assim não couber: em `full`, comprimir a copy (redraft); em `design-only`,
+`edit <projeto> <slide-id> --body "…" --reason "…"` gera `qa/edit-proposal.md` e só entra com
+`approve <projeto> edit --by Diego` depois do aval dele. Nunca descer abaixo dos pisos. Registrar
+cada inspeção real: `review <projeto> --reviewer Claude --note "<o que vi>" [--approved]` (ciclo
+automático; no limite de `config.json` a revisão passa a ser humana). Nunca usar `--human`.
 
-**Fase 10 — Export e preview.** `validate` → `export`. `preview <projeto>` abre o estúdio em
-127.0.0.1:4321, onde Diego ajusta, cria versões e exporta (a exportação pelo estúdio registra a
-revisão humana). Não chamar de "publicável" com placeholder, lint com erro, render antigo ou
-revisão pendente.
+**Fase 10 — Export e preview.** `validate` → `export` (copia também para `export.sync_dir`, se
+configurado). `preview <projeto>` abre o estúdio em 127.0.0.1:4321: ajuste com prévia ao vivo,
+visão Instagram (com o recorte 3:4 da grade), área segura, versões e exportação (que registra a
+revisão humana). Não chamar de "publicável" com placeholder, lint com erro, render antigo ou revisão
+pendente.
 
 ## Copy pronta (design-only)
 
@@ -116,6 +126,13 @@ revisão pendente.
   `art-direction.json`, depois `render <projeto>`; só o slide afetado muda.
 - Variante: `variant <projeto> <nome> --family <família>` → `render <projeto>/variants/<nome>`;
   `promote <projeto> <nome>` guarda o visual anterior como backup.
+
+## Manutenção
+
+- Projeto de versão antiga do engine: `migrate <projeto>` (ou `migrate --all`).
+- Vocabulário visual inteiro: `gallery [--image foto.jpg]` → `gallery/gallery.png`.
+- Fidelidade aos publicados: `calibrate <projeto> --slide n --ref <png publicado>`.
+- Fixtures de aceite: `npm run eval -- --dry-run`, `--engine-only` ou completo (local, via `claude -p`).
 
 ## Retomada
 

@@ -67,7 +67,7 @@
  function drawInstagram(){
   const n=data.carousel.slides.length;igIndex=Math.min(igIndex,n-1);
   $$('.ig-handle').forEach(el=>el.textContent=(data.handle??'odiego.moreira').replace(/^@/,''));
-  $('#ig-image').src=imageUrl(igIndex);$('.ig-count').textContent=(igIndex+1)+'/'+n;
+  $('#ig-image').src=imageUrl(igIndex);$('#ig-grid-image').src=imageUrl(0);$('.ig-count').textContent=(igIndex+1)+'/'+n;
   $('.ig-dots').replaceChildren(...Array.from({length:n},(_,i)=>{const d=document.createElement('i');if(i===igIndex)d.className='on';return d;}));
   $('#ig-caption-text').textContent=data.carousel.editorial.caption||data.carousel.slides[0].headline;
   $('.ig-prev').hidden=igIndex===0;$('.ig-next').hidden=igIndex===n-1;
