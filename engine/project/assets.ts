@@ -50,3 +50,10 @@ export async function chooseAsset(dir:string,slide:string,assetId:string,{score,
  await writeJson(path.join(dir,'art-direction.json'),p.art);await writeJson(path.join(base,'assets/manifest.json'),Assets.parse(p.assets));
  return {slide,asset:assetId,previous:previous??null};
 }
+// A frame of Diego's own video (third in the image priority). Needs ffmpeg (FFMPEG or PATH).
+export async function addVideoFrame(dir:string,video:string,at:string,slide?:string){
+ if(!/^\d{1,2}(:\d{2}){1,2}(\.\d+)?$/.test(at))throw Error('Use --at mm:ss ou hh:mm:ss');
+ const {execFile}=await import('node:child_process');
+ const bytes=await new Promise<Buffer>((resolve,reject)=>execFile(process.env.FFMPEG||'ffmpeg',['-v','error','-ss',at,'-i',video,'-frames:v','1','-f','image2pipe','-vcodec','png','-'],{encoding:'buffer',maxBuffer:64*1024*1024},(e,out)=>e?reject(Error(`ffmpeg falhou: ${e.message}`)):out.length?resolve(out):reject(Error('Nenhum frame nesse tempo'))));
+ return addAsset(dir,bytes,`Frame do vídeo de Diego (${path.basename(video)} @ ${at})`,slide,{origin:'video_frame',provider:'ffmpeg',params:{video:path.basename(video),at}});
+}

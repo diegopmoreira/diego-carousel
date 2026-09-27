@@ -11,7 +11,7 @@ import { render, validate, exportProject, review, renderInputs } from './render/
 import { serve } from './preview/server.js';
 import { listProjects } from './preview/api.js';
 import { createVariant, promoteVariant } from './project/variants.js';
-import { addAsset, chooseAsset } from './project/assets.js';
+import { addAsset, chooseAsset, addVideoFrame } from './project/assets.js';
 import { requestAsset, cancelRequest, addFromRequest } from './project/requests.js';
 import { candidates } from './render/candidates.js';
 import { draft, slideAdd, slideMove, slideRemove } from './project/draft.js';
@@ -52,6 +52,7 @@ npm run carousel -- <comando>
   asset request <projeto> <slide-id> [--variants n] [--concept t]   ticket de geração (prompt, teto)
   asset add <projeto> --request <pedido> (--url <u> | <arquivo>) [--seed s] [--model m] [--score n --rationale t]
   asset candidates <projeto> <slide-id> | asset choose <projeto> <slide-id> <asset-id> [--score n --rationale t]
+  asset frame <projeto> <video> --at mm:ss [--slide id]   frame do próprio vídeo (ffmpeg)
   asset cancel <projeto> <pedido> | asset list <projeto>
   log <projeto> <TAG> <mensagem>
   doctor
@@ -96,8 +97,9 @@ try{
   if(sub==='request'){print(await requestAsset(dir,required(args[1],'asset request <projeto> <slide-id> [--variants n] [--concept texto]'),{variants:num(flag('variants')),concept:flag('concept'),provider:flag('provider'),model:flag('model')}));break;}
   if(sub==='cancel'){print(await cancelRequest(dir,required(args[1],'asset cancel <projeto> <pedido>')));break;}
   if(sub==='choose'){print(await chooseAsset(dir,required(args[1],'asset choose <projeto> <slide-id> <asset-id>'),required(args[2],'Informe o asset'),{score:num(flag('score')),rationale:flag('rationale')}));break;}
+  if(sub==='frame'){print(await addVideoFrame(dir,path.resolve(required(args[1],'asset frame <projeto> <video> --at mm:ss [--slide id]')),required(flag('at'),'Informe --at mm:ss'),flag('slide')));break;}
   if(sub==='candidates'){print(await candidates(dir,required(args[1],'asset candidates <projeto> <slide-id>')));break;}
-  if(sub!=='add')throw Error('Disponíveis: asset add|request|cancel|choose|candidates|list');
+  if(sub!=='add')throw Error('Disponíveis: asset add|request|cancel|choose|candidates|frame|list');
   const request=flag('request');
   if(request){
    const file=args[1]&&!args[1].startsWith('--')?path.resolve(args[1]):undefined;
