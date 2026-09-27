@@ -80,14 +80,19 @@ Após **abrir e conferir todas as imagens**, registre a revisão:
 
 ```sh
 npm run carousel -- validate <projeto>
-npm run carousel -- review <projeto> --reviewer Diego --note "Resultado da inspeção" --approved
+npm run carousel -- review <projeto> --reviewer Claude --note "Resultado da inspeção" --approved
+# revisão feita por uma pessoa (libera o limite de ciclos automáticos):
+npm run carousel -- review <projeto> --reviewer Diego --note "Conferi tudo" --approved --human
 npm run carousel -- export <projeto>
 ```
 
 `export/` recebe somente `01.png`…`NN.png`; `qa/carrossel.zip` reúne os mesmos PNGs. Exportação recusa copy alterada,
 render antigo, erro técnico, imagem necessária ausente e revisão visual
 pendente. A revisão é uma declaração explícita de quem inspecionou; o engine
-não faz julgamento visual sozinho.
+não faz julgamento visual sozinho. Sem `--human`, cada render novo revisado
+conta como um ciclo automático; depois de `qa.max_auto_revision_cycles`
+(config.json) só uma revisão humana libera. O estúdio sempre registra revisão
+humana, com o nome informado na tela.
 
 ## Desenvolvimento
 
@@ -96,10 +101,17 @@ npm run check       # TypeScript + testes unitários
 npm run test:e2e    # Chromium: duas famílias, oito composições e gates
 npm run test:studio # Interface: projetos, versões, upload e ZIP
 npm run schemas    # regenerar JSON Schema após mudar contratos
+npm run brand      # regenerar o avatar de 256 px a partir de avatar-source.png
 ```
 
-`test:e2e` trabalha em diretório temporário e limpa apenas seus próprios
-artefatos. Verifica overflow sem reescrita, detecção de arquivos alterados,
+Na nuvem (Claude Code on the web) o hook `.claude/hooks/cloud-setup.sh`
+instala dependências e aponta `CAROUSEL_CHROMIUM` para o Chromium já
+instalado. Trocar de navegador invalida renders anteriores, porque a versão
+do navegador faz parte do hash de ambiente.
+
+`test:e2e` e `test:studio` trabalham em diretório temporário
+(`CAROUSEL_PROJECTS_DIR`) e nunca escrevem em `projects/` ou `fixtures/`;
+`STUDIO_SCREENSHOTS=<pasta>` guarda as capturas do estúdio. Verifica overflow sem reescrita, detecção de arquivos alterados,
 revisão obrigatória e preservação dos PNGs não ajustados.
 
 A Skill do Claude Code está em `.claude/skills/diego-carousel/SKILL.md`.

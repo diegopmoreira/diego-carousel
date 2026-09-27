@@ -1,4 +1,51 @@
-# MVP de copy pronta — 27/09/2026
+# Estado atual — 27/09/2026
+
+Plano em vigor: `docs/plano-v2.md`. **Rodada 0 (linha de base e correções) concluída.**
+Próxima: Rodada 1, motor editorial (modo `full`).
+
+## Rodada 0 — o que mudou
+
+- **Estúdio:** salvar envia só os campos tocados; tirar a imagem de um slide que precisa de
+  imagem volta a ser placeholder (o gate de export continua valendo). Composição escolhida no
+  estúdio vai para `tweaks.json`, não reescreve a direção de arte.
+- **Hash de ambiente:** só o que chega ao pixel (runtime, CSS, tokens, fontes, avatar processado,
+  compositor, branding, versão do Playwright e caminho do Chromium). Editar testes ou a UI não
+  invalida renders.
+- **Revisão:** ciclos automáticos contados por render distinto desde a última revisão humana
+  (limite em `config.json`); nome do revisor não dá atalho. `review --human` e o estúdio (que
+  pergunta quem revisou) registram revisão humana.
+- **Quebra de linha** (`design/runtime/linebreak.js`, testada em Node): menor número de linhas,
+  sem viúva, sem linha terminando em palavra curta de ligação, títulos equilibrados.
+- **Fit:** o log lista só estágios executados; o body encolhe até o piso antes do título;
+  reprovação registra `needs` e `chars_that_fit` de cada bloco.
+- **Fontes:** selo ✓ desenhado em SVG; detecção de fonte fallback em todo elemento com texto.
+- **Servidor:** rotas estáticas por lista exata (sem segmentos codificados), token em
+  `/api/download`, ZIP e uploads só pela API, CSP com `frame-ancestors 'none'`, `localhost`
+  aceito, lock de projeto compartilhado com o CLI, estúdio abre com `projects/` vazio.
+- **Voz:** "você" em copy pronta é aviso; continua erro no modo `full`.
+- **Perfil só na capa** (`branding.profile_on: "cover"`).
+- **Import:** `P1 Título` na mesma linha; formato Figma com parágrafos (painéis separados por
+  duas linhas em branco); `copy.md` com marcadores reimporta igual; CAIXA ALTA em texto misto
+  vira ênfase e `**ênfase**` é desenhada (cor) em vez de removida.
+- `asset add` não troca composição sozinho (avisa); limite de 60 MP aplicado na decodificação;
+  `$schema` correto em todos os documentos, inclusive variantes; `config.json` validado e lido
+  (faixa de painéis, ciclos, branding).
+- Avatar processado em 256 px (`npm run brand`); `.claude/launch.json` para o estúdio; hook de
+  SessionStart para a nuvem (`CAROUSEL_CHROMIUM`).
+- **Testes:** 29 unitários (quebrador de linhas, hash de ambiente, regressão do `asset_id`, import,
+  voz); E2E cobre ciclos de revisão e fonte fallback; estúdio E2E cobre Host, `localhost`,
+  traversal, `..%2F`, ZIP estático, token do download e CSP — tudo em diretório temporário.
+- Fixture 5 (`fixtures/copy-excessiva.md`, bodies de 600+ caracteres). A fixture 4 depende de um
+  carrossel publicado de `references/` (privado, fora do Git).
+
+## Ainda pendente da Rodada 0
+
+Nada bloqueante. `design/brand/avatar-source.png` (15 MB) continua versionado como procedência;
+o render usa só `avatar.png`.
+
+---
+
+# Relato do MVP de copy pronta — 27/09/2026
 
 ## Escopo fechado nesta rodada
 
