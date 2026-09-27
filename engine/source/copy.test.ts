@@ -18,4 +18,9 @@ describe('importação — casos da Rodada 0',()=>{
  it('copy.md derivado reimporta igual, com parágrafos e ênfase',()=>{const p=[{headline:'Capa',body:null},{headline:'Um **HOMEM** decide',body:'Um.\n\nDois com **ênfase**.'}];expect(parseCopy(toCopy(p))).toEqual(p);});
  it('CAIXA ALTA dentro de texto misto vira ênfase; texto todo em caixa alta não',()=>{expect(emphasis('Como um HOMEM escolhe uma MULHER?')).toBe('Como um **HOMEM** escolhe uma **MULHER**?');expect(emphasis('TUDO EM CAIXA ALTA')).toBe('TUDO EM CAIXA ALTA');expect(emphasis('Já **marcado** e NÃO marcado')).toBe('Já **marcado** e **NÃO** marcado');expect(emphasis('Uma A só')).toBe('Uma A só');expect(emphasis('E aí tu diz: EU SOU ASSIM mesmo')).toBe('E aí tu diz: **EU SOU ASSIM** mesmo');});
 it('sigla não vira ênfase; marcada com ** vira',()=>{expect(emphasis('O TDAH NÃO é preguiça')).toBe('O TDAH **NÃO** é preguiça');expect(emphasis('O **TDAH** não é preguiça')).toBe('O **TDAH** não é preguiça');expect(emphasis('Teu QI não mede teu VALOR')).toBe('Teu QI não mede teu **VALOR**');});
+
+ it('limpa o copiar-colar de transcrição do YouTube com tempo grudado no texto',()=>{
+  const raw='Capítulo 1: Introdução\n0:00Olha só, o negócio.\n0:099 segundoscomo é que tá o volume.\n1:011 minuto e 1 segundoQuem segura a espada.\n7:007 minutoseu realmente.\n12:1712 minutos e 17 segundosaquele cara.\nSincronizar com o momento do vídeo';
+  expect(cleanTranscript(raw)).toBe('Capítulo 1: Introdução\nOlha só, o negócio.\ncomo é que tá o volume.\nQuem segura a espada.\neu realmente.\naquele cara.');
+ });
 });

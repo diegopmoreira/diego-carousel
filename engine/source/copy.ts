@@ -48,4 +48,13 @@ export function emphasis(text:string){
  // Each capitalised word is marked on its own, then neighbours are joined back into one run.
  return text.split(/(\*\*.*?\*\*)/s).map(part=>part.startsWith('**')?part:part.replace(/(?<![\p{L}\p{N}])\p{Lu}{2,}(?![\p{L}\p{N}])/gu,m=>ACRONYMS.has(m)?m:`**${m}**`).replace(/\*\*([ \t]+)\*\*/g,'$1')).join('');
 }
-export function cleanTranscript(text:string){return normalizeSource(text).split('\n').filter(l=>!/^\s*(?:(?:\d{1,2}:)?\d{1,2}:\d{2}|\d+\s+segundos?)\s*$/i.test(l)).join('\n').trim();}
+// YouTube's "copy transcript" glues the timestamp and its spoken duration to the text:
+// "0:099 segundoscomo é…", "1:011 minuto e 1 segundoQuem…", "7:007 minutosEu…". Strip that prefix,
+// standalone timestamp lines and the "Sincronizar com o momento do vídeo" footer; keep chapter titles.
+const YT_PREFIX=/^\s*(?:\d{1,2}:)?\d{1,2}:\d{2}(?:\d+\s+(?:horas?|minutos?)(?:\s+e\s+\d+\s+(?:minutos?|segundos?))*|\d+\s+segundos?)?/i;
+export function cleanTranscript(text:string){
+ return normalizeSource(text).split('\n')
+  .filter(l=>!/^\s*(?:(?:\d{1,2}:)?\d{1,2}:\d{2}|\d+\s+segundos?)\s*$/i.test(l)&&!/^\s*Sincronizar com o momento do vídeo\s*$/i.test(l))
+  .map(l=>l.replace(YT_PREFIX,'').trimStart())
+  .join('\n').trim();
+}
