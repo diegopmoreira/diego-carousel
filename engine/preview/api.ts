@@ -1,10 +1,11 @@
 import { z } from 'zod';
 import path from 'node:path';
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir } from 'node:fs/promises';
 import { ArtDirection, Family, Composition, Tweaks, Assets, IMAGE_COMPOSITIONS } from '../schema/index.js';
-import { projectsDir, contentDir, loadProject, jsonHash, writeJson, optionalJson, log } from '../project/io.js';
+import { ROOT, readJson, projectsDir, contentDir, loadProject, jsonHash, writeJson, optionalJson, log } from '../project/io.js';
 import { listVariants } from '../project/variants.js';
 import { loadConfig } from '../project/config.js';
+import { pendingProposals } from '../qa/voice.js';
 export async function revision(dir:string){const p=await loadProject(dir);return jsonHash(p);}
 export const Adjustment=z.object({revision:z.string(),id:z.string(),family:Family.optional(),composition:Composition.optional(),align:z.enum(['left','center']).optional(),position:z.enum(['top','center','bottom']).optional(),fit:z.enum(['fill','preferred']).optional(),asset_id:z.string().nullable().optional(),image_need:z.boolean().optional(),focal_x:z.number().min(0).max(1).optional(),focal_y:z.number().min(0).max(1).optional(),params:Tweaks.shape.slides.valueType.shape.params.optional()}).strict();
 // Patch semantics: only fields present in the request change. The studio sends the fields the user touched.
@@ -30,7 +31,8 @@ export async function adjust(dir:string,input:unknown){
  if(patch.focal_x!==undefined)d.image.focal_point.x=patch.focal_x;if(patch.focal_y!==undefined)d.image.focal_point.y=patch.focal_y;
  const comp=p.tweaks.slides[patch.id]?.composition??d.composition;
  if(d.image.asset_id&&!IMAGE_COMPOSITIONS.includes(comp))throw Error('Essa composição não possui imagem. Escolhe uma composição com imagem ou remove a imagem do slide.');
- if(!d.image.asset_id&&!d.image.placeholder&&(comp==='cinematic_fade'||comp==='image_card'))throw Error('Essa composição precisa de imagem: escolhe uma imagem, marca "Exige imagem" ou troca para uma composição de texto.');
+ if(!d.image.asset_id&&!d.image.placeholder&&(comp==='cinematic_fade'||comp==='image_card'))throw Error('Essa composição precisa de imagem: escolhe uma imagem, marca "Exige imagem" ou troca para uma composição de texto (CLI: composition <projeto> <slide> text_only).');
+ if(!d.image.asset_id&&(d.image.need||d.image.placeholder)&&!IMAGE_COMPOSITIONS.includes(comp))throw Error('Essa composição não mostra imagem, mas o slide exige uma: desmarca "Exige imagem" (CLI: image --none) ou escolhe uma composição com imagem.');
  if(patch.params)tweak().params={...p.tweaks.slides[patch.id]?.params,...patch.params};
  const current=p.tweaks.slides[patch.id];if(current&&!current.composition&&!Object.keys(current.params).length)delete p.tweaks.slides[patch.id];
  ArtDirection.parse(p.art);Tweaks.parse(p.tweaks);
@@ -52,7 +54,8 @@ export async function state(dir:string){
  const {renderInputs}=await import('../render/render.js');const current=await renderInputs(dir);
  const projects=await listProjects();
  // Proposals waiting for Diego (voice, edit), shown in the studio with an approve button.
- const base=await contentDir(dir),pending=[];
- for(const type of ['voice','edit'] as const){const proposal=await optionalJson(path.join(base,`qa/${type}-proposal.json`));if(proposal&&proposal.base_hash===jsonHash(p.carousel.slides.map(({headline,body})=>({headline,body}))))pending.push({type,markdown:await readFile(path.join(base,`qa/${type}-proposal.md`),'utf8').catch(()=>'')});}
- return {pending,projects,handle:(await loadConfig()).branding.handle,project_name:path.basename(await contentDir(dir)),revision:jsonHash(p),title:p.carousel.source.title,...p,variants:await listVariants(dir),active_variant:path.basename(path.dirname(dir))==='variants'?path.basename(dir):null,render_current:manifest?.project_hash===current.project_hash,review_current:!!review?.approved&&review.render_hash===manifest?.render_hash&&manifest?.project_hash===current.project_hash,manifest,fits:Object.fromEntries(await Promise.all(p.carousel.slides.map(async s=>[s.id,await optionalJson(path.join(dir,`fit/${s.id}.json`))]))),lint:await optionalJson(path.join(dir,'qa/editorial-lint.json'))};
+ const base=await contentDir(dir),pending=await pendingProposals(base,p.carousel.slides.map(({headline,body})=>({headline,body})));
+ // Default gap per family (the slider starts from what the slide really uses when there is no tweak).
+ const tokens=await readJson(path.join(ROOT,'design/tokens.json')),family_gaps=Object.fromEntries(Object.entries<any>(tokens.families).map(([k,v])=>[k,v.gap]));
+ return {pending,family_gaps,image_compositions:IMAGE_COMPOSITIONS,projects,handle:(await loadConfig()).branding.handle,project_name:path.basename(await contentDir(dir)),revision:jsonHash(p),title:p.carousel.source.title,...p,variants:await listVariants(dir),active_variant:path.basename(path.dirname(dir))==='variants'?path.basename(dir):null,render_current:manifest?.project_hash===current.project_hash,review_current:!!review?.approved&&review.render_hash===manifest?.render_hash&&manifest?.project_hash===current.project_hash,manifest,fits:Object.fromEntries(await Promise.all(p.carousel.slides.map(async s=>[s.id,await optionalJson(path.join(dir,`fit/${s.id}.json`))]))),lint:await optionalJson(path.join(dir,'qa/editorial-lint.json'))};
 }

@@ -4,7 +4,9 @@ A direção de arte separa o raciocínio visual da execução. Fica em `art-dire
 por slide (pelo ID opaco): `visual_role`, `composition`, `density`, `layout`, `image` (need,
 concept, mood, subject_priority, crop, negative_space, strategy, focal_point, alternatives) e `fit`.
 O `draft`/`import-copy` cria uma primeira versão por função narrativa
-(`engine/project/direction.ts`); revisar sempre.
+(`engine/project/direction.ts`); revisar sempre. Para trocar a composição de um slide:
+`composition <projeto> <slide-id> <composição>` (leva junto posição do texto, ajuste do título,
+densidade e a decisão de imagem).
 
 ## Família (heurística, não regra)
 

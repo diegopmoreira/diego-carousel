@@ -1,10 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { loadProject, jsonHash, writeJson, hash, contentDir } from '../project/io.js';
-import { parseCopy, plainText } from '../source/copy.js';
+import { plainText, COPY_PARSERS } from '../source/copy.js';
 import { loadConfig } from '../project/config.js';
 import { approvedPanels } from './voice.js';
-import { NARRATIVE_ROLES, HEADLINE_TYPES, ADDS } from '../schema/index.js';
+import { NARRATIVE_ROLES, HEADLINE_TYPES, ADDS, IMAGE_COMPOSITIONS } from '../schema/index.js';
 export type Issue={severity:'error'|'warning';path:string;message:string};
 export async function lint(dir:string){
  const base=await contentDir(dir),p=await loadProject(dir),c=p.carousel,issues:Issue[]=[];
@@ -35,7 +35,12 @@ export async function lint(dir:string){
  if(/(?<!\p{L})voc[eê]s?(?!\p{L})/iu.test(extra))add(voiceSeverity,'editorial','Legenda e CTA também usam tu');
  for(const phrase of forbidden)if(extra.includes(phrase))add(phraseSeverity,'editorial',`Expressão proibida: ${phrase}`);
  if(c.project.copy_locked){
-  try{const raw=await readFile(path.join(base,'source/copy-input.md'),'utf8');if(hash(raw)!==c.source.hash)add('error','source.hash','Fonte original alterada');const approved=await approvedPanels(base,parseCopy(raw));for(const e of approved.errors)add('error','approvals.json',e);if(JSON.stringify(approved.panels)!==JSON.stringify(c.slides.map(({headline,body})=>({headline,body}))))add('error','slides','Copy travada difere da fonte original (NFC) e das mudanças aprovadas');}catch(e){add('error','source',`Não foi possível conferir copy original: ${String(e)}`);}
+  try{const raw=await readFile(path.join(base,'source/copy-input.md'),'utf8');if(hash(raw)!==c.source.hash)add('error','source.hash','Fonte original alterada');const current=JSON.stringify(c.slides.map(({headline,body})=>({headline,body})));
+   // Copy locked by an older engine is read with the parser that locked it (the parser changed in 0.2).
+   let matched=false,chainErrors:string[]=[];
+   for(const parser of COPY_PARSERS){let panels;try{panels=parser.parse(raw);}catch{continue;}const approved=await approvedPanels(base,panels);if(!approved.errors.length&&JSON.stringify(approved.panels)===current){matched=true;break;}if(parser===COPY_PARSERS[0])chainErrors=approved.errors;}
+   for(const e of chainErrors)add('error','approvals.json',e);
+   if(!matched)add('error','slides','Copy travada difere da fonte original (NFC) e das mudanças aprovadas');}catch(e){add('error','source',`Não foi possível conferir copy original: ${String(e)}`);}
  }
  if(c.project.mode==='full'){
   if(!c.editorial.central_thesis.trim())add('error','editorial.central_thesis','Tese ausente');
@@ -61,6 +66,8 @@ export async function visualLint(dir:string){
  const {carousel:c,art:a,tweaks:t,assets:m}=await loadProject(dir);const errors:string[]=[];const ids=new Set(c.slides.map(s=>s.id));
  for(const [name,map] of Object.entries({art:a.slides,tweaks:t.slides}))for(const id of Object.keys(map))if(!ids.has(id))errors.push(`${name}.${id}: entrada órfã`);
  let last='',run=0;
- c.slides.forEach(s=>{const d=a.slides[s.id];if(!d){errors.push(`${s.id}: direção ausente`);return;}const comp=t.slides[s.id]?.composition??d.composition;run=comp===last?run+1:1;last=comp;if(run>2)errors.push(`${s.id}: mais de duas composições iguais seguidas`);if(d.image.need&&!d.image.asset_id&&!d.image.placeholder)errors.push(`${s.id}: falta asset ou placeholder declarado`);if(d.image.asset_id&&!m.assets.some(x=>x.id===d.image.asset_id))errors.push(`${s.id}: asset não registrado`);if(d.image.asset_id&&!['full_bleed','cinematic_fade','image_card'].includes(comp))errors.push(`${s.id}: composição ${comp} não possui slot de imagem`);if(!d.image.asset_id&&!d.image.placeholder&&(comp==='cinematic_fade'||comp==='image_card'))errors.push(`${s.id}: ${comp} sem imagem deixa um vazio; escolher uma imagem, declarar placeholder ou trocar para uma composição de texto`);});
+ c.slides.forEach(s=>{const d=a.slides[s.id];if(!d){errors.push(`${s.id}: direção ausente`);return;}const comp=t.slides[s.id]?.composition??d.composition;run=comp===last?run+1:1;last=comp;if(run>2)errors.push(`${s.id}: mais de duas composições iguais seguidas`);if(d.image.need&&!d.image.asset_id&&!d.image.placeholder)errors.push(`${s.id}: falta asset ou placeholder declarado`);if(d.image.asset_id&&!m.assets.some(x=>x.id===d.image.asset_id))errors.push(`${s.id}: asset não registrado`);if(d.image.asset_id&&!IMAGE_COMPOSITIONS.includes(comp))errors.push(`${s.id}: composição ${comp} não possui slot de imagem`);if(!d.image.asset_id&&!d.image.placeholder&&(comp==='cinematic_fade'||comp==='image_card'))errors.push(`${s.id}: ${comp} sem imagem deixa um vazio; escolher uma imagem, declarar placeholder ou trocar para uma composição de texto`);
+  // A text layout cannot show the image the slide still requires: the export would wait forever.
+  if(!d.image.asset_id&&(d.image.need||d.image.placeholder)&&!IMAGE_COMPOSITIONS.includes(comp))errors.push(`${s.id}: ${comp} não mostra imagem, mas o slide exige uma; trocar para ${IMAGE_COMPOSITIONS.join('/')} ou rodar image <projeto> ${s.id} --none`);});
  if(c.slides.length&&c.slides.every(s=>a.slides[s.id]?.density==='HIGH'))errors.push('Todos os slides estão HIGH');return errors;
 }

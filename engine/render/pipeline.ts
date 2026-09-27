@@ -18,8 +18,9 @@ async function browserChecks(page:Page){
   return errors;
  });
  const cdp=await page.context().newCDPSession(page);await cdp.send('DOM.enable');await cdp.send('CSS.enable');
- // Every element that draws text, not only headline/body lines: badge, handle, cue and page number too.
- const {root}=await cdp.send('DOM.getDocument');const {nodeIds}=await cdp.send('DOM.querySelectorAll',{nodeId:root.nodeId,selector:'.slide *'});
+ // Every element that draws text, not only headline/body lines: badge, handle and cue too. The placeholder's note
+ // is left out: a slide with a placeholder never reaches an export.
+ const {root}=await cdp.send('DOM.getDocument');const {nodeIds}=await cdp.send('DOM.querySelectorAll',{nodeId:root.nodeId,selector:'.slide *:not(.placeholder, .placeholder *)'});
  const fonts=[];
  const fallback:string[]=[];
  for(const nodeId of nodeIds){const r=await cdp.send('CSS.getPlatformFontsForNode',{nodeId});fonts.push(...r.fonts);for(const f of r.fonts)if(f.glyphCount>0&&!f.isCustomFont){const {outerHTML}=await cdp.send('DOM.getOuterHTML',{nodeId});fallback.push(`${f.familyName} em ${outerHTML.slice(0,60)}`);}}

@@ -8,7 +8,9 @@ import {draft} from '../engine/project/draft.js';
 import {addAsset} from '../engine/project/assets.js';
 import {requestAsset,addFromRequest} from '../engine/project/requests.js';
 import {candidates} from '../engine/render/candidates.js';
-import {listVariants} from '../engine/project/variants.js';
+import {listVariants,createVariant} from '../engine/project/variants.js';
+import {autofit,fitProbe} from '../engine/render/fitprobe.js';
+import {IMAGE_COMPOSITIONS} from '../engine/schema/index.js';
 import sharp from 'sharp';
 const dir=await mkdtemp(path.join(os.tmpdir(),'diego-carousel-e2e-'));
 try{
@@ -79,5 +81,24 @@ try{
  assert.equal((await readJson(path.join(fullDir,'qa/visual-review.json'))).pending_images>0,true);
  await assert.rejects(exportProject(fullDir),/placeholder/);
  const fullValidation=await validate(fullDir);assert.ok(!fullValidation.passed&&fullValidation.errors.every((e:string)=>/placeholder/.test(e)),JSON.stringify(fullValidation.errors));
- console.log('E2E aprovado: duas famílias, oito composições, gate de revisão, hashes, rerender isolado, overflow sem reescrita, fonte fallback detectada e fluxo full (Corpus → draft → render).');
+ // Placeholder notes never reach an export, so a character outside the fonts there is not a fallback failure.
+ {const a2=await readJson(path.join(fullDir,'art-direction.json')),ph=Object.entries<any>(a2.slides).find(([,d])=>d.image.placeholder&&!d.image.asset_id)![0];a2.slides[ph].image.concept='sede → água salgada → poça';await writeJson(path.join(fullDir,'art-direction.json'),a2);
+  const r2=await render(fullDir);assert.ok(r2.slides.every((x:any)=>x.passed),JSON.stringify(r2.slides.filter((x:any)=>!x.passed)));}
+ // autofit on an image slide whose text cannot fit: the change goes to the art direction with the fields that go with
+ // it; an image slot is kept when one holds the text (otherwise the image leaves as an alternative), never a
+ // requirement the layout cannot show; and the next render passes.
+ {const p3=await loadProject(fullDir),fade=p3.carousel.slides.findIndex(x=>p3.art.slides[x.id].composition==='cinematic_fade'),fadeId=p3.carousel.slides[fade].id;
+  const long='Tu responde antes de terminar de ouvir porque a pergunta parece um ataque, e o ataque pede defesa imediata. Só que a defesa chega antes da compreensão, e tu passa a discutir com uma frase que o outro nem disse. Quando isso vira hábito, cada conversa difícil vira um tribunal em que tu é réu e advogado ao mesmo tempo. A escuta exige tolerar alguns segundos de desconforto sem resolver nada, e esse intervalo é justamente o que a pressa não permite.';
+  const copy=(await readFile(path.join(fullDir,'copy.md'),'utf8')).split('\n\n');const block=copy.findIndex(b=>b.startsWith(`P${fade+1}\n`));const [marker,head]=copy[block].split('\n');copy[block]=[marker,head,long].join('\n');
+  await writeFile(path.join(fullDir,'long.md'),copy.join('\n\n'));await draft(fullDir,path.join(fullDir,'long.md'));
+  const before=await render(fullDir);assert.equal(before.slides.find((x:any)=>x.id===fadeId).passed,false,'long body must not fit under the image');
+  const fixed=await autofit(fullDir);const change=fixed.changes.find(x=>x.slide===fadeId)!;assert.equal(change.changed,true,JSON.stringify(fixed));
+  const d=(await loadProject(fullDir)).art.slides[fadeId];assert.notEqual(d.composition,'cinematic_fade');assert.equal(change.to,d.composition);
+  assert.ok(IMAGE_COMPOSITIONS.includes(d.composition)||(!d.image.need&&!d.image.placeholder),JSON.stringify(d));
+  assert.equal((await readJson(path.join(fullDir,'tweaks.json'))).slides[fadeId]?.composition,undefined);
+  const after=await render(fullDir);assert.ok(after.slides.find((x:any)=>x.id===fadeId).passed,JSON.stringify(after.slides.find((x:any)=>x.id===fadeId)));}
+ // fit-probe on a version measures that version's family.
+ {const v=await createVariant(fullDir,'clean','editorial_clean'),first=(await loadProject(v)).carousel.slides[1].id;
+  const probe=await fitProbe(v,first);const text=probe.results.find(r=>r.composition==='text_only'||r.composition==='quote');assert.equal(text?.headline_px,60,JSON.stringify(probe.results));}
+ console.log('E2E aprovado: duas famílias, oito composições, gate de revisão, hashes, rerender isolado, overflow sem reescrita, fonte fallback detectada, fluxo full (Corpus → draft → render), autofit com imagem e fit-probe em versão.');
 }finally{await rm(dir,{recursive:true,force:true});}

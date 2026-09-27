@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { readFile, writeFile } from 'node:fs/promises';
 import { z } from 'zod';
-import { loadProject, jsonHash, writeJson, optionalJson, log, withLock, contentDir, opaqueId, hash } from '../project/io.js';
+import { loadProject, jsonHash, writeJson, optionalJson, log, withProjectLock, contentDir, opaqueId, hash } from '../project/io.js';
 import { toCopy, type Panel } from '../source/copy.js';
 // "você" → "tu" for ready copy. The proposal changes only grammatical person; Diego approves it before it applies.
 // Colloquial tu keeps third-person verb forms ("tu faz"), so most verbs stay; imperatives change ("pare" → "para").
@@ -68,7 +68,13 @@ export async function approvedPanels(base:string,source:Panel[]){
  return {panels,errors};
 }
 const panelsOf=(slides:{headline:string;body:string|null}[])=>slides.map(({headline,body})=>({headline,body}));
-function proposalMarkdown(original:Panel[],proposed:Panel[],changes:Change[]){
+export function editMarkdown(current:Panel[],state:{panels:Panel[];reasons:Record<string,string>}){
+ const len=(t:string|null)=>t?t.replace(/\*\*/g,'').length:0;
+ const rows=current.map((c,i)=>{const n=state.panels[i];if(c.headline===n.headline&&c.body===n.body)return '';
+  return `### P${i+1} — ${state.reasons[i+1]??''}\n\n**Original** (${len(c.body)} caracteres no body)\n\n${c.headline}${c.body?'\n\n'+c.body:''}\n\n**Proposta** (${len(n.body)} caracteres no body)\n\n${n.headline}${n.body?'\n\n'+n.body:''}\n`;}).filter(Boolean);
+ return {slides:rows.length,text:`# Proposta de edição da copy pronta\n\nNada muda até Diego aprovar:\n\n\`\`\`sh\nnpm run carousel -- approve <projeto> edit --by Diego\n\`\`\`\n\n${rows.join('\n')}`};
+}
+export function proposalMarkdown(original:Panel[],proposed:Panel[],changes:Change[]){
  const rows=original.map((p,i)=>{
   const mine=changes.filter(c=>c.panel===i+1);if(!mine.length)return '';
   const flag=(c:Change)=>c.kind==='other'?' ⚠ não é mudança de pessoa':c.kind==='ambiguous'?' ⚠ conferir (pode ser 3ª pessoa)':'';
@@ -77,7 +83,7 @@ function proposalMarkdown(original:Panel[],proposed:Panel[],changes:Change[]){
  const other=changes.filter(c=>c.kind==='other').length,ambiguous=changes.filter(c=>c.kind==='ambiguous').length;
  return `# Proposta de voz: "você" → "tu"\n\nSó mudanças de pessoa verbal. Nada muda até Diego aprovar:\n\n\`\`\`sh\nnpm run carousel -- approve <projeto> voice --by Diego\n\`\`\`\n\n${changes.length} mudanças em ${rows.length} painéis · ${ambiguous} para conferir · ${other} fora da regra${other?' (bloqueiam a aprovação)':''}\n\n${rows.join('\n')}`;
 }
-export function proposeVoice(dir:string,{render=false}={}){return withLock(dir,async()=>{
+export function proposeVoice(dir:string,{render=false}={}){return withProjectLock(dir,async()=>{
  const base=await contentDir(dir),p=await loadProject(dir);
  if(!p.carousel.project.copy_locked)throw Error('voice é para copy pronta; no modo full a copy já é escrita em tu');
  const current=panelsOf(p.carousel.slides),file=path.join(base,'qa/voice-proposal.json');
@@ -90,7 +96,7 @@ export function proposeVoice(dir:string,{render=false}={}){return withLock(dir,a
  await log(base,'EDITORIAL',`Proposta de voz: ${changes.length} mudanças`);
  return {changes:changes.length,ambiguous:changes.filter(c=>c.kind==='ambiguous').length,other:changes.filter(c=>c.kind==='other').length,file:path.join(base,'qa/voice-proposal.md')};
 });}
-export function approveVoice(dir:string,by:string,note='',{allowOther=false}={}){return withLock(dir,async()=>{
+export function approveVoice(dir:string,by:string,note='',{allowOther=false}={}){return withProjectLock(dir,async()=>{
  const base=await contentDir(dir),p=await loadProject(dir);
  if(!by.trim()||by.trim().length<2)throw Error('Informe --by com o nome de quem aprovou');
  const proposal=await optionalJson(path.join(base,'qa/voice-proposal.json'));if(!proposal)throw Error('Sem proposta: rode voice primeiro');
@@ -109,7 +115,7 @@ export function approveVoice(dir:string,by:string,note='',{allowOther=false}={})
 
 // Editorial change to ready copy (e.g. compressing a body that does not fit): Claude proposes, Diego approves.
 // Proposals accumulate per slide in qa/edit-proposal.json until approved.
-export function proposeEdit(dir:string,slide:string,change:{headline?:string;body?:string|null;reason:string}){return withLock(dir,async()=>{
+export function proposeEdit(dir:string,slide:string,change:{headline?:string;body?:string|null;reason:string}){return withProjectLock(dir,async()=>{
  const base=await contentDir(dir),p=await loadProject(dir);
  if(!p.carousel.project.copy_locked)throw Error('edit é para copy pronta; no modo full editar pelo draft');
  const index=p.carousel.slides.findIndex(s=>s.id===slide);if(index<0)throw Error('Slide desconhecido');
@@ -122,13 +128,11 @@ export function proposeEdit(dir:string,slide:string,change:{headline?:string;bod
  if(change.body!==undefined)panel.body=change.body===null||!change.body.trim()?null:change.body.normalize('NFC').trim();
  state.reasons[index+1]=change.reason.trim();
  await writeJson(file,state);
- const rows=current.map((c,i)=>{const n=state.panels[i];if(c.headline===n.headline&&c.body===n.body)return '';
-  const len=(t:string|null)=>t?t.replace(/\*\*/g,'').length:0;
-  return `### P${i+1} — ${state.reasons[i+1]??''}\n\n**Original** (${len(c.body)} caracteres no body)\n\n${c.headline}${c.body?'\n\n'+c.body:''}\n\n**Proposta** (${len(n.body)} caracteres no body)\n\n${n.headline}${n.body?'\n\n'+n.body:''}\n`;}).filter(Boolean);
- await writeFile(path.join(base,'qa/edit-proposal.md'),`# Proposta de edição da copy pronta\n\nNada muda até Diego aprovar:\n\n\`\`\`sh\nnpm run carousel -- approve <projeto> edit --by Diego\n\`\`\`\n\n${rows.join('\n')}`);
- return {slides:rows.length,file:path.join(base,'qa/edit-proposal.md')};
+ const md=editMarkdown(current,state);
+ await writeFile(path.join(base,'qa/edit-proposal.md'),md.text);
+ return {slides:md.slides,file:path.join(base,'qa/edit-proposal.md')};
 });}
-export function approveEdit(dir:string,by:string,note=''){return withLock(dir,async()=>{
+export function approveEdit(dir:string,by:string,note=''){return withProjectLock(dir,async()=>{
  const base=await contentDir(dir),p=await loadProject(dir);
  if(!by.trim()||by.trim().length<2)throw Error('Informe --by com o nome de quem aprovou');
  const file=path.join(base,'qa/edit-proposal.json'),proposal=await optionalJson(file);if(!proposal)throw Error('Sem proposta: rode edit primeiro');
@@ -141,3 +145,17 @@ export function approveEdit(dir:string,by:string,note=''){return withLock(dir,as
  await log(base,'APPROVAL',`Edição aprovada por ${by.trim()}`);
  return {applied:true};
 });}
+
+// What the studio shows for approval: the text is rendered from the proposal file itself (never from a markdown that
+// could be stale) and carries the file's hash; approving requires that same hash.
+export async function pendingProposals(base:string,current:Panel[]){
+ const out:{type:'voice'|'edit';hash:string;markdown:string}[]=[];
+ for(const type of ['voice','edit'] as const){
+  const file=path.join(base,`qa/${type}-proposal.json`),bytes=await readFile(file).catch(()=>null);if(!bytes)continue;
+  const proposal=JSON.parse(bytes.toString('utf8'));if(proposal.base_hash!==jsonHash(current))continue;
+  const markdown=type==='voice'?proposalMarkdown(current,proposal.panels,diffPanels(current,proposal.panels)):editMarkdown(current,proposal).text;
+  out.push({type,hash:hash(bytes),markdown});
+ }
+ return out;
+}
+export async function proposalHash(base:string,type:'voice'|'edit'){const bytes=await readFile(path.join(base,`qa/${type}-proposal.json`)).catch(()=>null);return bytes?hash(bytes):null;}

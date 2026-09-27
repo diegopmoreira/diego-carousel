@@ -58,6 +58,18 @@ try{
  await page.setViewportSize({width:1440,height:1000});await page.locator('#new-project').click();await page.locator('#create-form [name="slug"]').fill(slug);await page.locator('#create-form [name="copy"]').fill(await readFile(path.join(ROOT,'fixtures/copy-pronta.md'),'utf8'));await page.locator('#create-form button[type="submit"]').click();await page.waitForURL('**/*project=*');await page.locator('#studio').waitFor({state:'visible'});assert.equal(await page.locator('#slides button').count(),10);
  await page.locator('#upload-file').setInputFiles(path.join(ROOT,'design/brand/avatar-source.png'));await page.locator('#upload-form textarea').fill('Imagem do template local, usada somente neste teste.');await page.locator('#upload-form button[type="submit"]').click();await page.waitForFunction(()=>document.querySelector('#notice')?.textContent==='Imagem adicionada ao slide.');
  assert.equal((await loadProject(created)).assets.assets.length,1);assert.equal((await loadProject(created)).carousel.slides.length,10);
+ // A composition carries the image decision: a text layout takes the image out (kept as an alternative) and an image
+ // slot without an image waits for one, so the slide never lands in a state the export cannot finish.
+ {const p=await loadProject(created),uploaded=p.assets.assets[0].id,coverId=p.carousel.slides[0].id,fourth=p.carousel.slides[3].id,saved=()=>page.waitForFunction(()=>document.querySelector('#notice')?.textContent==='Ajustes salvos. Preview atualizado.');
+  assert.equal(p.art.slides[coverId].image.asset_id,uploaded);
+  await page.locator('#adjust-form [name="composition"]').selectOption('giant_statement');
+  assert.equal(await page.locator('#adjust-form [name="asset_id"]').inputValue(),'');assert.equal(await page.locator('#adjust-form [name="image_need"]').isChecked(),false);
+  await page.locator('#save').click();await saved();
+  const q=await loadProject(created),cover=q.art.slides[coverId];assert.equal(cover.image.asset_id,undefined);assert.ok(cover.image.alternatives.includes(uploaded));assert.equal(cover.image.need,false);assert.equal(q.tweaks.slides[coverId]?.composition,'giant_statement');
+  await page.locator('#slides button').nth(3).click();await page.locator('#adjust-form [name="composition"]').selectOption('cinematic_fade');
+  assert.equal(await page.locator('#adjust-form [name="image_need"]').isChecked(),true);assert.equal(await page.locator('#adjust-form [name="position"]').inputValue(),'top');
+  await page.locator('#save').click();await saved();
+  const r=(await loadProject(created)).art.slides[fourth];assert.equal(r.image.need,true);assert.equal(r.image.placeholder,true);assert.equal(r.layout.headline_position,'top');}
  // Empty studio: with no project yet, the first carousel can be created from the screen.
  const emptyProjects=path.join(dir,'empty-projects');process.env.CAROUSEL_PROJECTS_DIR=emptyProjects;
  const empty=await serve(null,0,true);try{
@@ -67,11 +79,16 @@ try{
   assert.equal(await p2.locator('#slides button').count(),10);
   // A voice proposal waits in the studio; Diego approves it on screen and the copy changes only then.
   const created=path.join(emptyProjects,(await readdir(emptyProjects))[0]);await proposeVoice(created);await p2.reload();
-  await p2.locator('#pending').waitFor({state:'visible'});await p2.locator('#pending-open').click();
+  await p2.locator('#pending').waitFor({state:'visible'});
+  // A proposal changed after it was shown is never applied.
+  const shown=await (await p2.request.get(empty.url+'/api/state?project='+path.basename(created))).json();
+  const stale=await p2.request.post(empty.url+'/api/approve?project='+path.basename(created),{headers:{Origin:empty.url,'X-Carousel-Token':shown.token},data:{revision:shown.revision,type:'voice',hash:'0'.repeat(64),by:'Diego',confirmed:true}});
+  assert.equal(stale.status(),409);assert.equal((await loadProject(created)).carousel.slides[0].headline,'Você não precisa vencer toda discussão');
+  await p2.locator('#pending-open').click();
   await p2.locator('#approve-form [name="by"]').fill('Diego');await p2.locator('#approve-form [name="confirmed"]').check();await p2.locator('#approve-form button[type="submit"]').click();
   await p2.waitForFunction(()=>document.querySelector('#notice')?.textContent?.startsWith('Aprovado'));
   assert.equal((await loadProject(created)).carousel.slides[0].headline,'Tu não precisa vencer toda discussão');
   assert.equal((await readJson(path.join(created,'approvals.json'))).approvals[0].by,'Diego');await p2.close();
  }finally{await empty.close();process.env.CAROUSEL_PROJECTS_DIR=path.join(dir,'projects');}
- console.log('Estúdio E2E aprovado: UI, prévia ao vivo, Instagram, área segura, eventos do servidor, estúdio vazio, aprovação de proposta, ajuste isolado, copy preservada, versão, proteção de escrita, revisão e ZIP íntegro.');
+ console.log('Estúdio E2E aprovado: UI, prévia ao vivo, Instagram, área segura, eventos do servidor, estúdio vazio, aprovação de proposta, ajuste isolado, composição com a decisão de imagem, copy preservada, versão, proteção de escrita, revisão e ZIP íntegro.');
 }finally{await browser?.close();await server?.close();await rm(dir,{recursive:true,force:true});}

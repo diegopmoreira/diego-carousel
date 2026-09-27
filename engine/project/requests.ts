@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { readdir } from 'node:fs/promises';
 import { AssetRequest, type ArtData } from '../schema/index.js';
-import { contentDir, loadProject, opaqueId, writeJson, readJson, log, optionalJson } from './io.js';
+import { contentDir, loadProject, opaqueId, writeJson, readJson, log, optionalJson, withProjectLock } from './io.js';
 import { loadConfig } from './config.js';
 import { addAsset } from './assets.js';
 // Image generation goes through a ticket: the engine writes the canonical prompt and checks the budget, Claude
@@ -28,7 +28,7 @@ async function requestsOf(base:string){
  const dir=path.join(base,'assets/requests');
  return Promise.all((await readdir(dir).catch(()=>[])).filter(f=>f.endsWith('.json')).map(async f=>AssetRequest.parse(await readJson(path.join(dir,f)))));
 }
-export async function requestAsset(dir:string,slide:string,{variants,concept,provider,model}:{variants?:number;concept?:string;provider?:string;model?:string}={}){
+export function requestAsset(dir:string,slide:string,{variants,concept,provider,model}:{variants?:number;concept?:string;provider?:string;model?:string}={}){return withProjectLock(dir,async()=>{
  const base=await contentDir(dir),p=await loadProject(dir),config=await loadConfig(),d=p.art.slides[slide];
  if(!d)throw Error('Slide desconhecido');
  const composition=(p.tweaks.slides[slide]?.composition??d.composition) as Composition;
@@ -42,12 +42,12 @@ export async function requestAsset(dir:string,slide:string,{variants,concept,pro
  await writeJson(path.join(base,`assets/requests/${request.id}.json`),request);
  await log(base,'ASSET',`Pedido ${request.id} para ${slide}: ${count} variante(s), ${used+count}/${limit} do teto`);
  return {...request,budget:{used:used+count,limit}};
-}
-export async function cancelRequest(dir:string,id:string){
+});}
+export function cancelRequest(dir:string,id:string){return withProjectLock(dir,async()=>{
  const base=await contentDir(dir),file=path.join(base,`assets/requests/${id}.json`),r=await optionalJson(file);
  if(!r)throw Error('Pedido desconhecido');const req=AssetRequest.parse(r);if(req.results.length)throw Error('Pedido já tem imagens registradas');
  req.status='cancelled';await writeJson(file,req);return req;
-}
+});}
 // Generated URLs expire: download right away, with limits, and keep the full request with the image.
 export async function downloadImage(url:string){
  const u=new URL(url),local=u.hostname==='127.0.0.1'||u.hostname==='localhost';
@@ -59,11 +59,16 @@ export async function downloadImage(url:string){
  return bytes;
 }
 export async function addFromRequest(dir:string,id:string,source:{url?:string;bytes?:Buffer},extra:{seed?:string|number;model?:string;params?:Record<string,unknown>;score?:number;rationale?:string}={}){
+ // Download first (outside the lock: it may take a while), then register under the project lock.
+ const bytes=source.bytes??(source.url?await downloadImage(source.url):undefined);
+ return withProjectLock(dir,()=>registerFromRequest(dir,id,{url:source.url,bytes},extra));
+}
+async function registerFromRequest(dir:string,id:string,source:{url?:string;bytes?:Buffer},extra:{seed?:string|number;model?:string;params?:Record<string,unknown>;score?:number;rationale?:string}){
  const base=await contentDir(dir),file=path.join(base,`assets/requests/${id}.json`),raw=await optionalJson(file);
  if(!raw)throw Error('Pedido desconhecido');const request=AssetRequest.parse(raw);
  if(request.status==='cancelled')throw Error('Pedido cancelado');
  if(request.results.length>=request.variants)throw Error(`O pedido já tem ${request.variants} imagem(ns); faça outro pedido`);
- const bytes=source.bytes??(source.url?await downloadImage(source.url):undefined);if(!bytes)throw Error('Informe --url ou um arquivo');
+ const bytes=source.bytes;if(!bytes)throw Error('Informe --url ou um arquivo');
  const first=request.results.length===0;
  const added=await addAsset(dir,bytes,`Gerada via ${request.provider}${extra.model??request.model?` (${extra.model??request.model})`:''} para este carrossel; sem pessoas reais, sem texto`,request.slide,{
   origin:'generated',provider:request.provider,model:extra.model??request.model,prompt:request.prompt,negative:request.negative,request:request,request_id:request.id,

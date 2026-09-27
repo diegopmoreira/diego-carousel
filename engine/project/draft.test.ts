@@ -69,3 +69,21 @@ describe('redraft: IDs seguem o texto',()=>{
   const after=await loadProject(dir);expect(after.carousel.slides[4].id).toBe(ids[3]);expect(after.art.slides[ids[3]].image.concept).toBe('conceito do P4');
  });
 });
+describe('redraft com metadados parciais',()=>{
+ it('mudar só a legenda não apaga tese, hooks e briefing',async()=>{
+  const dir=await full(),before=(await loadProject(dir)).carousel.editorial;
+  await writeFile(path.join(dir,'parcial.json'),JSON.stringify({editorial:{caption:'Legenda nova'}}));
+  await draft(dir,F('copy.md'),path.join(dir,'parcial.json'));
+  const after=(await loadProject(dir)).carousel.editorial;
+  expect(after.caption).toBe('Legenda nova');expect(after.central_thesis).toBe(before.central_thesis);expect(after.hook_candidates).toEqual(before.hook_candidates);expect(after.objective).toBe(before.objective);
+ });
+});
+describe('versões acompanham a estrutura',()=>{
+ it('slide add e rm mantêm a direção das versões sem órfãos',async()=>{
+  const {createVariant}=await import('./variants.js');const {visualLint}=await import('../qa/lint.js');
+  const dir=await full();const v=await createVariant(dir,'editorial','editorial_clean');const ids=(await loadProject(dir)).carousel.slides.map(s=>s.id);
+  const added=await slideAdd(dir,{headline:'Um painel novo para a versão',body:'Corpo sintético.',after:ids[1]});await slideRemove(dir,ids[6]);
+  const vp=await loadProject(v);expect(vp.art.slides[added.id]).toBeDefined();expect(vp.art.slides[ids[6]]).toBeUndefined();expect(vp.art.family).toBe('editorial_clean');
+  expect(await visualLint(v)).toEqual([]);
+ });
+});

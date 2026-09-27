@@ -7,7 +7,7 @@ export const escapeHtml=(t:string)=>t.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 export const scriptJson=(v:unknown)=>JSON.stringify(v).replaceAll('<','\\u003c');
 const TEXT_COMPOSITIONS=new Set(['text_only','quote','contrast','minimal_pause','giant_statement']);
 // lineSpace: extra px above given headline lines, opened by the ink map only where two lines collide.
-export type ComposeOptions={headlineLineHeight?:number;lineSpace?:Record<number,number>;headlineCeiling?:number};
+export type ComposeOptions={lineSpace?:Record<number,number>;headlineCeiling?:number};
 export function compose(c:CarouselData,a:ArtData,t:TweaksData,index:number,config:any,tokens:any,assetUrl?:string,frozen?:unknown,options:ComposeOptions={}){
  const s=c.slides[index],d=a.slides[s.id],tw=t.slides[s.id],p=tw?.params??{},comp=tw?.composition??d.composition;
  const fam=tokens.families[a.family],floors=tokens.floors,cover=index===0,last=index===c.slides.length-1,penultimate=index===c.slides.length-2;
@@ -35,7 +35,7 @@ export function compose(c:CarouselData,a:ArtData,t:TweaksData,index:number,confi
  const vars={
   '--bg':fam.background,'--margin':`${fam.margin}px`,'--headline':tokens.colors.headline,'--body':fam.bodyColor,'--muted':tokens.colors.muted,'--handle':tokens.colors.handle,
   '--headline-font':`'${fam.headlineFont}'`,'--body-font':`'${fam.bodyFont}'`,'--headline-size':`${hsize}px`,'--body-size':`${bsize}px`,
-  '--headline-lh':String(options.headlineLineHeight??fam.headlineLineHeight),'--body-lh':String(fam.bodyLineHeight),
+  '--headline-lh':String(fam.headlineLineHeight),'--body-lh':String(fam.bodyLineHeight),
   '--headline-weight':String(cover?fam.cover.headlineWeight:fam.headlineWeight),'--body-weight':String(fam.bodyWeight),
   '--em-headline':fam.emphasis.headlineColor,'--em-body':fam.emphasis.bodyColor,'--em-weight':String(fam.emphasis.bodyWeight),
   '--gap':`${p.block_gap??fam.gap}px`,'--image-y':`${p.image_y??0}px`,'--image-scale':String(p.image_scale??1),

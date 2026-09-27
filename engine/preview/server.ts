@@ -55,10 +55,10 @@ export async function serve(initialDir:string|null,port=0,editable=false){
      if(!dir){send(404,{error:'Nenhum projeto aberto'});return;}
      res.writeHead(200,{...headers,'Content-Type':'text/event-stream; charset=utf-8',Connection:'keep-alive'});res.write('retry: 3000\n\n');
      let timer:NodeJS.Timeout|undefined;
-     const relevant=(f:string|null)=>!!f&&/(^|[\\/])(carousel|art-direction|tweaks|render-manifest|approvals)\.json$|assets[\\/]manifest\.json$|qa[\\/]visual-review\.json$/.test(f);
+     const relevant=(f:string|null)=>!!f&&/(^|[\\/])(carousel|art-direction|tweaks|render-manifest|approvals)\.json$|assets[\\/]manifest\.json$|qa[\\/](visual-review|voice-proposal|edit-proposal)\.json$/.test(f);
      const fire=(f:string|null)=>{if(!relevant(f))return;clearTimeout(timer);timer=setTimeout(()=>res.write(`event: change\ndata: ${JSON.stringify({file:f})}\n\n`),250);};
      // Directory watches (not recursive): documents are replaced by atomic renames, which per-file watches lose.
-     const folders=[...new Set([dir,path.join(dir,'qa'),base!,path.join(base!,'assets')])];
+     const folders=[...new Set([dir,path.join(dir,'qa'),base!,path.join(base!,'qa'),path.join(base!,'assets')])];
      const watchers=folders.flatMap(d=>{try{return [watch(d,(_e,f)=>fire(f?path.join(path.relative(dir,d),String(f)):null))];}catch{return [];}});
      const ping=setInterval(()=>res.write(': ping\n\n'),25000);
      req.on('close',()=>{clearInterval(ping);clearTimeout(timer);watchers.forEach(w=>w.close());});
@@ -102,7 +102,10 @@ export async function serve(initialDir:string|null,port=0,editable=false){
        if(!variant)throw Error('Seleciona uma versão antes de torná-la principal');await withLock(base,async()=>{await promoteVariant(base,variant);await render(base);});send(200,{variant:null});return true;
       }else if(pathname==='/api/approve'){
        // Diego approves a pending voice or edit proposal on screen; the approval is recorded with the name given.
-       const approval=z.object({revision:z.string(),type:z.enum(['voice','edit']),by:z.string().trim().min(2).max(80),confirmed:z.literal(true)}).strict().parse(input);
+       const approval=z.object({revision:z.string(),type:z.enum(['voice','edit']),hash:z.string().regex(/^[a-f0-9]{64}$/),by:z.string().trim().min(2).max(80),confirmed:z.literal(true)}).strict().parse(input);
+       // Only the proposal Diego read: if the file changed after the page showed it, nothing is applied.
+       const {proposalHash}=await import('../qa/voice.js');
+       if(await proposalHash(base,approval.type)!==approval.hash){send(409,{error:'A proposta mudou depois que foi aberta. Abre de novo e confere antes de aprovar.'});return true;}
        const {approveVoice,approveEdit}=await import('../qa/voice.js');
        // Diego read the whole proposal on screen (changes outside the rule are marked ⚠ there), so his approval
        // covers them. The copy lives in the main project, shared by every version: lock it and render it too.

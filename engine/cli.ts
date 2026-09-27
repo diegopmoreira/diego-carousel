@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import { readFile, access } from 'node:fs/promises';
-import { chromiumPath } from './render/browser.js';
+import { chromiumPath, chromiumVersion } from './render/browser.js';
 import { loadConfig } from './project/config.js';
 import { VERSION } from './schema/index.js';
 import { z } from 'zod';
 import { createProject, importCopy } from './project/create.js';
 import { ROOT, projectsDir, readJson, writeJson, loadProject, log, optionalJson, jsonHash, withLock } from './project/io.js';
 import { lint } from './qa/lint.js';
-import { render, validate, exportProject, review, renderInputs } from './render/render.js';
+import { render, validate, exportProject, review, renderInputs, reviewCycles } from './render/render.js';
 import { serve } from './preview/server.js';
 import { listProjects } from './preview/api.js';
 import { createVariant, promoteVariant } from './project/variants.js';
@@ -23,6 +23,7 @@ import { gallery } from './render/gallery.js';
 import { calibrate } from './render/calibrate.js';
 import { fitProbe, autofit } from './render/fitprobe.js';
 import { migrate, migrateAll } from './project/migrate.js';
+import { setComposition } from './project/direction.js';
 const args=process.argv.slice(2),command=args.shift();
 const flag=(name:string)=>{const i=args.indexOf('--'+name);return i<0?undefined:args[i+1];};
 // Positional arguments, skipping flags and their values (boolean flags listed so their neighbour stays positional).
@@ -52,7 +53,8 @@ npm run carousel -- <comando>
   idea add --thesis <t> --source <ref> --why <t> [--project <slug>] | idea list
   render <projeto> [--slides id,id]
   fit-probe <projeto> <slide-id>          composições que cabem, tamanhos e quanto cortar
-  autofit <projeto>                       troca a composição dos slides que não cabem (tweaks) e renderiza
+  autofit <projeto>                       troca a composição dos slides que não cabem e renderiza
+  composition <projeto> <slide-id> <composição>   troca a composição com posição, ajuste e imagem coerentes
   validate <projeto> [--json]
   review <projeto> --reviewer <nome> --note <nota> [--approved] [--human]
   export <projeto>
@@ -84,6 +86,7 @@ try{
   else throw Error('Disponíveis: slide add|move|rm');
   break;
  }
+ case 'composition':print(await setComposition(project(),required(args[1],'composition <projeto> <slide-id> <composição>'),required(args[2],'Informe a composição (full_bleed, cinematic_fade, image_card, text_only, giant_statement, minimal_pause, quote, contrast)')));break;
  case 'image':{
   // Explicit decision per slide: --need (export waits for an image) or --none (the slide does not use one).
   const dir=project(),slide=required(args[1],'image <projeto> <slide-id> --need|--none'),need=args.includes('--need')?true:args.includes('--none')?false:undefined;
@@ -117,9 +120,10 @@ try{
   const lintCurrent=!!l?.passed&&l.content_hash===jsonHash(p.carousel),renderCurrent=r?.project_hash===p.project_hash,renderPassed=renderCurrent&&r.slides.every((x:any)=>x.passed);
   const pendingImages=p.carousel.slides.filter(x=>{const d=p.art.slides[x.id];return (d?.image.need||d?.image.placeholder)&&!d?.image.asset_id;}).map(x=>x.id);
   const reviewCurrent=!!v&&v.render_hash===r?.render_hash&&renderCurrent,approved=reviewCurrent&&!!v.approved;
-  const exported=await optionalJson(path.join(dir,'qa/export-receipt.json'));
-  const next=!p.carousel.slides.length?(p.carousel.project.mode==='full'?'escrever copy.md + editorial.json e rodar draft':'import-copy'):!lintCurrent?'lint (corrigir erros)':!renderPassed?'render (e fit-probe/autofit nos que falham)':!reviewCurrent?'abrir os PNGs e registrar review':pendingImages.length?`imagens pendentes em ${pendingImages.length} slide(s): asset request/add ou image --none`:!approved?'corrigir o que a revisão apontou e renderizar de novo':exported?.render_hash===r?.render_hash?'exportado':'validate e export';
-  print({project:dir,mode:p.carousel.project.mode,slides:p.carousel.slides.length,lint_current:lintCurrent,render_current:renderCurrent,render_passed:renderPassed,pending_images:pendingImages,visual_review_current:reviewCurrent,approved,exported:exported?.render_hash===r?.render_hash,next,source:p.carousel.source});break;
+  const receipt=await optionalJson(path.join(dir,'qa/export-receipt.json')),exported=!!receipt&&!!r&&renderCurrent&&receipt.render_hash===r.render_hash;
+  const {agentRenders,max}=await reviewCycles(dir),cyclesLeft=Math.max(0,max-agentRenders.size),humanNext=!reviewCurrent&&cyclesLeft===0&&!agentRenders.has(r?.render_hash);
+  const next=!p.carousel.slides.length?(p.carousel.project.mode==='full'?'escrever copy.md + editorial.json e rodar draft':'import-copy'):!lintCurrent?'lint (corrigir erros)':!renderPassed?'render (e fit-probe/autofit nos que falham)':humanNext?'ciclos automáticos esgotados: Diego revisa no estúdio (preview) e exporta':!reviewCurrent?'abrir os PNGs e registrar review':pendingImages.length?`imagens pendentes em ${pendingImages.length} slide(s): asset request/add ou image --none`:!approved?'corrigir o que a revisão apontou e renderizar de novo':exported?'exportado':'validate e export';
+  print({project:dir,mode:p.carousel.project.mode,slides:p.carousel.slides.length,lint_current:lintCurrent,render_current:renderCurrent,render_passed:renderPassed,pending_images:pendingImages,visual_review_current:reviewCurrent,approved,auto_review_cycles_left:cyclesLeft,exported,next,source:p.carousel.source});break;
  }
  case 'preview':{let dir:string|null=args[0]&&!args[0].startsWith('--')?path.resolve(args[0]):null;if(!dir){const projects=await listProjects();dir=projects.length?path.join(projectsDir(),projects[0]):null;}const config=await loadConfig();const server=await serve(dir,Number(flag('port')??config.preview.port),true);print(server.url);for(const sig of ['SIGINT','SIGTERM'] as const)process.on(sig,()=>void server.close().then(()=>process.exit(0)));break;}
  case 'asset':{
@@ -144,7 +148,7 @@ try{
   const checks=[];
   checks.push({check:'Node 24 LTS',ok:process.versions.node.startsWith('24.'),detail:process.versions.node});
   for(const file of ['design/fonts/manifest.json','engine/schema/generated/carousel.schema.json']){try{await access(path.join(ROOT,file));checks.push({check:file,ok:true});}catch{checks.push({check:file,ok:false});}}
-  try{await access(chromiumPath());checks.push({check:'Chromium instalado',ok:true,detail:chromiumPath()});}catch{checks.push({check:'Chromium instalado',ok:false});}
+  try{await access(chromiumPath());checks.push({check:'Chromium instalado',ok:true,detail:`${await chromiumVersion()} · ${chromiumPath()}`});}catch{checks.push({check:'Chromium instalado',ok:false});}
   const config=await loadConfig();checks.push({check:'Avatar oficial',ok:!!config.branding.avatar,optional:true});
   print({passed:checks.every(c=>c.ok||c.optional),checks});if(checks.some(c=>!c.ok&&!c.optional))process.exitCode=1;break;
  }

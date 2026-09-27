@@ -2,7 +2,8 @@ import path from 'node:path';
 import { readFile, writeFile } from 'node:fs/promises';
 import { z } from 'zod';
 import { Carousel, ArtDirection, Family, type ArtData, type CarouselData } from '../schema/index.js';
-import { loadProject, opaqueId, writeJson, log, withLock } from './io.js';
+import { loadProject, opaqueId, writeJson, readJson, log, withLock } from './io.js';
+import { listVariants } from './variants.js';
 import { loadConfig } from './config.js';
 import { parseCopy, toCopy, plainText } from '../source/copy.js';
 import { initialDirection } from './direction.js';
@@ -20,6 +21,19 @@ async function save(dir:string,c:CarouselData,art:ArtData,tweaks:any){
  for(const id of Object.keys(tweaks.slides))if(!ids.has(id))delete tweaks.slides[id];
  await writeJson(path.join(dir,'carousel.json'),c);await writeJson(path.join(dir,'art-direction.json'),art);await writeJson(path.join(dir,'tweaks.json'),tweaks);
  await writeFile(path.join(dir,'copy.md'),toCopy(c.slides));
+ // Versions share the copy: drop entries of removed slides and give new slides a direction in each version's family,
+ // otherwise every version fails its visual lint after a structural change.
+ for(const name of await listVariants(dir)){
+  const vdir=path.join(dir,'variants',name);
+  await withLock(vdir,async()=>{
+   const vart=ArtDirection.parse(await readJson(path.join(vdir,'art-direction.json'))),vtw=await readJson(path.join(vdir,'tweaks.json'));
+   for(const id of Object.keys(vart.slides))if(!ids.has(id))delete vart.slides[id];
+   for(const id of Object.keys(vtw.slides))if(!ids.has(id))delete vtw.slides[id];
+   const fresh=initialDirection(vart.family,c.slides);
+   c.slides.forEach((sl,i)=>{if(!vart.slides[sl.id])vart.slides[sl.id]=fresh[i];});
+   await writeJson(path.join(vdir,'art-direction.json'),vart);await writeJson(path.join(vdir,'tweaks.json'),vtw);
+  });
+ }
 }
 // Creates or replaces the slides of a full-mode project from copy.md (+ editorial metadata). A redraft keeps the IDs
 // of slides that stay (explicit id in the metadata, else same position), so art direction and tweaks survive.
@@ -40,7 +54,7 @@ export function matchSlides(panels:{headline:string}[],old:{id:string;headline:s
 export function draft(dir:string,copyFile:string,metaFile?:string,options:{resetArt?:boolean}={}){return withLock(dir,async()=>{
  const p=await loadProject(dir),c=p.carousel;assertEditable(c);
  if(await readFile(path.join(dir,'variant.json')).then(()=>true,()=>false))throw Error('Draft só no projeto principal, não numa versão');
- const panels=parseCopy(await readFile(copyFile,'utf8')),meta=metaFile?DraftMeta.parse(JSON.parse(await readFile(metaFile,'utf8'))):{};
+ const rawMeta=metaFile?JSON.parse(await readFile(metaFile,'utf8')):{},panels=parseCopy(await readFile(copyFile,'utf8')),meta=DraftMeta.parse(rawMeta);
  const {slides:range}=await loadConfig();
  if(panels.length<range.min||panels.length>range.max)throw Error(`A copy precisa de ${range.min} a ${range.max} painéis (tem ${panels.length})`);
  if(meta.slides&&meta.slides.length!==panels.length)throw Error(`Metadados com ${meta.slides.length} slides para ${panels.length} painéis`);
@@ -55,7 +69,10 @@ export function draft(dir:string,copyFile:string,metaFile?:string,options:{reset
   return {id,narrative_role:fields.narrative_role??previous?.narrative_role??(i===0?'interruption':i===panels.length-1?'hammer':'mechanism'),headline:panel.headline,body:panel.body,
    headline_type:fields.headline_type??previous?.headline_type??'statement',adds:fields.adds??previous?.adds??[],next_question:fields.next_question??previous?.next_question??'',visual_intent:fields.visual_intent??previous?.visual_intent??''};
  });
- c.editorial={...c.editorial,...meta.editorial};c.slides=slides;
+ // Only fields the metadata file actually has: zod fills defaults inside .partial(), which would blank the thesis,
+ // hooks and briefing on a redraft that only changes the caption.
+ const given=Object.keys(rawMeta.editorial??{});
+ c.editorial={...c.editorial,...Object.fromEntries(given.map(k=>[k,(meta.editorial as any)[k]]))};c.slides=slides;
  const art=p.art;if(meta.art?.family)art.family=meta.art.family;if(meta.art?.cover_strategy)art.cover_strategy=meta.art.cover_strategy;if(meta.art?.rationale)art.rationale=meta.art.rationale;
  const fresh=initialDirection(art.family,slides);
  slides.forEach((s,i)=>{if(options.resetArt||!art.slides[s.id])art.slides[s.id]=fresh[i];});

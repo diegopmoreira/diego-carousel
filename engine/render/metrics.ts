@@ -3,7 +3,6 @@ import sharp from 'sharp';
 // Measured legibility and balance, reported as review warnings (visual/visual-qa.md).
 const channel=(v:number)=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4);};
 const luminance=(r:number,g:number,b:number)=>.2126*channel(r)+.7152*channel(g)+.0722*channel(b);
-const hex=(c:string)=>{const m=c.replace('#','');return [0,2,4].map(i=>parseInt(m.slice(i,i+2),16)) as [number,number,number];};
 export const contrastRatio=(a:number,b:number)=>(Math.max(a,b)+.05)/(Math.min(a,b)+.05);
 export type SlideMetrics={contrast:{role:string;ratio:number;minimum:number}[];empty_band_pct:number;warnings:string[]};
 // Contrast: the slide without text; the brightest 5% of the background under each block against the text color.
@@ -44,4 +43,3 @@ export function rhythmWarnings(compositions:string[],densities:string[]){
  if(new Set(densities).size===1&&densities.length>=8)warnings.push(`Todos os painéis com densidade ${densities[0]}`);
  return warnings;
 }
-export { hex };

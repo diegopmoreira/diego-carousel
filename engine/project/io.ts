@@ -38,8 +38,15 @@ export function safeChild(dir:string,relative:string){const p=path.resolve(dir,r
 // Cross-process write lock shared by the CLI and the studio. Nested calls in the same async flow pass through;
 // a lock left by a dead process is reclaimed.
 const held=new AsyncLocalStorage<Set<string>>();
+const alive=(pid:number)=>{try{process.kill(pid,0);return true;}catch(err){return (err as NodeJS.ErrnoException).code==='EPERM';}};
+// The owner recorded in a lock file: undefined when the file is gone, null when it cannot be read (treated as held).
+async function lockOwner(file:string):Promise<{pid:number;token:string}|null|undefined>{
+ const raw=await readFile(file,'utf8').catch(err=>(err as NodeJS.ErrnoException).code==='ENOENT'?undefined:'');
+ if(raw===undefined)return undefined;
+ try{const owner=JSON.parse(raw);return typeof owner?.pid==='number'&&typeof owner?.token==='string'?owner:null;}catch{return null;}
+}
 export async function withLock<T>(dir:string,fn:()=>Promise<T>):Promise<T>{
- const file=path.resolve(dir,'.lock'),mine=held.getStore();
+ const file=path.resolve(dir,'.lock'),guard=`${file}.reclaim`,mine=held.getStore();
  if(mine?.has(file))return fn();
  // The lock appears with its content already in place (hard link of a finished temp file), so nobody ever reads
  // a half-written lock and mistakes it for a stale one.
@@ -47,19 +54,32 @@ export async function withLock<T>(dir:string,fn:()=>Promise<T>):Promise<T>{
  await writeFile(tmp,JSON.stringify({pid:process.pid,token,at:new Date().toISOString()}));
  try{
   for(let attempt=0;;attempt++){
-   try{await link(tmp,file);break;}
+   try{await link(tmp,file);break;}catch(e){if((e as NodeJS.ErrnoException).code!=='EEXIST')throw e;}
+   if(attempt>=5)throw new LockedError();
+   const owner=await lockOwner(file);
+   if(owner===undefined)continue; // released in the meantime
+   if(!owner)throw new LockedError();
+   if(alive(owner.pid))throw new LockedError(owner.pid);
+   // A dead owner's lock is removed only under the reclaim guard, created exclusively and held for one read and one
+   // delete: two processes reclaiming the same dead lock can never delete the lock one of them has just taken.
+   try{await link(tmp,guard);}
    catch(e){
     if((e as NodeJS.ErrnoException).code!=='EEXIST')throw e;
-    const owner=await optionalJson(file).catch(()=>null);
-    let alive=!owner; // unreadable: treat as held
-    if(owner?.pid){try{process.kill(owner.pid,0);alive=true;}catch(err){alive=(err as NodeJS.ErrnoException).code==='EPERM';}}
-    if(alive||attempt>0)throw new LockedError(owner?.pid);
-    await rm(file,{force:true});
+    const reclaimer=await lockOwner(guard);
+    if(reclaimer&&!alive(reclaimer.pid))throw new LockedError(undefined,'.lock.reclaim');
+    await new Promise(r=>setTimeout(r,20));continue; // someone else is reclaiming right now
    }
+   try{const current=await lockOwner(file);if(current&&current.pid===owner.pid&&current.token===owner.token)await rm(file,{force:true});}
+   finally{await rm(guard,{force:true});}
   }
  }finally{await rm(tmp,{force:true});}
  try{return await held.run(new Set([...(mine??[]),file]),fn);}
- finally{const owner=await optionalJson(file).catch(()=>null);if(owner?.token===token)await rm(file,{force:true});}
+ finally{if((await lockOwner(file))?.token===token)await rm(file,{force:true});}
 }
-export class LockedError extends Error{constructor(pid?:number){super(`Projeto em uso por outro processo${pid?` (pid ${pid})`:''}. Aguarda terminar${pid?'':'; se nenhum comando estiver rodando, apaga o arquivo .lock do projeto'}.`);}}
+// A write that touches both a version and the main project (shared manifest, copy, requests) holds both locks.
+export async function withProjectLock<T>(dir:string,fn:()=>Promise<T>):Promise<T>{
+ const base=path.resolve(await contentDir(dir));
+ return withLock(dir,()=>base===path.resolve(dir)?fn():withLock(base,fn));
+}
+export class LockedError extends Error{constructor(pid?:number,extra?:string){super(`Projeto em uso por outro processo${pid?` (pid ${pid})`:''}. Aguarda terminar${pid?'':`; se nenhum comando estiver rodando, apaga o arquivo .lock${extra?` e o ${extra}`:''} do projeto`}.`);}}
 export const escapeXml=(t:string)=>t.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]!));

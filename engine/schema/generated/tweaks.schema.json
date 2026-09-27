@@ -56,7 +56,7 @@
               },
               "block_gap": {
                 "type": "number",
-                "minimum": 24,
+                "minimum": 12,
                 "maximum": 72
               }
             },

@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
-import { Carousel, ArtDirection, Tweaks, Assets, VERSION } from '../schema/index.js';
+import { Carousel, ArtDirection, Tweaks, Assets, VERSION, IMAGE_COMPOSITIONS } from '../schema/index.js';
 import { writeJson, readJson, log, withLock, projectsDir } from './io.js';
 import { listVariants } from './variants.js';
 import { listProjects } from '../preview/api.js';
@@ -15,8 +15,12 @@ async function migrateDir(dir:string,variant:boolean){
   const parsed=schema.parse(JSON.parse(before));await writeJson(full,parsed);
   if(await readFile(full,'utf8')!==before)changed.push(file);
  }
- const art=await readJson(path.join(dir,'art-direction.json')).catch(()=>null);
- if(art)for(const [id,d] of Object.entries<any>(art.slides))if(['text_only','quote','contrast'].includes(d.composition)&&d.layout.headline_position==='top')notes.push(`${id}: ${d.composition} alinhado ao topo (antes da Rodada 2 era o padrão); "center" equilibra o bloco`);
+ const art=await readJson(path.join(dir,'art-direction.json')).catch(()=>null),tweaks=await readJson(path.join(dir,'tweaks.json')).catch(()=>null);
+ if(art)for(const [id,d] of Object.entries<any>(art.slides)){
+  const comp=tweaks?.slides?.[id]?.composition??d.composition;
+  if(['text_only','quote','contrast'].includes(comp)&&d.layout.headline_position==='top')notes.push(`${id}: ${comp} alinhado ao topo (antes da Rodada 2 era o padrão); "center" equilibra o bloco`);
+  if(!d.image.asset_id&&(d.image.need||d.image.placeholder)&&!IMAGE_COMPOSITIONS.includes(comp))notes.push(`${id}: ${comp} não mostra imagem, mas o slide exige uma: trocar a composição ou rodar image <projeto> ${id} --none`);
+ }
  const review=await readJson(path.join(dir,'qa/visual-review.json')).catch(()=>null);
  if(review&&review.schema_version===1)notes.push('Revisão visual no formato antigo: será convertida na próxima revisão');
  if(changed.length)await log(dir,'MIGRATE',`Engine ${VERSION}: ${changed.join(', ')}`);

@@ -1,5 +1,6 @@
 import { loadConfig, type ConfigData } from '../project/config.js';
-import { launchChromium, chromiumPath } from './browser.js';
+import { launchChromium, chromiumVersion } from './browser.js';
+import type { Browser } from 'playwright';
 import sharp from 'sharp';
 import { readFile, writeFile, mkdir, rename, readdir, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
@@ -21,7 +22,7 @@ export async function environmentHash(config:ConfigData,root=ROOT){
  const files=[...PIXEL_FILES,...fonts,...(config.branding.avatar?['design/'+config.branding.avatar]:[])];
  const hashes=await Promise.all(files.map(async f=>[f,hash(await readFile(path.join(root,f)))]));
  const playwright=(await readJson(path.join(ROOT,'node_modules/playwright/package.json'))).version;
- return jsonHash({files:hashes,branding:config.branding,version:VERSION,playwright,chromium:chromiumPath()});
+ return jsonHash({files:hashes,branding:config.branding,version:VERSION,playwright,chromium:await chromiumVersion()});
 }
 // Images are hashed again only when their size or modification time changes: the studio asks for the project state
 // on every change event, and re-reading every picture each time made it slow on image-heavy projects.
@@ -39,8 +40,9 @@ export async function renderInputs(dir:string){
  const slides=p.carousel.slides.map((s,i)=>({id:s.id,input_hash:jsonHash({s,d:p.art.slides[s.id],family:p.art.family,t:p.tweaks.slides[s.id],environment,index:i,total:p.carousel.slides.length,asset:p.art.slides[s.id]?.image.asset_id?assetHashes[p.art.slides[s.id].image.asset_id!]:null})}));
  return {...p,config,tokens,environment,slides,project_hash:jsonHash({p,environment,slides})};
 }
-export function render(dir:string,only?:string[]){return withLock(dir,()=>renderUnlocked(dir,only));}
-async function renderUnlocked(dir:string,only?:string[]){
+// A caller that renders many times in a row (fit-probe, candidates) may lend its browser instead of launching one each time.
+export function render(dir:string,only?:string[],{browser:lent}:{browser?:Browser}={}){return withLock(dir,()=>renderUnlocked(dir,only,lent));}
+async function renderUnlocked(dir:string,only?:string[],lent?:Browser){
  const editorial=await lint(dir);if(!editorial.passed)throw Error('Lint editorial falhou; consulta qa/editorial-lint.json');
  const visual=await visualLint(dir);if(visual.length)throw Error(visual.join('\n'));
  const input=await renderInputs(dir);const {carousel:c,art:a,tweaks:t,config,tokens}=input;
@@ -50,7 +52,7 @@ async function renderUnlocked(dir:string,only?:string[]){
  const server=await serve(dir);let browser;
  const records:any[]=[];
  try{
-  browser=await launchChromium({args:['--force-color-profile=srgb']});
+  browser=lent??await launchChromium({args:['--force-color-profile=srgb']});
   const browserVersion=browser.version();
   for(let i=0;i<c.slides.length;i++){
    const s=c.slides[i],fingerprint=input.slides[i],num=String(i+1).padStart(2,'0');const old=previous?.slides.find((r:any)=>r.id===s.id);
@@ -71,7 +73,7 @@ async function renderUnlocked(dir:string,only?:string[]){
   await buildPreview(dir,c.slides.length);
   await log(dir,'RENDER',`${records.length} painéis; ${records.filter(r=>!r.passed).length} falhas`);
   return manifest;
- }finally{await browser?.close();await server.close();}
+ }finally{if(!lent)await browser?.close();await server.close();}
 }
 export async function buildPreview(dir:string,count:number){
  const tiles=[];
@@ -100,20 +102,25 @@ export async function validate(dir:string){
  const result={schema_version:1,passed:!errors.length,project_hash:input.project_hash,render_hash:manifest?.render_hash??null,errors};await writeJson(path.join(dir,'qa/validation.json'),result);return result;
 }
 export type Reviewer={name:string;kind:'agent'|'human'};
+// Review history and the automatic cycles spent since the last human review (distinct renders reviewed by the agent).
+export async function reviewCycles(dir:string){
+ const previous=await optionalJson(path.join(dir,'qa/visual-review.json'));
+ const history:any[]=previous?.history??(previous?[{render_hash:previous.render_hash,approved:previous.approved,reviewer:previous.reviewer,kind:'human',notes:previous.notes,created_at:previous.created_at}]:[]);
+ const lastHuman=history.findLastIndex(h=>h.kind==='human');
+ const agentRenders=new Set<string>(history.slice(lastHuman+1).filter(h=>h.kind==='agent').map(h=>h.render_hash));
+ return {history,agentRenders,max:(await loadConfig()).qa.max_auto_revision_cycles};
+}
 // Automatic cycles are counted per distinct render reviewed by the agent since the last human review.
 // Re-reviewing the same render does not spend a cycle; a person can always review.
-export async function review(dir:string,reviewer:Reviewer,notes:string,approved:boolean){
+export function review(dir:string,reviewer:Reviewer,notes:string,approved:boolean){return withLock(dir,()=>reviewUnlocked(dir,reviewer,notes,approved));}
+async function reviewUnlocked(dir:string,reviewer:Reviewer,notes:string,approved:boolean){
  // Pending images do not stop the QA cycle (the review is recorded for this render); anything else does.
  // Export still needs a passing validation, so the images and a new review come before publishing.
  const validation=await validate(dir),blocking=validation.errors.filter(e=>!/placeholder/.test(e));
  if(blocking.length)throw Error('Corrigir validação antes de registrar revisão visual: '+blocking.join('; '));
  if(!reviewer.name.trim())throw Error('Informe quem revisou');
- const previous=await optionalJson(path.join(dir,'qa/visual-review.json'));
- const history:any[]=previous?.history??(previous?[{render_hash:previous.render_hash,approved:previous.approved,reviewer:previous.reviewer,kind:'human',notes:previous.notes,created_at:previous.created_at}]:[]);
- const lastHuman=history.findLastIndex(h=>h.kind==='human');
- const agentRenders=new Set(history.slice(lastHuman+1).filter(h=>h.kind==='agent').map(h=>h.render_hash));
- const max=(await loadConfig()).qa.max_auto_revision_cycles;
- if(reviewer.kind==='agent'&&!agentRenders.has(validation.render_hash)&&agentRenders.size>=max)throw Error(`Limite de ${max} ciclos automáticos atingido; revisão humana necessária (review --human).`);
+ const {history,agentRenders,max}=await reviewCycles(dir);
+ if(reviewer.kind==='agent'&&!agentRenders.has(validation.render_hash)&&agentRenders.size>=max)throw Error(`Limite de ${max} ciclos automáticos atingido: a próxima é uma revisão humana. Diego confere no estúdio (Exportar) ou, depois que ele conferir, review --human --reviewer Diego. Nunca usar --human sem uma pessoa ter olhado.`);
  const cycles=reviewer.kind==='agent'?new Set([...agentRenders,validation.render_hash]).size:0;
  const pendingImages=validation.errors.length-blocking.length;
  const entry={render_hash:validation.render_hash,approved,reviewer:reviewer.name,kind:reviewer.kind,notes,...(pendingImages?{pending_images:pendingImages}:{}),created_at:new Date().toISOString()};

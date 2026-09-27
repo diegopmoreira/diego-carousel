@@ -23,6 +23,7 @@ export async function promoteVariant(dir:string,name:string){
 }
 // A throwaway visual variant for experiments (fit-probe, candidates); always removed afterwards.
 export async function withTempVariant<T>(dir:string,prefix:string,fn:(variant:string)=>Promise<T>):Promise<T>{
- const base=await contentDir(dir),variant=await createVariant(base,`${prefix}-${randomBytes(3).toString('hex')}`);
+ // Cloned from the given directory, so an experiment on a version uses that version's family and tweaks.
+ const variant=await createVariant(dir,`${prefix}-${randomBytes(3).toString('hex')}`);
  try{return await fn(variant);}finally{await rm(variant,{recursive:true,force:true});}
 }

@@ -73,7 +73,8 @@ export function checkCorpusSource(t:CorpusTranscript,{allowConversation=false,al
  const visibility=typeof m.visibilidade==='string'?m.visibilidade:null;
  if(visibility==='privado')throw Error('Fonte recusada: vídeo privado no YouTube');
  if(visibility&&visibility!=='publico'&&!allowUnlisted)throw Error(`Fonte recusada: vídeo ${visibility}. Só vídeos públicos; use --allow-unlisted se Diego autorizar este vídeo.`);
- if(typeof m.tipo!=='string'&&!visibility&&!confirmPublic)throw Error('Fonte sem registro no Corpus (tipo e visibilidade desconhecidos). Confira pelo MCP corpus-diego que é um vídeo público de Diego, sem supervisão, e repita com --confirm-public.');
+ // Only a recorded "publico" counts as public: unknown visibility, even with a known type, needs a confirmation.
+ if(!visibility&&!confirmPublic)throw Error(`Visibilidade desconhecida no Corpus${typeof m.tipo==='string'?` (tipo ${m.tipo})`:' (sem registro)'}. Confira pelo MCP corpus-diego que é um vídeo público de Diego, sem supervisão, e repita com --confirm-public.`);
  const catalogSpeakers=Array.isArray(m.falantes)?(m.falantes as unknown[]).map(String):[];
  const speakers=[...new Set([...t.segments.map(s=>s.speaker).filter(Boolean) as string[],...catalogSpeakers])];
  const others=speakers.filter(s=>!DIEGO.test(s)&&!UNKNOWN_LABEL.test(s));

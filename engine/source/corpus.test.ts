@@ -45,4 +45,9 @@ describe('fonte do Corpus',()=>{
   const t=parseCorpus(JSON.stringify({text:'a b',segments:[{start:'01:02',text:'a',speaker:'Diego Moreira'}]}),'id1');
   expect(t.segments[0].start).toBe(62);expect(checkCorpusSource(t,{confirmPublic:true}).conversation).toBe(false);
  });
+ it('tipo conhecido com visibilidade desconhecida exige --confirm-public',()=>{
+  const t=parseCorpus(JSON.stringify({texto:'Texto sintético.'}),'id2',{tipo:'aula'});
+  expect(()=>checkCorpusSource(t)).toThrow(/confirm-public/);
+  expect(()=>checkCorpusSource(t,{confirmPublic:true})).not.toThrow();
+ });
 });

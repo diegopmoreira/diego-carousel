@@ -95,6 +95,10 @@ avisos. Passar no lint não prova qualidade: fazer a leitura do checklist.
 arquivo da família. Revisar a direção inicial do draft/import: família (heurística em
 `art-direction.md`), composição por função, densidade (nunca todos HIGH), ritmo, conceito de
 imagem por slide (`image.concept`, `mood`, `negative_space`, `focal_point`).
+Trocar composição sempre com `composition <projeto> <slide-id> <composição>`: grava posição do
+texto, ajuste do título, densidade e imagem coerentes (composição de texto guarda a imagem como
+alternativa; `cinematic_fade`/`image_card` sem imagem viram placeholder declarado). Nunca editar só
+o campo `composition` à mão.
 
 **Fase 8 — Assets.** `visual/image-policy.md` e a ficha do provider em `visual/providers/`.
 Prioridade: fornecido por Diego → biblioteca → frame do próprio vídeo (`asset frame <projeto>
@@ -106,22 +110,24 @@ pedido → conferir cada imagem (sem texto, sem pessoa real) → registrar na ho
 `asset add <projeto> --request <pedido> --url <url> [--model …] [--seed …]`. Escolher entre as
 variantes com `asset candidates <projeto> <slide-id>` (abrir `qa/candidates/<slide>.png`) e
 `asset choose <projeto> <slide-id> <asset-id> --score n --rationale "…"`. Sem imagem, fica
-placeholder e o export espera. Se Diego decidir que um slide não usa imagem: trocar a composição
-para uma de texto e rodar `image <projeto> <slide-id> --none` (`--need` volta a exigir). Uma capa
-`full_bleed` sem imagem vira capa tipográfica.
+placeholder e o export espera. Se Diego decidir que um slide não usa imagem:
+`composition <projeto> <slide-id> text_only` (ou outra de texto). Uma capa `full_bleed` sem imagem
+vira capa tipográfica: `image <projeto> <slide-id> --none` (`--need` volta a exigir).
 
 **Fase 9 — Render e QA visual.** `render <projeto>` (exige lint limpo). Abrir
 `qa/contact-sheet.png`, TODOS os PNGs de `qa/render/` e os mapas de tinta de `qa/ink/`; ler os
 avisos do render (tinta, contraste, espaço vazio, ritmo) e comparar com a direção de arte
 (`visual/visual-qa.md`). Se algo não cabe: `fit-probe <projeto> <slide-id>` mostra que composições
-cabem e quanto cortar; `autofit <projeto>` troca a composição dos que não cabem (como tweak) e
-renderiza. Se ainda assim não couber: em `full`, comprimir a copy (redraft); em `design-only`,
+cabem e quanto cortar; `autofit <projeto>` troca a composição dos que não cabem (na direção de
+arte, pela mesma regra do `composition`; mantém um slot de imagem quando algum cabe, senão avisa que
+a imagem virou alternativa) e renderiza. Se ainda assim não couber: em `full`, comprimir a copy (redraft); em `design-only`,
 `edit <projeto> <slide-id> --body "…" --reason "…"` gera `qa/edit-proposal.md` e só entra com
 `approve <projeto> edit --by Diego` depois do aval dele. Nunca descer abaixo dos pisos. Registrar
 cada inspeção real: `review <projeto> --reviewer Claude --note "<o que vi>" [--approved]` (ciclo
-automático; no limite de `config.json` a revisão passa a ser humana). Nunca usar `--human`. Com
-imagens ainda pendentes a revisão pode ser registrada (fica marcada); o export continua esperando
-as imagens e uma nova revisão do render final.
+automático; `status` mostra `auto_review_cycles_left`). Esgotados os ciclos, a próxima revisão é
+de Diego no estúdio: avisar e parar. Nunca usar `--human`. Com imagens ainda pendentes a revisão
+pode ser registrada (fica marcada); o export continua esperando as imagens e uma nova revisão do
+render final.
 
 **Fase 10 — Export e preview.** `validate` → `export` (copia também para `export.sync_dir`, se
 configurado). `preview <projeto>` abre o estúdio em 127.0.0.1:4321: ajuste com prévia ao vivo,
@@ -132,7 +138,8 @@ pendente.
 ## Copy pronta (design-only)
 
 1. `new <slug> --source copy` e `import-copy <projeto> <copy.md>` (ou `from-copy <slug> <copy.md>`).
-   Aceita P1/Slide 1/formato Figma; CAIXA ALTA vira ênfase.
+   Aceita P1/Slide 1/formato Figma; CAIXA ALTA vira ênfase (siglas conhecidas como TDAH e QI não;
+   para destacar uma sigla, `**TDAH**`).
 2. Se houver "você": `voice <projeto>` gera `qa/voice-proposal.md`. Mostrar a Diego. Só depois do
    "aprovado" explícito dele: `approve <projeto> voice --by Diego`. Mudanças fora da regra bloqueiam.
 3. Seguir as Fases 7–10. Não reescrever copy travada para caber: reportar.
