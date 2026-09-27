@@ -1,7 +1,27 @@
 # Estado atual — 27/09/2026
 
-Plano em vigor: `docs/plano-v2.md`. **Rodada 0 (linha de base e correções) concluída.**
-Próxima: Rodada 1, motor editorial (modo `full`).
+Plano em vigor: `docs/plano-v2.md`. **Rodada 0 concluída. Rodada 1 concluída na parte que roda na
+nuvem**; o que depende do Corpus e das referências privadas está em `docs/sessao-local.md`.
+
+## Rodada 1 — motor editorial (nuvem)
+
+- `editorial/` reescrito a partir da especificação: papéis P1–P10, cinco arquiteturas, dez famílias
+  de hook, Nota Viral com piso (impacto, clareza, tensão), famílias de headline, densidade, spine e
+  teste cego, continuidade (`next_question`, `adds`, anti-filler, segunda virada), tom, contraste,
+  metáfora, CTA, anti-padrões. Frameworks de Diego são vocabulário quando a fonte sustenta.
+- `new --source corpus:<id>` (ou um `v1.json`): lê a transcrição do Corpus, mantém tempo e falante
+  na transcrição de trabalho, recusa supervisão e conversa. **Formato real ainda a conferir.**
+- `draft <proj> copy.md --meta editorial.json`: slides com IDs opacos, metadados editoriais e
+  direção de arte inicial por função narrativa; redraft preserva IDs. `slide add|move|rm`.
+- `voice` / `approve <proj> voice --by`: proposta "você → tu" só com mudanças de pessoa; aplicada
+  com aval registrado em `approvals.json`; o lint confere a cadeia fonte → aprovações.
+- Lint do modo full: seções do relatório (inclui `## Teste cego`), briefing, hook com piso,
+  5+ candidatos, vocabulários de papel/headline/adds. Faixa do body em `config.json`.
+- `idea add|list` (backlog), `spine --blind`, `library validate|stats` (biblioteca genética em YAML),
+  checkpoint após a tese em `config.json`.
+- Skill reescrita com as Fases 1–10, modos e comandos.
+- Testes: 44 unitários; E2E cobre o fluxo full (Corpus sintético → draft → render → export
+  bloqueado pelas imagens pendentes).
 
 ## Rodada 0 — o que mudou
 

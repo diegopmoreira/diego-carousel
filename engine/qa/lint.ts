@@ -9,7 +9,7 @@ export type Issue={severity:'error'|'warning';path:string;message:string};
 export async function lint(dir:string){
  const base=await contentDir(dir),p=await loadProject(dir),c=p.carousel,issues:Issue[]=[];
  const add=(severity:Issue['severity'],at:string,message:string)=>issues.push({severity,path:at,message});
- const {slides:range}=await loadConfig();
+ const {slides:range,editorial:{body_range:[bodyMin,bodyMax]}}=await loadConfig();
  if(c.slides.length<range.min||c.slides.length>range.max)add('error','slides',`São necessários ${range.min}–${range.max} painéis`);
  const voiceSeverity:Issue['severity']=c.project.mode==='full'?'error':'warning';
  const forbidden=['antes de começar','neste carrossel','siga meu perfil','compartilhe com seus amigos','5 dicas','você merece','transforme sua vida','descubra o segredo','junto com você nessa jornada','vamos juntos','acredite em si mesmo'];
@@ -21,7 +21,7 @@ export async function lint(dir:string){
   if(/(?<!\p{L})voc[eê]s?(?!\p{L})/iu.test(t))add(voiceSeverity,`slides.${i}`,c.project.mode==='full'?'A voz usa sempre tu':'Copy pronta usa "você": a proposta em tu só entra com aval de Diego');
   if(/\b(seu|sua|seus|suas)\b/u.test(t))add('warning',`slides.${i}`,'Verificar pronome possessivo: prefere teu/tua');
   for(const phrase of forbidden)if(t.includes(phrase))add('error',`slides.${i}`,`Expressão proibida: ${phrase}`);
-  if(s.body&&(plainText(s.body).length<120||plainText(s.body).length>350))add('warning',`slides.${i}.body`,'Body fora da faixa inicial de 120–350 caracteres; o fit decide legibilidade');
+  if(s.body&&(plainText(s.body).length<bodyMin||plainText(s.body).length>bodyMax))add('warning',`slides.${i}.body`,`Body com ${plainText(s.body).length} caracteres, fora da faixa ${bodyMin}–${bodyMax} (config.json); o fit decide legibilidade`);
   if(i<c.slides.length-1&&!s.next_question)add(c.project.mode==='full'?'error':'warning',`slides.${i}.next_question`,'Registrar a pergunta que conduz ao próximo painel');
   if(i>0&&s.adds.some(a=>c.slides[i-1].adds.includes(a)))add('warning',`slides.${i}.adds`,'Adição repetida no painel vizinho');
   const words=new Set(plainText(s.headline).toLowerCase().split(/\s+/));

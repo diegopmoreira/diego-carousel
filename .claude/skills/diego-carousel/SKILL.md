@@ -1,55 +1,123 @@
 ---
 name: diego-carousel
-description: Transformar transcrições públicas de Diego Moreira em copy de carrossel e diagramar copy pronta com o engine local deste projeto. Usar também para revisar e renderizar um carrossel existente.
+description: Transformar transcrições públicas de Diego Moreira (arquivo ou Corpus) em carrossel de Instagram completo — tese, copy, direção de arte e PNGs — e diagramar copy pronta com o engine local deste projeto. Usar também para ajustar, variar, revisar e exportar um carrossel existente.
 ---
 
 # Sistema de carrosséis Diego Moreira
 
-Trabalhar na raiz do projeto. Ler `docs/STATUS.md` antes de escolher comandos: a V1 está em implementação. O plano em vigor é `docs/plano-v2.md`; a especificação original está em `docs/plano-v1.md`. Não confundir capacidade planejada com comando disponível.
+Trabalhar na raiz do projeto. Plano em vigor: `docs/plano-v2.md`; estado: `docs/STATUS.md`.
+Não confundir capacidade planejada com comando disponível: `npm run carousel -- help` lista o que
+existe. Todo comando abaixo é `npm run carousel -- <comando>`.
 
-## Modo e invariantes
+## Detectar o modo
 
-- Transcrição pública: `full`. Fonte clínica de terceiros/supervisão não entra.
-- Copy pronta: `design-only`, conteúdo travado. Importar, não reescrever.
-- Ajuste visual: editar direção/tweaks por ID e renderizar novamente.
-- Variante: `variant <projeto> <nome> --family <família>`, depois `render <projeto>/variants/<nome>`. Copy e assets permanecem no principal. `promote <projeto> <nome>` preserva o visual anterior antes de substituir a direção principal.
-- Voz sempre tu, com conjugação coloquial. Ler `editorial/language-style.md`. Em copy pronta, "você" gera aviso (não bloqueio) e nunca é convertido sem aval de Diego.
-- IDs opacos persistentes: nunca renumerar IDs junto com P1…Pn.
-- `carousel.json` contém copy; `art-direction.json` contém decisões visuais; `tweaks.json` contém ajuste numérico.
+| Pedido | Modo | Começa em |
+|---|---|---|
+| transcrição (.txt), vídeo do Corpus (`corpus:<id>`), "faz um carrossel deste vídeo" | `full` | Fase 1 |
+| copy P1–P10 pronta (do agente de copy ou colada) | `design-only` | Copy pronta |
+| "aumenta o título do 4", "troca a imagem", "move o texto" em projeto existente | `rerender` | Ajustes |
+| "faz no estilo B", "outra capa" | `variant` | Variantes |
+
+"Outra capa" é ambíguo (outro hook? outra imagem? outra estratégia?): perguntar antes.
+
+## Invariantes
+
+- Voz sempre "tu" (`editorial/language-style.md`). Em copy pronta, "você" é aviso e só muda com
+  aval de Diego.
+- Uma tese por carrossel. Nunca inventar posição de Diego. Só fonte pública com falante Diego:
+  supervisões, conversas e casos de terceiros nunca entram.
+- IDs de slide são opacos e persistentes: nunca renumerar. `carousel.json` = conteúdo;
+  `art-direction.json` = decisões visuais; `tweaks.json` = ajuste numérico; `approvals.json` = o que
+  Diego aprovou (gravado pelo CLI).
+- Depois de aprovado, editar arquivos com mudanças pontuais; nunca reescrever o arquivo inteiro.
+- Nunca mexer em `copy_locked`, `source/` ou `approvals.json` para contornar o lint.
 - Fontes e assets locais. Nunca copiar `.env` ou credenciais.
 
-## Copy pronta
+## Modo full — Fases 1 a 6 (editorial)
 
-1. `npm run carousel -- new <slug> --source copy`.
-2. `npm run carousel -- import-copy <projeto> <arquivo>` aceita P1/Slide 1 e blocos do Figma.
-3. Ler `visual/visual-dna.md`, `visual/compositions.md`, `visual/art-direction.md` e a família escolhida. Revisar a direção inicial, que é apenas uma alternância tipográfica.
-4. Se necessário, registrar imagem com `asset add <projeto> <arquivo> --rights <origem> --slide <id>`; ler `visual/image-policy.md`.
-5. Seguir render e revisão abaixo.
+**Fase 1 — Fonte e mapa.** Ler `editorial/core-dna.md` e `editorial/source-compression.md`.
+- `new <slug> --source corpus:<video_id>` (lê `transcricoes/<id>/v1.json` do disco; defina
+  `CAROUSEL_CORPUS_DIR` se o Corpus não estiver no caminho padrão) ou `--source <arquivo.txt>`.
+  Sem acesso ao disco mas com o MCP `corpus-diego`: obter a transcrição pelo MCP, salvar o JSON
+  como `v1.json` e usar `--source <v1.json>`. Supervisão/conversa é recusada pelo engine.
+- Ler `source/transcript.txt` uma vez (tem `[m:ss] (falante)`); escrever `## Mapa da fonte` em
+  `editorial-report.md` com citação literal e localização por ideia. Daqui em diante trabalhar
+  sobre o mapa.
 
-O log de fit (`run.log`, `fit/<id>.json`) lista só os estágios executados; `needs` indica se falta trocar composição ou comprimir, e `chars_that_fit` quanto do texto cabe. Não reduzir ou reescrever copy travada para caber. Reportar o problema. O fluxo de autorização/histórico de compressão ainda não existe; não contornar o gate alterando copy_locked ou a fonte original.
+**Fase 2 — Diagnóstico e tese.** `editorial/thesis-selection.md`. Escrever `## Diagnóstico` (cinco
+campos) e `## Teses` (3–6 candidatas, seis implicações cada). Com o MCP: `consultar_corpus`
+(falante = Diego) para checar defensabilidade e achar formulações próprias. Escolher UMA; as outras
+vão para o backlog com `idea add --thesis … --source corpus:<id> --why …`.
+**Checkpoint:** se `config.json` → `editorial.checkpoint_after_thesis` for `true` (padrão agora),
+apresentar a tese escolhida, duas alternativas e 3 hooks e esperar Diego escolher.
 
-## Full editorial
+**Fase 3 — Hooks.** `editorial/hook-matrix.md` e `viral-score.md`. 5–10 hooks de famílias
+diferentes, notas nas seis dimensões, piso 7 em impacto/clareza/tensão, escolha por curiosidade +
+defensabilidade + progressão. Registrar em `## Hooks`.
 
-1. Criar projeto com `new <slug> --source <transcricao.txt>`. Corpus direto ainda não implementado: usar uma exportação pública verificável.
-2. Ler `editorial/core-dna.md` e `source-compression.md`. Produzir mapa com citações literais e falante no relatório.
-3. Ler `thesis-selection.md`; levantar teses, escolher uma sustentada na fonte e registrar alternativas em `ideas/backlog.jsonl`. Nas primeiras rodadas editoriais, apresentar a tese para avaliação de Diego antes de desenvolver a copy.
-4. Ler `hook-matrix.md` e `viral-score.md`; produzir 5–10 hooks e justificar escolha.
-5. Ler `narrative-architectures.md`, `internal-headlines.md` e `continuity.md`; escrever spine, adds e next_question. Não afirmar que houve teste cego se não foi realizado.
-6. Ler `language-style.md` e `editorial-qa.md`; escrever bodies e legenda, completar `carousel.json` conforme os schemas em `engine/schema/generated`. Relatório com Mapa da fonte, Diagnóstico, Teses, Hooks e Spine.
-7. `lint <projeto>`; corrigir erros. Depois seguir direção de arte e render.
+**Fase 4 — Arquitetura e spine.** `narrative-architectures.md`, `internal-headlines.md`,
+`continuity.md` e, quando existir, 2–3 exemplos de `genetic-library/editorial/`. Escrever só as
+headlines + `next_question` + `adds`. Registrar em `## Spine`.
+**Teste cego:** depois do draft (Fase 5), rodar `spine <projeto> --blind` e passar SÓ essa saída a
+um subagente com a pergunta: "Qual é a tese em uma frase? O argumento avança a cada painel? Qual
+painel sobra?". Registrar a resposta literal, a comparação com a tese e o veredito em
+`## Teste cego`. Se não bater, corrigir a spine antes dos bodies. Nunca inventar o resultado.
 
-A biblioteca genética ainda não foi transcrita/calibrada. Não inventar exemplos como se fossem publicados por Diego.
+**Fase 5 — Bodies e estrutura.** `language-style.md`. Escrever `copy.md` (formato P1…Pn) e um
+`editorial.json` com `editorial` (briefing, tese, hook, candidatos, CTA, legenda), `art` (família,
+racional) e `slides[]` (`narrative_role`, `headline_type`, `adds`, `next_question`,
+`visual_intent`) na mesma ordem. Modelo: `fixtures/full/editorial.json`. Então:
+```
+draft <projeto> copy.md --meta editorial.json      # cria slides, IDs e direção inicial por função
+```
+Redraft preserva IDs e direção de arte; `--reset-art` refaz a direção. Ajustes estruturais:
+`slide add|move|rm`.
 
-## Render e revisão
+**Fase 6 — QA editorial.** `editorial-qa.md` + `lint <projeto>`. Corrigir todos os erros; ler os
+avisos. Passar no lint não prova qualidade: fazer a leitura do checklist.
 
-- `render <projeto>` executa lint antes de renderizar. `--slides id,id` restringe a execução, mas validate continua exigindo todos os slides atuais.
-- O engine salva candidatos em `qa/render`, fit em `fit/` e a grade em `qa/contact-sheet.png`.
-- Se o texto não couber: examinar relatório, testar composição apropriada; compressão depende do modo e autorização. Nunca baixar fontes abaixo do piso.
-- Ler `visual/visual-qa.md`; abrir a grade e todos os PNGs, conferir acentos e identidade. Corrigir a direção/tweaks com edições pontuais. Máximo de três ciclos.
-- `validate <projeto>` verifica integridade atual. Após inspeção real, registrar `review <projeto> --reviewer Claude --note <observações> [--approved]`. Cada render novo revisado assim conta um ciclo automático; no limite de `config.json` pedir revisão humana. Nunca usar `--human` por conta própria.
-- `export <projeto>` só libera PNGs e ZIP após validação e revisão atuais. `preview <projeto>` abre o estúdio local na porta 4321. A interface cria projetos por copy colada, ajusta visual, envia imagens, cria versões e registra revisão ao exportar. A copy permanece protegida.
-- Não anunciar “publicável” se houver placeholder, conflito editorial, render antigo ou revisão pendente.
+## Fases 7 a 10 (visual) — full e design-only
+
+**Fase 7 — Direção de arte.** `visual/visual-dna.md`, `compositions.md`, `art-direction.md` e o
+arquivo da família. Revisar a direção inicial do draft/import: família (heurística em
+`art-direction.md`), composição por função, densidade (nunca todos HIGH), ritmo, conceito de
+imagem por slide (`image.concept`, `mood`, `negative_space`, `focal_point`).
+
+**Fase 8 — Assets.** `visual/image-policy.md`. Prioridade: fornecido por Diego → biblioteca →
+frame do próprio vídeo → licenciado → gerado. Registrar com
+`asset add <projeto> <arquivo> --rights <origem> --slide <id>`. Sem imagem, fica placeholder e o
+export espera.
+
+**Fase 9 — Render e QA visual.** `render <projeto>` (exige lint limpo). Abrir
+`qa/contact-sheet.png` e TODOS os PNGs de `qa/render/`; comparar com a direção de arte
+(`visual/visual-qa.md`). Se algo não cabe: `fit/<id>.json` → `needs` diz se falta trocar
+composição ou comprimir; `chars_that_fit` diz quanto cabe. Em `full`, comprimir a copy; em
+`design-only`, só com autorização. Nunca descer abaixo dos pisos. Corrigir com edições pontuais e
+renderizar de novo. Registrar cada inspeção real:
+`review <projeto> --reviewer Claude --note "<o que vi>" [--approved]` (ciclo automático; no limite
+de `config.json` a revisão passa a ser humana). Nunca usar `--human`.
+
+**Fase 10 — Export e preview.** `validate` → `export`. `preview <projeto>` abre o estúdio em
+127.0.0.1:4321, onde Diego ajusta, cria versões e exporta (a exportação pelo estúdio registra a
+revisão humana). Não chamar de "publicável" com placeholder, lint com erro, render antigo ou
+revisão pendente.
+
+## Copy pronta (design-only)
+
+1. `new <slug> --source copy` e `import-copy <projeto> <copy.md>` (ou `from-copy <slug> <copy.md>`).
+   Aceita P1/Slide 1/formato Figma; CAIXA ALTA vira ênfase.
+2. Se houver "você": `voice <projeto>` gera `qa/voice-proposal.md`. Mostrar a Diego. Só depois do
+   "aprovado" explícito dele: `approve <projeto> voice --by Diego`. Mudanças fora da regra bloqueiam.
+3. Seguir as Fases 7–10. Não reescrever copy travada para caber: reportar.
+
+## Ajustes (rerender) e variantes
+
+- Ajuste pontual: editar `tweaks.json` (`slides.<id>.params`) ou o campo certo de
+  `art-direction.json`, depois `render <projeto>`; só o slide afetado muda.
+- Variante: `variant <projeto> <nome> --family <família>` → `render <projeto>/variants/<nome>`;
+  `promote <projeto> <nome>` guarda o visual anterior como backup.
 
 ## Retomada
 
-Rodar `status <projeto>`, ler run.log e os relatórios em qa. Manter a fonte original. Não reconstruir arquivos inteiros aprovados para uma mudança pequena. Pedidos ambíguos sobre “outra capa” exigem distinguir hook, imagem e estratégia.
+`status <projeto>`, `run.log`, `qa/*.json`. Manter a fonte original. Não reconstruir arquivos
+aprovados para uma mudança pequena.

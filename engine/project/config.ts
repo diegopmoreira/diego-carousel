@@ -8,7 +8,8 @@ export const Config=z.object({
  slides:z.object({default:z.number().int(),min:z.number().int().min(1),max:z.number().int().max(12)}).refine(s=>s.min<=s.default&&s.default<=s.max,'slides: min ≤ default ≤ max'),
  family:z.enum(['auto','cinematic_condensed','editorial_clean']).default('auto'),
  // Early weeks: stop after the thesis for Diego's choice (editorial/thesis-selection.md).
- editorial:z.object({checkpoint_after_thesis:z.boolean().default(true)}).default({checkpoint_after_thesis:true}),
+ // body_range is calibrated on the genetic library (library stats); outside it the lint warns.
+ editorial:z.object({checkpoint_after_thesis:z.boolean().default(true),body_range:z.tuple([z.number().int().min(0),z.number().int().min(1)]).default([120,350])}).default({checkpoint_after_thesis:true,body_range:[120,350]}),
  qa:z.object({max_auto_revision_cycles:z.number().int().min(1).max(10)}),
  branding:z.object({name:z.string(),handle:z.string(),avatar:z.string().nullable(),verified:z.boolean(),profile_on:z.enum(['cover','all']).default('cover'),swipe_text:z.string(),follow_text:z.string()}),
  assets:z.object({priority:z.array(z.string()),cover_variants:z.number().int(),body_variants:z.number().int(),max_generations_per_carousel:z.number().int()}),

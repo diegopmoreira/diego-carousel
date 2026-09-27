@@ -9,7 +9,8 @@
   },
   "family": "auto",
   "editorial": {
-    "checkpoint_after_thesis": true
+    "checkpoint_after_thesis": true,
+    "body_range": [120, 350]
   },
   "qa": {
     "max_auto_revision_cycles": 3
