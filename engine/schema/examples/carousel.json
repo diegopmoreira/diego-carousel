@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "$schema": "../../engine/schema/generated/carousel.schema.json",
+  "project": {
+    "id": "k45f700159b",
+    "created_at": "2026-09-27T03:01:06.748Z",
+    "skill_version": "0.1.0",
+    "engine_version": "0.1.0",
+    "language": "pt-BR",
+    "canvas": {
+      "width": 1080,
+      "height": 1350
+    },
+    "mode": "design-only",
+    "copy_locked": true
+  },
+  "source": {
+    "type": "copy_input",
+    "ref": "copy-pronta.md",
+    "title": "demonstracao",
+    "hash": "016f9b0e8b00b7ba321fcdde8d44e4504d2d0564a2e3b5c28e0625f1f9ca35fb"
+  },
+  "editorial": {
+    "objective": "",
+    "audience": "",
+    "angle": "",
+    "promise": "",
+    "central_thesis": "",
+    "belief": "",
+    "contradiction": "",
+    "mechanism": "",
+    "architecture": "",
+    "hybrid": [],
+    "hook_candidates": [],
+    "central_metaphor": "",
+    "cta": {
+      "type": "none",
+      "text": ""
+    },
+    "caption": ""
+  },
+  "slides": [
+    {
+      "id": "k9bc97b0827",
+      "narrative_role": "hook",
+      "headline": "Tu não precisa vencer toda discussão",
+      "body": null,
+      "headline_type": "statement",
+      "adds": [],
+      "next_question": "",
+      "visual_intent": ""
+    },
+    {
+      "id": "kb1861419a8",
+      "narrative_role": "development",
+      "headline": "Responder rápido pode esconder medo",
+      "body": "Quando alguém discorda de ti, a resposta pode sair antes da escuta. Tu tenta proteger tua imagem, mas perde a chance de entender o que foi dito.",
+      "headline_type": "statement",
+      "adds": [],
+      "next_question": "",
+      "visual_intent": ""
+    },
+    {
+      "id": "k03bdea1439",
+      "narrative_role": "development",
+      "headline": "A pressa troca escuta por defesa",
+      "body": "Tu prepara a próxima frase enquanto o outro ainda fala. A conversa deixa de servir ao encontro e começa a servir à tua necessidade de ter razão.",
+      "headline_type": "statement",
+      "adds": [],
+      "next_question": "",
+      "visual_intent": ""
+    },
+    {
+      "id": "k91a8183e7c",
+      "narrative_role": "development",
+      "headline": "Discordar não diminui teu valor",
+      "body": "Uma ideia tua pode estar errada. Reconhecer isso não apaga tua história, teu trabalho ou tua capacidade de aprender. Só coloca aquela ideia no lugar dela.",
+      "headline_type": "statement",
+      "adds": [],
+      "next_question": "",
+      "visual_intent": ""
+    },
+    {
+      "id": "k9c5c7170c3",
+      "narrative_role": "development",
+      "headline": "O silêncio também pode ser escolha",
+      "body": "Faz uma pausa antes de responder. Nesse intervalo, pergunta o que tu quer proteger: a verdade que está em discussão ou a imagem que tu tem de ti?",
+      "headline_type": "statement",
+      "adds": [],
+      "next_question": "",
+      "visual_intent": ""
+    },
+    {
+      "id": "k004bdb650a",
+      "narrative_role": "development",
+      "headline": "Escutar exige uma pergunta concreta",
+      "body": "Pede um exemplo. Repete o que tu entendeu e confere se é isso mesmo. Essa pequena ação impede que tu discuta com uma versão inventada do outro.",
+      "headline_type": "statement",
+      "adds": [],
+      "next_question": "",
+      "visual_intent": ""
+    },
+    {
+      "id": "k93d03f7171",
+      "narrative_role": "development",
+      "headline": "Tu pode rever uma frase hoje",
+      "body": "Escolhe uma conversa recente. Identifica uma resposta que tu deu só para vencer. Volta a ela com uma pergunta que tu ainda não fez.",
+      "headline_type": "statement",
+      "adds": [],
+      "next_question": "",
+      "visual_intent": ""
+    },
+    {
+      "id": "k9bb8b59251",
+      "narrative_role": "development",
+      "headline": "Nem toda conversa precisa de vencedor",
+      "body": "Às vezes, o melhor resultado é sair com uma pergunta mais precisa e com alguém que ainda consegue falar contigo sem precisar se defender.",
+      "headline_type": "statement",
+      "adds": [],
+      "next_question": "",
+      "visual_intent": ""
+    },
+    {
+      "id": "ke266d3ac87",
+      "narrative_role": "development",
+      "headline": "Firmeza e escuta podem andar juntas",
+      "body": "Tu não precisa abandonar o que considera verdadeiro. Precisa conseguir explicar por quê e reconhecer quando a experiência do outro pede uma distinção.",
+      "headline_type": "statement",
+      "adds": [],
+      "next_question": "",
+      "visual_intent": ""
+    },
+    {
+      "id": "k98bc22a707",
+      "narrative_role": "closing",
+      "headline": "Na próxima conversa, deixa espaço",
+      "body": "Antes de responder, faz uma pergunta. Começa por uma conversa de hoje e observa o que muda quando tu deixa de tratar cada discordância como ameaça.",
+      "headline_type": "statement",
+      "adds": [],
+      "next_question": "",
+      "visual_intent": ""
+    }
+  ]
+}

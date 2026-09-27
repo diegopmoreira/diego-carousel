@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "number",
+      "const": 1
+    },
+    "$schema": {
+      "type": "string"
+    },
+    "slides": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]{3,63}$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "composition": {
+            "type": "string",
+            "enum": [
+              "full_bleed",
+              "cinematic_fade",
+              "image_card",
+              "text_only",
+              "giant_statement",
+              "minimal_pause",
+              "quote",
+              "contrast"
+            ]
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "headline_size_delta": {
+                "type": "number",
+                "minimum": -24,
+                "maximum": 24
+              },
+              "body_size_delta": {
+                "type": "number",
+                "minimum": -4,
+                "maximum": 8
+              },
+              "image_y": {
+                "type": "number",
+                "minimum": -200,
+                "maximum": 200
+              },
+              "image_scale": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 1.5
+              },
+              "block_gap": {
+                "type": "number",
+                "minimum": 24,
+                "maximum": 72
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "params"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "slides"
+  ],
+  "additionalProperties": false
+}

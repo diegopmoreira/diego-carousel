@@ -1,0 +1,35 @@
+{
+  "name": "diego-carousel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "carousel": "node --import tsx engine/cli.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "fonts": "node --import tsx scripts/vendor-fonts.ts",
+    "schemas": "node --import tsx scripts/generate-schemas.ts",
+    "preview": "node --import tsx engine/cli.ts preview",
+    "check": "npm run typecheck && npm test",
+    "test:e2e": "node --import tsx scripts/e2e.ts",
+    "test:studio": "node --import tsx scripts/studio-e2e.ts"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "5.3.0",
+    "@fontsource/anton-sc": "5.3.0",
+    "@fontsource/montserrat": "5.3.0",
+    "playwright": "1.63.0",
+    "sharp": "0.35.4",
+    "tsx": "4.23.15",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.3",
+    "node": "24.21.0",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11"
+  }
+}

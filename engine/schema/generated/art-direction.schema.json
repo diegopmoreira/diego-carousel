@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "number",
+      "const": 1
+    },
+    "$schema": {
+      "type": "string"
+    },
+    "family": {
+      "type": "string",
+      "enum": [
+        "cinematic_condensed",
+        "editorial_clean"
+      ]
+    },
+    "cover_strategy": {
+      "type": "string"
+    },
+    "rationale": {
+      "type": "string"
+    },
+    "slides": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]{3,63}$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "visual_role": {
+            "type": "string"
+          },
+          "composition": {
+            "type": "string",
+            "enum": [
+              "full_bleed",
+              "cinematic_fade",
+              "image_card",
+              "text_only",
+              "giant_statement",
+              "minimal_pause",
+              "quote",
+              "contrast"
+            ]
+          },
+          "density": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          },
+          "layout": {
+            "type": "object",
+            "properties": {
+              "headline_position": {
+                "type": "string",
+                "enum": [
+                  "top",
+                  "center",
+                  "bottom"
+                ]
+              },
+              "align": {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "center"
+                ]
+              }
+            },
+            "required": [
+              "headline_position",
+              "align"
+            ],
+            "additionalProperties": false
+          },
+          "image": {
+            "type": "object",
+            "properties": {
+              "need": {
+                "type": "boolean"
+              },
+              "placeholder": {
+                "default": false,
+                "type": "boolean"
+              },
+              "concept": {
+                "type": "string"
+              },
+              "mood": {
+                "type": "string"
+              },
+              "subject_priority": {
+                "type": "string"
+              },
+              "crop": {
+                "type": "string"
+              },
+              "negative_space": {
+                "type": "string"
+              },
+              "strategy": {
+                "default": "none",
+                "type": "string",
+                "enum": [
+                  "none",
+                  "manual",
+                  "library",
+                  "generated",
+                  "video_frame"
+                ]
+              },
+              "asset_id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{3,63}$"
+              },
+              "alternatives": {
+                "default": [],
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{3,63}$"
+                }
+              },
+              "focal_point": {
+                "default": {
+                  "x": 0.5,
+                  "y": 0.5
+                },
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "x",
+                  "y"
+                ]
+              }
+            },
+            "required": [
+              "need"
+            ],
+            "additionalProperties": false
+          },
+          "fit": {
+            "type": "object",
+            "properties": {
+              "headline": {
+                "type": "string",
+                "enum": [
+                  "fill",
+                  "preferred"
+                ]
+              }
+            },
+            "required": [
+              "headline"
+            ]
+          }
+        },
+        "required": [
+          "visual_role",
+          "composition",
+          "density",
+          "layout",
+          "image",
+          "fit"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "family",
+    "cover_strategy",
+    "rationale",
+    "slides"
+  ],
+  "additionalProperties": false
+}

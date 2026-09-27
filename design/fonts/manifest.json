@@ -1,0 +1,38 @@
+[
+  {
+    "file": "anton-sc-latin-400-normal.woff2",
+    "family": "Anton SC",
+    "weight": "400",
+    "sha256": "099fb394896d346cc4a259a5cc071856ec3a34d1901d5028ec5d56ceaff86d72"
+  },
+  {
+    "file": "anton-sc-latin-ext-400-normal.woff2",
+    "family": "Anton SC",
+    "weight": "400",
+    "sha256": "a4284a8799891ef3578398125465a13338832efa1aba4839c1b0deed24ce938e"
+  },
+  {
+    "file": "montserrat-latin-500-normal.woff2",
+    "family": "Montserrat",
+    "weight": "500",
+    "sha256": "2b53300fb9471520df2f4905847fb7a209879b2029ae893c05c6ee346b1320cd"
+  },
+  {
+    "file": "montserrat-latin-ext-500-normal.woff2",
+    "family": "Montserrat",
+    "weight": "500",
+    "sha256": "e28f60d292d6574d2cb5c0b63fd3e893ae6d9a17d698afc9d037643dcfde4228"
+  },
+  {
+    "file": "inter-latin-wght-normal.woff2",
+    "family": "Inter",
+    "weight": "100 900",
+    "sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62"
+  },
+  {
+    "file": "inter-latin-ext-wght-normal.woff2",
+    "family": "Inter",
+    "weight": "100 900",
+    "sha256": "34b9c504cab7a73e37b746343a449132e56cf7b5481af2cb81dc74dcff25c956"
+  }
+]

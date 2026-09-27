@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "family": "editorial_clean",
+  "cover_strategy": "typographic",
+  "rationale": "Alternância tipográfica inicial; revisar intenção editorial.",
+  "slides": {
+    "k9bc97b0827": {
+      "visual_role": "hook",
+      "composition": "full_bleed",
+      "density": "LOW",
+      "layout": {
+        "headline_position": "bottom",
+        "align": "left"
+      },
+      "image": {
+        "need": true,
+        "placeholder": false,
+        "concept": "",
+        "mood": "",
+        "subject_priority": "",
+        "crop": "cover",
+        "negative_space": "",
+        "strategy": "manual",
+        "alternatives": [],
+        "focal_point": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "asset_id": "kf581e79f70"
+      },
+      "fit": {
+        "headline": "fill"
+      }
+    },
+    "kb1861419a8": {
+      "visual_role": "development",
+      "composition": "quote",
+      "density": "MEDIUM",
+      "layout": {
+        "headline_position": "top",
+        "align": "left"
+      },
+      "image": {
+        "need": false,
+        "placeholder": false,
+        "concept": "",
+        "mood": "",
+        "subject_priority": "",
+        "crop": "cover",
+        "negative_space": "",
+        "strategy": "none",
+        "alternatives": [],
+        "focal_point": {
+          "x": 0.5,
+          "y": 0.5
+        }
+      },
+      "fit": {
+        "headline": "preferred"
+      }
+    },
+    "k03bdea1439": {
+      "visual_role": "development",
+      "composition": "text_only",
+      "density": "MEDIUM",
+      "layout": {
+        "headline_position": "top",
+        "align": "left"
+      },
+      "image": {
+        "need": false,
+        "placeholder": false,
+        "concept": "",
+        "mood": "",
+        "subject_priority": "",
+        "crop": "cover",
+        "negative_space": "",
+        "strategy": "none",
+        "alternatives": [],
+        "focal_point": {
+          "x": 0.5,
+          "y": 0.5
+        }
+      },
+      "fit": {
+        "headline": "preferred"
+      }
+    },
+    "k91a8183e7c": {
+      "visual_role": "development",
+      "composition": "contrast",
+      "density": "MEDIUM",
+      "layout": {
+        "headline_position": "top",
+        "align": "left"
+      },
+      "image": {
+        "need": false,
+        "placeholder": false,
+        "concept": "",
+        "mood": "",
+        "subject_priority": "",
+        "crop": "cover",
+        "negative_space": "",
+        "strategy": "none",
+        "alternatives": [],
+        "focal_point": {
+          "x": 0.5,
+          "y": 0.5
+        }
+      },
+      "fit": {
+        "headline": "preferred"
+      }
+    },
+    "k9c5c7170c3": {
+      "visual_role": "development",
+      "composition": "text_only",
+      "density": "MEDIUM",
+      "layout": {
+        "headline_position": "top",
+        "align": "left"
+      },
+      "image": {
+        "need": false,
+        "placeholder": false,
+        "concept": "",
+        "mood": "",
+        "subject_priority": "",
+        "crop": "cover",
+        "negative_space": "",
+        "strategy": "none",
+        "alternatives": [],
+        "focal_point": {
+          "x": 0.5,
+          "y": 0.5
+        }
+      },
+      "fit": {
+        "headline": "preferred"
+      }
+    },
+    "k004bdb650a": {
+      "visual_role": "development",
+      "composition": "quote",
+      "density": "MEDIUM",
+      "layout": {
+        "headline_position": "top",
+        "align": "left"
+      },
+      "image": {
+        "need": false,
+        "placeholder": false,
+        "concept": "",
+        "mood": "",
+        "subject_priority": "",
+        "crop": "cover",
+        "negative_space": "",
+        "strategy": "none",
+        "alternatives": [],
+        "focal_point": {
+          "x": 0.5,
+          "y": 0.5
+        }
+      },
+      "fit": {
+        "headline": "preferred"
+      }
+    },
+    "k93d03f7171": {
+      "visual_role": "development",
+      "composition": "text_only",
+      "density": "MEDIUM",
+      "layout": {
+        "headline_position": "top",
+        "align": "left"
+      },
+      "image": {
+        "need": false,
+        "placeholder": false,
+        "concept": "",
+        "mood": "",
+        "subject_priority": "",
+        "crop": "cover",
+        "negative_space": "",
+        "strategy": "none",
+        "alternatives": [],
+        "focal_point": {
+          "x": 0.5,
+          "y": 0.5
+        }
+      },
+      "fit": {
+        "headline": "preferred"
+      }
+    },
+    "k9bb8b59251": {
+      "visual_role": "development",
+      "composition": "contrast",
+      "density": "MEDIUM",
+      "layout": {
+        "headline_position": "top",
+        "align": "left"
+      },
+      "image": {
+        "need": false,
+        "placeholder": false,
+        "concept": "",
+        "mood": "",
+        "subject_priority": "",
+        "crop": "cover",
+        "negative_space": "",
+        "strategy": "none",
+        "alternatives": [],
+        "focal_point": {
+          "x": 0.5,
+          "y": 0.5
+        }
+      },
+      "fit": {
+        "headline": "preferred"
+      }
+    },
+    "ke266d3ac87": {
+      "visual_role": "development",
+      "composition": "text_only",
+      "density": "MEDIUM",
+      "layout": {
+        "headline_position": "top",
+        "align": "left"
+      },
+      "image": {
+        "need": false,
+        "placeholder": false,
+        "concept": "",
+        "mood": "",
+        "subject_priority": "",
+        "crop": "cover",
+        "negative_space": "",
+        "strategy": "none",
+        "alternatives": [],
+        "focal_point": {
+          "x": 0.5,
+          "y": 0.5
+        }
+      },
+      "fit": {
+        "headline": "preferred"
+      }
+    },
+    "k98bc22a707": {
+      "visual_role": "closing",
+      "composition": "quote",
+      "density": "MEDIUM",
+      "layout": {
+        "headline_position": "top",
+        "align": "left"
+      },
+      "image": {
+        "need": false,
+        "placeholder": false,
+        "concept": "",
+        "mood": "",
+        "subject_priority": "",
+        "crop": "cover",
+        "negative_space": "",
+        "strategy": "none",
+        "alternatives": [],
+        "focal_point": {
+          "x": 0.5,
+          "y": 0.5
+        }
+      },
+      "fit": {
+        "headline": "preferred"
+      }
+    }
+  }
+}

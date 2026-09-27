@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "autonomy": "full",
+  "approval_mode": false,
+  "slides": {
+    "default": 10,
+    "min": 8,
+    "max": 12
+  },
+  "family": "auto",
+  "qa": {
+    "max_auto_revision_cycles": 3
+  },
+  "branding": {
+    "name": "Diego Moreira",
+    "handle": "@odiego.moreira",
+    "avatar": "brand/avatar-source.png",
+    "verified": true,
+    "swipe_text": "Arrasta para o lado >",
+    "follow_text": "Segue o perfil para mais conteúdos como esse!"
+  },
+  "assets": {
+    "priority": [
+      "user",
+      "library",
+      "video_frame",
+      "generated"
+    ],
+    "cover_variants": 3,
+    "body_variants": 1,
+    "max_generations_per_carousel": 12
+  },
+  "providers": {
+    "default": "higgsfield",
+    "higgsfield": {
+      "mode": "mcp"
+    }
+  },
+  "preview": {
+    "port": 4321
+  },
+  "export": {
+    "sync_dir": null
+  }
+}

@@ -1,0 +1,358 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "number",
+      "const": 1
+    },
+    "$schema": {
+      "type": "string"
+    },
+    "project": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{3,63}$"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        },
+        "skill_version": {
+          "type": "string"
+        },
+        "engine_version": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string",
+          "const": "pt-BR"
+        },
+        "canvas": {
+          "type": "object",
+          "properties": {
+            "width": {
+              "type": "number",
+              "const": 1080
+            },
+            "height": {
+              "type": "number",
+              "const": 1350
+            }
+          },
+          "required": [
+            "width",
+            "height"
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "full",
+            "design-only"
+          ]
+        },
+        "copy_locked": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "created_at",
+        "skill_version",
+        "engine_version",
+        "language",
+        "canvas",
+        "mode",
+        "copy_locked"
+      ],
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "transcript_file",
+            "corpus_video",
+            "copy_input"
+          ]
+        },
+        "ref": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "type",
+        "ref",
+        "title",
+        "hash"
+      ],
+      "additionalProperties": false
+    },
+    "editorial": {
+      "type": "object",
+      "properties": {
+        "objective": {
+          "type": "string"
+        },
+        "audience": {
+          "type": "string"
+        },
+        "angle": {
+          "type": "string"
+        },
+        "promise": {
+          "type": "string"
+        },
+        "central_thesis": {
+          "type": "string"
+        },
+        "belief": {
+          "type": "string"
+        },
+        "contradiction": {
+          "type": "string"
+        },
+        "mechanism": {
+          "type": "string"
+        },
+        "architecture": {
+          "type": "string"
+        },
+        "hybrid": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "hook": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "family": {
+              "type": "string"
+            },
+            "viral_score": {
+              "type": "object",
+              "properties": {
+                "impact": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "clarity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "originality": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "tension": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "utility": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "shareability": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10
+                }
+              },
+              "required": [
+                "impact",
+                "clarity",
+                "originality",
+                "tension",
+                "utility",
+                "shareability"
+              ]
+            },
+            "defensibility": {
+              "type": "string"
+            },
+            "progression": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "text",
+            "family",
+            "defensibility",
+            "progression"
+          ]
+        },
+        "hook_candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "family": {
+                "type": "string"
+              },
+              "viral_score": {
+                "type": "object",
+                "properties": {
+                  "impact": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "clarity": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "originality": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "tension": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "utility": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "shareability": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  }
+                },
+                "required": [
+                  "impact",
+                  "clarity",
+                  "originality",
+                  "tension",
+                  "utility",
+                  "shareability"
+                ]
+              }
+            },
+            "required": [
+              "text",
+              "family"
+            ]
+          }
+        },
+        "central_metaphor": {
+          "type": "string"
+        },
+        "cta": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "none",
+                "share_specific",
+                "comment_keyword"
+              ]
+            },
+            "text": {
+              "type": "string"
+            },
+            "keyword": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "text"
+          ]
+        },
+        "caption": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "cta"
+      ],
+      "additionalProperties": false
+    },
+    "slides": {
+      "maxItems": 12,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{3,63}$"
+          },
+          "narrative_role": {
+            "type": "string"
+          },
+          "headline": {
+            "type": "string"
+          },
+          "body": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "headline_type": {
+            "type": "string"
+          },
+          "adds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "next_question": {
+            "type": "string"
+          },
+          "visual_intent": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "narrative_role",
+          "headline",
+          "body"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "project",
+    "source",
+    "editorial",
+    "slides"
+  ],
+  "additionalProperties": false
+}
