@@ -2,7 +2,7 @@
 import path from 'node:path';
 import { readFile, writeFile, access, readdir } from 'node:fs/promises';
 import sharp from 'sharp';
-import { chromium } from 'playwright';
+import { chromiumPath } from './render/browser.js';
 import { z } from 'zod';
 import { createProject, importCopy } from './project/create.js';
 import { ROOT, readJson, writeJson, loadProject, opaqueId, hash, log, optionalJson, jsonHash } from './project/io.js';
@@ -65,7 +65,7 @@ try{
   const checks=[];
   checks.push({check:'Node 24 LTS',ok:process.versions.node.startsWith('24.'),detail:process.versions.node});
   for(const file of ['design/fonts/manifest.json','engine/schema/generated/carousel.schema.json']){try{await access(path.join(ROOT,file));checks.push({check:file,ok:true});}catch{checks.push({check:file,ok:false});}}
-  try{await access(chromium.executablePath());checks.push({check:'Chromium instalado',ok:true,detail:chromium.executablePath()});}catch{checks.push({check:'Chromium instalado',ok:false});}
+  try{await access(chromiumPath());checks.push({check:'Chromium instalado',ok:true,detail:chromiumPath()});}catch{checks.push({check:'Chromium instalado',ok:false});}
   const config=await readJson(path.join(ROOT,'config.json'));checks.push({check:'Avatar oficial',ok:!!config.branding.avatar,optional:true});
   print({passed:checks.every(c=>c.ok||c.optional),checks});if(checks.some(c=>!c.ok&&!c.optional))process.exitCode=1;break;
  }

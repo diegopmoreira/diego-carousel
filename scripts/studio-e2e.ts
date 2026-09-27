@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { launchChromium } from '../engine/render/browser.js';
 import assert from 'node:assert/strict';
 import { mkdtemp,mkdir,readFile,rm,writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
@@ -11,7 +11,7 @@ const dir=await mkdtemp(path.join(os.tmpdir(),'studio-e2e-'));let server,browser
 try{
  await mkdir(path.join(dir,'source'));const c=await readJson(path.join(ROOT,'engine/schema/examples/carousel.json'));c.slides=[];await writeJson(path.join(dir,'carousel.json'),c);await writeJson(path.join(dir,'assets/manifest.json'),{schema_version:1,assets:[]});await writeJson(path.join(dir,'tweaks.json'),{schema_version:1,slides:{}});await importCopy(dir,path.join(ROOT,'fixtures/copy-pronta.md'));
  const before=await readFile(path.join(dir,'carousel.json'),'utf8'),first=await render(dir);
- server=await serve(dir,0,true);browser=await chromium.launch();const page=await browser.newPage({viewport:{width:1440,height:1000}});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ server=await serve(dir,0,true);browser=await launchChromium();const page=await browser.newPage({viewport:{width:1440,height:1000}});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(server.url);await page.locator('#studio').waitFor({state:'visible'});assert.equal(await page.locator('#slides button').count(),10);
  const unauthorized=await page.request.post(server.url+'/api/render',{data:{revision:'x'}});assert.equal(unauthorized.status(),403);
  assert.equal((await page.request.get(server.url+'/api/download')).status(),400);

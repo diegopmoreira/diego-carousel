@@ -1,4 +1,5 @@
-import { chromium, type Page } from 'playwright';
+import type { Page } from 'playwright';
+import { launchChromium } from './browser.js';
 import sharp from 'sharp';
 import { readFile, writeFile, mkdir, readdir, unlink, copyFile, rename } from 'node:fs/promises';
 import path from 'node:path';
@@ -46,7 +47,7 @@ export async function render(dir:string,only?:string[]){
  const server=await serve(dir);let browser;
  const records:any[]=[];
  try{
-  browser=await chromium.launch({args:['--force-color-profile=srgb']});
+  browser=await launchChromium({args:['--force-color-profile=srgb']});
   const browserVersion=browser.version();
   for(let i=0;i<c.slides.length;i++){
    const s=c.slides[i],fingerprint=input.slides[i],num=String(i+1).padStart(2,'0');const old=previous?.slides.find((r:any)=>r.id===s.id);
