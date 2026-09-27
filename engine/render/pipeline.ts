@@ -40,15 +40,19 @@ export async function renderSlide({browser,serverUrl,dir,num,index:i,carousel:c,
   // Fit, then the ink map. When accents or cedillas of neighbouring headline lines touch, the headline gets more
   // leading and the fit runs again (the ladder of editorial/visual decisions is unchanged).
   const family=tokens.families[a.family],maxExtra=(tokens.ink?.max_extra_em??.25),step=tokens.ink?.step??.03;
-  const lineSpace:Record<number,number>={};let state:any,ink:InkReport|undefined,attempts=0;
-  for(;;attempts++){
+  const lineSpace:Record<number,number>={};let state:any,ink:InkReport|undefined,attempts=0,headlineCeiling:number|undefined;
+  for(;attempts<40;attempts++){
    errors=[];
-   await writeFile(file,compose(c,a,t,i,config,tokens,assetUrl,undefined,{lineSpace}));
+   await writeFile(file,compose(c,a,t,i,config,tokens,assetUrl,undefined,{lineSpace,headlineCeiling}));
    await page.goto(`${server.url}/project/html/slide-${num}.html`);
    await page.waitForFunction(()=> (window as any).__slideReady===true,{},{timeout:30000});
    state=await page.evaluate(()=>({fit:(window as any).__fit,error:(window as any).__fitError}));
    if(state.error)throw Error(state.error);
    ink=await inkCheck(page,{minGapEm:tokens.ink?.min_gap_em,headlineBodyGap:tokens.ink?.headline_body_gap,safeX:tokens.ink?.safe_x});
+   // A filled headline sized to its layout box can still spill ink (Anton overhangs) past the safe area:
+   // lower the fill ceiling a few px and fit again, never below the size the composition starts from.
+   const filled=state.fit.stages.includes('headline-fill');
+   if(ink.outside>0&&filled){headlineCeiling=state.fit.blocks.headline.size-4;for(const k of Object.keys(lineSpace))delete lineSpace[Number(k)];continue;}
    if(ink.headline_ok)break;
    const size=state.fit.blocks.headline.size,limit=Math.round(maxExtra*size),add=Math.ceil(step*size);
    const open=ink.collisions.filter(k=>(lineSpace[k]??0)<limit);
@@ -66,7 +70,7 @@ export async function renderSlide({browser,serverUrl,dir,num,index:i,carousel:c,
   const checks=await browserChecks(page);errors.push(...checks.errors,...ink!.errors.map(e=>`Mapa de tinta: ${e}`));
   if(!state.fit.passed)errors.push('Texto não cabe: ajustar composição ou solicitar compressão editorial');
   await writeJson(path.join(dir,`fit/${s.id}.json`),state.fit);
-  await writeFile(file,compose(c,a,t,i,config,tokens,assetUrl,state.fit,{lineSpace}));
+  await writeFile(file,compose(c,a,t,i,config,tokens,assetUrl,state.fit,{lineSpace,headlineCeiling}));
   const png=await page.screenshot({type:'png'});await writeFile(path.join(dir,`qa/render/${num}.png`),png);
   return {record:{warnings,png_hash:hash(png),fit_hash:hash(await readFile(path.join(dir,`fit/${s.id}.json`))),html_hash:hash(await readFile(file)),passed:!errors.length,errors,fonts:checks.fonts},fit:state.fit};
  }finally{await page?.close();}

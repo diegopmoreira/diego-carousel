@@ -45,7 +45,7 @@ footer{position:absolute;left:49px;right:49px;bottom:41px;height:53px;display:fl
 .cue{font-size:var(--cue-size);color:var(--muted);text-align:right;white-space:nowrap}
 .cue.follow{color:#D6D6D6;display:inline-flex;align-items:center;gap:12px}
 .follow-icon{width:30px;height:30px;color:var(--follow);flex:none}
-.cover-cue{font-family:Inter;font-size:24px;font-weight:500;color:#F6F6F6;margin-top:6px}
+.cover-cue{font-family:Inter;font-size:21px;font-weight:500;color:#F6F6F6;margin-top:6px}
 
 /* Text compositions: the block sits balanced in the free area instead of hugging the top. */
 .text-composition .copy-region{top:110px;bottom:150px}
@@ -59,20 +59,27 @@ footer{position:absolute;left:49px;right:49px;bottom:41px;height:53px;display:fl
 /* Image on top with a fade into the background (Family A body slides). */
 .cinematic_fade .image-slot{height:var(--image-top-h)}
 .cinematic_fade .shade{display:block;height:var(--image-top-h);background:linear-gradient(180deg,transparent calc(100% - var(--fade)),var(--bg) 100%)}
-.cinematic_fade .copy-region{top:calc(var(--image-top-h) + 6px)}
+.cinematic_fade .copy-region{top:calc(var(--image-top-h) - 11px)}
 .cinematic_fade.position-top .copy-region{justify-content:flex-start}
 
 /* Image in a rounded card under the text (Family B). */
 .image_card .image-slot{left:var(--margin);right:var(--margin);width:auto;top:var(--card-top);height:var(--card-h);border-radius:var(--card-r)}
 .image_card .placeholder{padding:32px 36px}
-.image_card .copy-region{top:110px;bottom:calc(1350px - var(--card-top) + 34px);justify-content:center}
+/* Calibrated on post7:7: the text sits right above the card (~60px), not centered in the space. */
+.image_card .copy-region{top:110px;bottom:calc(1350px - var(--card-top) + 9px);justify-content:flex-end}
 .image_card.position-top .copy-region{justify-content:flex-start}
 
 /* Full-bleed image with the text on a gradient at the bottom (covers). */
 .full_bleed.has-image .shade{display:block;background:linear-gradient(180deg,rgba(0,0,0,0) 30%,rgba(0,0,0,.55) 55%,var(--bg) 88%)}
 .full_bleed .copy-region{top:480px;bottom:150px;justify-content:flex-end}
 .full_bleed.cover .copy-region{bottom:90px}
-.editorial_clean.full_bleed.cover .copy-region{bottom:110px}
+.editorial_clean.full_bleed.cover .copy-region{bottom:60px}
+/* Calibrated on post7:7: Inter 800 with slight negative tracking, profile ~34px above the title, cue ~36px below. */
+.editorial_clean.cover h1{letter-spacing:-0.01em;line-height:1.19}
+.editorial_clean.cover .copy{gap:20px}
+/* Calibrated on post31:07: the cinematic cover sits ~80px from the bottom, profile ~46px above the title. */
+.cinematic_condensed.full_bleed.cover .copy-region{bottom:70px;padding-left:5px}
+.cinematic_condensed.cover .copy{gap:42px}
 .cover .copy{gap:28px}
 
 /* Ink map (engine/render/ink.ts): text only, one color per headline line, body green. Never in exported PNGs. */

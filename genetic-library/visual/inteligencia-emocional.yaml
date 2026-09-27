@@ -2,6 +2,6 @@ name: inteligencia-emocional
 family: cinematic_condensed
 cover: {composition: full_bleed, headline_position: bottom, align: left, footer: false, profile: bottom_left}
 body: {composition: cinematic_fade, image_position: top, image_ratio: 0.48, headline: condensed_uppercase, body: sans, footer: "pill @ + Arrasta para o lado > à direita"}
-measures: {headline_px: 92, headline_lh: 0.92, body_px: 35, margin_x: 50}
+measures: {headline_px: 78, headline_lh: 1.10, body_px: 35.5, body_lh: 50, margin_x: 50, headline_top: 666}
 images: "stills de filme e série com rosto em close/meio-primeiro plano, emoção legível; um por painel"
 penultimate: "CTA 'Siga o perfil…' com ícone vermelho no rodapé à direita"

@@ -35,9 +35,11 @@ calibrar os tokens contra os PNGs publicados, gerar imagens reais pelo Higgsfiel
   último). Capa A embaixo à esquerda sem rodapé; capa B centralizada com o cue. Perfil só na capa.
 - Composições equilibradas; `quote` sem filete; `giant_statement` preenche; placeholder digno;
   ênfase por família.
-- Mapa de tinta: acentos/cedilhas que colidem ganham espaço só naquela linha; Família A em 0.92.
+- Mapa de tinta: acentos/cedilhas que colidem ganham espaço só naquela linha; título preenchido que
+  vaza da área segura tem o teto reduzido e refaz o fit.
 - `gallery` (vocabulário completo) e `calibrate` (render × PNG publicado, com folha de diferença).
-- **Pendente (local):** calibração contra `post31:07` e `post7:7`.
+- Calibrado localmente em 27/09 contra `post31:07` (capa e interno) e `post7:7` (capa e interno com
+  card): A = 78 px/1.10, B = 60 px/1.24, capa B 63 px/800; posições a ≤ 5 px do publicado.
 
 ## Rodada 1 — motor editorial (nuvem)
 

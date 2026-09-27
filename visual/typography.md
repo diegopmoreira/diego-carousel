@@ -28,5 +28,6 @@ primeiro, título por último). `fit/<id>.json` registra só as etapas executada
 Depois do fit, o render redesenha o slide só com texto (cada linha do título numa cor, body verde) e
 lê os pixels coluna a coluna. Se o acento ou a cedilha de uma linha encosta na vizinha, abre espaço
 só acima daquela linha e refaz o fit (até 0.6em; acima de 0.4em vira aviso de revisão). Também
-acusa título colado no body, tinta sobreposta e tinta fora da margem. Por isso a Família A pode usar
-entrelinha 0.92. O mapa de cada slide fica em `qa/ink/NN.png`.
+acusa título colado no body, tinta sobreposta e tinta fora da margem. Com a entrelinha real da Família A
+(1.10, calibrada no post31:07) quase não há colisão; o mapa segue como rede de segurança. Se um título
+preenchido deixa tinta fora da área segura, o render reduz o teto e refaz o fit. O mapa de cada slide fica em `qa/ink/NN.png`.
