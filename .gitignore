@@ -9,3 +9,4 @@ references/diego/*
 !references/diego/README.md
 library/images/
 .playwright/
+gallery/

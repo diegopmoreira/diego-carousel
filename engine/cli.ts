@@ -16,6 +16,7 @@ import { draft, slideAdd, slideMove, slideRemove } from './project/draft.js';
 import { proposeVoice, approveVoice } from './qa/voice.js';
 import { addIdea, listIdeas } from './project/backlog.js';
 import { loadEditorialLibrary, libraryStats } from './library/genetic.js';
+import { gallery } from './render/gallery.js';
 const args=process.argv.slice(2),command=args.shift();
 const flag=(name:string)=>{const i=args.indexOf('--'+name);return i<0?undefined:args[i+1];};
 const required=(v:string|undefined,usage:string)=>{if(!v||v.startsWith('--'))throw Error(usage);return v;};
@@ -35,6 +36,7 @@ npm run carousel -- <comando>
   variant <projeto> <nome> [--family cinematic_condensed]
   promote <projeto> <nome>
   lint <projeto> [--json] | spine <projeto> [--blind] | status <projeto>
+  gallery [--image foto.jpg] [--out pasta]   todas as composições × famílias (gallery/)
   library validate | library stats       biblioteca genética (genetic-library/)
   idea add --thesis <t> --source <ref> --why <t> [--project <slug>] | idea list
   render <projeto> [--slides id,id]
@@ -71,6 +73,7 @@ try{
  case 'lint':{const r=await lint(project());print(r);if(!r.passed)process.exitCode=1;break;}
  // --blind prints only the headlines: the input of the blind spine test (editorial/internal-headlines.md).
  case 'spine':{const {carousel}=await loadProject(project()),blind=args.includes('--blind');print(carousel.slides.map((s,i)=>blind?`P${i+1} ${s.headline}`:`P${i+1} [${s.id}] ${s.headline}${s.next_question?`\n     → ${s.next_question}`:''}`).join('\n'));break;}
+ case 'gallery':print(await gallery({out:flag('out')?path.resolve(flag('out')!):undefined,image:flag('image')?path.resolve(flag('image')!):undefined}));break;
  case 'library':{const sub=args.shift();const {examples,errors}=await loadEditorialLibrary();if(sub==='validate'){print({examples:examples.length,errors});if(errors.length)process.exitCode=1;}else if(sub==='stats')print({...libraryStats(examples),errors});else throw Error('Disponíveis: library validate|stats');break;}
  case 'idea':{const sub=args.shift();if(sub==='add')print(await addIdea({thesis:flag('thesis'),source:flag('source'),why:flag('why'),project:flag('project')}));else if(sub==='list')print(await listIdeas());else throw Error('Disponíveis: idea add|list');break;}
  case 'render':{const r=await render(project(),flag('slides')?.split(','));print({render_hash:r.render_hash,slides:r.slides.map(s=>({id:s.id,passed:s.passed,errors:s.errors}))});if(r.slides.some(s=>!s.passed))process.exitCode=1;break;}

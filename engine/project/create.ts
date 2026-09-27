@@ -4,6 +4,7 @@ import { Carousel, VERSION, type CarouselData, type ArtData } from '../schema/in
 import { projectsDir, opaqueId, hash, writeJson, log, readJson } from './io.js';
 import { cleanTranscript, parseCopy, toCopy } from '../source/copy.js';
 import { readCorpus, checkCorpusSource, corpusTranscriptText } from '../source/corpus.js';
+import { initialDirection, roleByPosition } from './direction.js';
 export type CreateOptions={allowConversation?:boolean};
 // Sources: `copy` (ready copy, imported next), `corpus:<video_id>` or a Corpus v1.json file, or a plain .txt transcript.
 export async function createProject(slug:string,source:string,options:CreateOptions={}){
@@ -33,11 +34,13 @@ export async function importCopy(dir:string,file:string){
  const c:CarouselData=Carousel.parse(await readJson(path.join(dir,'carousel.json')));
  if(c.slides.length)throw Error('Importação inicial apenas: cria outro projeto para preservar copy e IDs existentes');
  const raw=await readFile(file,'utf8'),panels=parseCopy(raw);
- c.slides=panels.map((p,i)=>({id:opaqueId(),narrative_role:i===0?'hook':i===panels.length-1?'closing':'development',...p,headline_type:'statement',adds:[],next_question:'',visual_intent:''}));
+ c.slides=panels.map((p,i)=>({id:opaqueId(),narrative_role:roleByPosition(i,panels.length),...p,headline_type:'statement',adds:[],next_question:'',visual_intent:''}));
  c.project.mode='design-only';c.project.copy_locked=true;c.source={type:'copy_input',ref:path.basename(file),title:c.source.title,hash:hash(raw)};
  Carousel.parse(c);
- const art:ArtData={schema_version:1,family:'editorial_clean',cover_strategy:'typographic',rationale:'Alternância tipográfica inicial; revisar intenção editorial.',slides:{}};
- c.slides.forEach((s,i)=>{art.slides[s.id]={visual_role:s.narrative_role,composition:i===0?'full_bleed':s.body?(['text_only','quote','text_only','contrast'] as const)[i%4]:i%2?'minimal_pause':'giant_statement',density:s.body?'MEDIUM':'LOW',layout:{headline_position:i===0?'bottom':'top',align:i===0?'center':'left'},image:{need:false,placeholder:false,concept:'',mood:'',subject_priority:'',crop:'cover',negative_space:'',strategy:'none',alternatives:[],focal_point:{x:.5,y:.5}},fit:{headline:i===0?'fill':'preferred'}};});
+ // Ready copy: roles inferred by position, no required images (Diego adds photos in the studio).
+ const art:ArtData={schema_version:1,family:'editorial_clean',cover_strategy:'typographic',rationale:'Direção inicial por função narrativa inferida da posição; revisar.',slides:{}};
+ const direction=initialDirection(art.family,c.slides,{images:false});
+ c.slides.forEach((s,i)=>{art.slides[s.id]=direction[i];});
  await writeFile(path.join(dir,'source/copy-input.md'),raw);
  await writeJson(path.join(dir,'carousel.json'),c);await writeJson(path.join(dir,'art-direction.json'),art);
  await writeFile(path.join(dir,'copy.md'),toCopy(c.slides));await log(dir,'COPY','Copy importada e travada; conteúdo preservado em NFC');

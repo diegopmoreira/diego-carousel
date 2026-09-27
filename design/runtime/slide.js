@@ -3,9 +3,17 @@ window.__slideReady = false;
 window.__fitError = null;
 (async () => {
   const measure=document.createElement('canvas').getContext('2d');
+  // Emphasized words may use another weight (body in Family B), so each segment is measured with its own font.
+  const emWeight=el=>el.dataset.role==='body'?(getComputedStyle(el).getPropertyValue('--em-weight').trim()||getComputedStyle(el).fontWeight):getComputedStyle(el).fontWeight;
   function linesFor(text,el,size){
-    const style=getComputedStyle(el);measure.font=`${style.fontWeight} ${size}px ${style.fontFamily}`;
-    return window.__breakText(text,t=>measure.measureText(t.replace(/\*\*/g,'')).width,el.clientWidth,{balance:el.dataset.role==='headline'});
+    const style=getComputedStyle(el),normal=`${style.fontWeight} ${size}px ${style.fontFamily}`,strong=`${emWeight(el)} ${size}px ${style.fontFamily}`;
+    const width=t=>{let w=0,open=false;t.split('**').forEach((part,i)=>{if(i>0)open=!open;if(!part)return;measure.font=open?strong:normal;w+=measure.measureText(part).width;});return w;};
+    return window.__breakText(text,width,el.clientWidth,{balance:el.dataset.role==='headline'});
+  }
+  // "**A B**" becomes "**A** **B**": every word carries its own markers, so any line can be measured and drawn alone.
+  function perWordEmphasis(text){
+    let open=false;
+    return text.replace(/[^\s]+/g,word=>{let out='';word.split('**').forEach((part,i)=>{if(i>0)open=!open;if(part)out+=open?`**${part}**`:part;});return out;});
   }
   // **emphasis** may span lines; the open/closed state carries from one line to the next. Emphasis changes color only,
   // so the measured widths stay exact.
@@ -23,14 +31,16 @@ window.__fitError = null;
   const linesOf=el=>[...el.children].map(line=>[...line.childNodes].map(n=>n.nodeName==='EM'?`**${n.textContent}**`:n.textContent.replace(/\u200b/g,'')).join(''));
   try {
     const blocks=[...document.querySelectorAll('[data-role="headline"],[data-role="body"]')];
-    await Promise.all(blocks.map(el=>{const s=getComputedStyle(el);return document.fonts.load(`${s.fontWeight} ${s.fontSize} ${s.fontFamily}`,el.textContent);}));
+    await Promise.all(blocks.flatMap(el=>{const s=getComputedStyle(el);return [s.fontWeight,emWeight(el)].map(w=>document.fonts.load(`${w} ${s.fontSize} ${s.fontFamily}`,el.textContent.replace(/\*\*/g,'')));}));
     await Promise.all([...document.images].map(im=>im.decode()));
     const frozen=window.__frozenFit;
     if(frozen){for(const el of blocks){const b=frozen.blocks[el.dataset.role];setLines(el,b.lines,b.size);}document.querySelector('.copy').style.gap=frozen.gap+'px';window.__fit=frozen;window.__slideReady=true;return;}
-    const original=blocks.map(el=>el.textContent);
+    const original=blocks.map(el=>perWordEmphasis(el.textContent));
     const floors=blocks.map(el=>Number(el.dataset.floor));
     const copy=document.querySelector('.copy');let gap=parseFloat(getComputedStyle(copy).gap);
-    const region=()=>document.querySelector('.copy-region').getBoundingClientRect();
+    // The region's content box: padding (optical centering) is not room for text.
+    const regionEl=document.querySelector('.copy-region');
+    const region=()=>{const r=regionEl.getBoundingClientRect(),st=getComputedStyle(regionEl);return {height:r.height-parseFloat(st.paddingTop)-parseFloat(st.paddingBottom)};};
     const fits=()=>copy.getBoundingClientRect().height<=region().height+.5&&blocks.every(el=>el.scrollWidth<=el.clientWidth+1&&el.children.length<=Number(el.dataset.maxLines));
     const apply=(sizes,texts=original)=>blocks.forEach((el,i)=>setLines(el,linesFor(texts[i],el,sizes[i]),sizes[i]));
     // Stages record only what actually ran, in order.

@@ -5,32 +5,7 @@ import { Carousel, ArtDirection, Family, type ArtData, type CarouselData } from 
 import { loadProject, opaqueId, writeJson, log, withLock } from './io.js';
 import { loadConfig } from './config.js';
 import { parseCopy, toCopy } from '../source/copy.js';
-type Role=string;type Composition=ArtData['slides'][string]['composition'];
-// First visual draft by narrative function (visual/art-direction.md). Claude revises it; the studio tweaks it.
-const PLAN:Record<string,Record<Role,Composition>>={
- cinematic_condensed:{interruption:'full_bleed',conflict:'text_only',revelation:'cinematic_fade',mechanism:'cinematic_fade',contrast:'contrast',example:'cinematic_fade',escalation:'text_only',second_turn:'giant_statement',reorganization:'text_only',hammer:'giant_statement'},
- editorial_clean:{interruption:'full_bleed',conflict:'text_only',revelation:'giant_statement',mechanism:'text_only',contrast:'contrast',example:'image_card',escalation:'text_only',second_turn:'giant_statement',reorganization:'text_only',hammer:'giant_statement'},
-};
-const WITH_IMAGE=new Set<Composition>(['full_bleed','cinematic_fade','image_card']);
-const ALTERNATE:Record<string,Composition>={text_only:'quote',cinematic_fade:'text_only',image_card:'text_only',giant_statement:'minimal_pause',contrast:'text_only',quote:'text_only',minimal_pause:'giant_statement',full_bleed:'cinematic_fade'};
-export function initialDirection(family:z.infer<typeof Family>,slides:{narrative_role:string;body:string|null;visual_intent?:string}[]){
- const comps:Composition[]=slides.map((s,i)=>{
-  if(i===0)return 'full_bleed';
-  let c=PLAN[family][s.narrative_role]??(s.body?'text_only':'giant_statement');
-  if(!s.body&&(c==='text_only'||c==='contrast'))c='giant_statement';
-  if(family==='editorial_clean'&&s.narrative_role==='mechanism'&&i%3===2)c='image_card'; // an image every few mechanisms keeps rhythm
-  return c;
- });
- // Never three equal compositions in a row (visual lint) — the third takes an alternate.
- for(let i=2;i<comps.length;i++)if(comps[i]===comps[i-1]&&comps[i]===comps[i-2])comps[i]=ALTERNATE[comps[i]]??'text_only';
- return comps.map((composition,i)=>{
-  const s=slides[i],image=WITH_IMAGE.has(composition),cover=i===0;
-  return {visual_role:s.narrative_role,composition,density:(image&&s.body?'HIGH':s.body?'MEDIUM':'LOW') as 'LOW'|'MEDIUM'|'HIGH',
-   layout:{headline_position:cover?'bottom':'top',align:cover&&family==='editorial_clean'?'center':'left'} as const,
-   image:{need:image,placeholder:image,concept:s.visual_intent??'',mood:'',subject_priority:'',crop:'cover',negative_space:cover?'lower third':'',strategy:image?'generated':'none',alternatives:[],focal_point:{x:.5,y:.5}} as ArtData['slides'][string]['image'],
-   fit:{headline:(cover||composition==='giant_statement')?'fill':'preferred'} as const};
- });
-}
+import { initialDirection } from './direction.js';
 const SlideMeta=z.object({id:z.string().optional(),narrative_role:z.string().optional(),headline_type:z.string().optional(),adds:z.array(z.string()).optional(),next_question:z.string().optional(),visual_intent:z.string().optional()}).strict();
 export const DraftMeta=z.object({
  editorial:Carousel.shape.editorial.partial().optional(),

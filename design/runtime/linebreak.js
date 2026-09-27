@@ -21,6 +21,7 @@
       let c=balance?Math.pow(target-used,2):last?0:Math.pow(width-used,2);
       if(!last&&SHORT.has(words[j].toLowerCase()))c+=W2*2;
       if(last&&i===j&&i>0)c+=W2*3; // widow
+      if(balance&&i===0&&j===0&&n>2)c+=W2*.5; // a lone first word in a title reads as a label
       if(last&&i>0&&used<width*.3)c+=Math.pow(width*.3-used,2)*4;
       return c;
     };

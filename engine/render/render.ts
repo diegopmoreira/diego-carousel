@@ -34,7 +34,7 @@ async function browserChecks(page:Page){
  const geometry=await page.evaluate(()=>{
   const errors:string[]=[];
   const blocks=[...document.querySelectorAll<HTMLElement>('[data-role]')];
-  const rects=blocks.map(el=>{const r=el.getBoundingClientRect();const style=getComputedStyle(el);const floor=Number(el.dataset.floor);if(parseFloat(style.fontSize)<floor)errors.push(`${el.dataset.role}: fonte abaixo do piso`);if(r.x<49||r.right>1031||r.y<50||r.bottom>1230)errors.push(`${el.dataset.role}: fora da margem segura`);if(el.scrollWidth>el.clientWidth+1)errors.push(`${el.dataset.role}: overflow horizontal`);return r;});
+  const rects=blocks.map(el=>{const r=el.getBoundingClientRect();const style=getComputedStyle(el);const floor=Number(el.dataset.floor);if(parseFloat(style.fontSize)<floor)errors.push(`${el.dataset.role}: fonte abaixo do piso`);const safeBottom=Number(document.body.dataset.safeBottom||1230);if(r.x<49||r.right>1031||r.y<50||r.bottom>safeBottom)errors.push(`${el.dataset.role}: fora da margem segura`);if(el.scrollWidth>el.clientWidth+1)errors.push(`${el.dataset.role}: overflow horizontal`);return r;});
   if(rects.length===2&&rects[0].bottom>rects[1].top+.5)errors.push('Headline e body se sobrepõem');
   if(document.documentElement.scrollWidth>1080||document.documentElement.scrollHeight>1350)errors.push('Canvas excedido');
   return errors;

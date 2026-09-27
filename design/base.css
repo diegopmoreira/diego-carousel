@@ -1,7 +1,76 @@
-*{box-sizing:border-box}html,body{margin:0;width:1080px;height:1350px;background:var(--background);color:var(--headline);font-synthesis:none;-webkit-font-smoothing:antialiased}body{overflow:hidden}.slide{position:relative;width:1080px;height:1350px;overflow:hidden}.scene{position:absolute;left:0;top:0;width:1080px;height:1350px;object-fit:cover;transform:translateY(var(--image-y)) scale(var(--image-scale))}.placeholder{display:grid;place-items:center;background:radial-gradient(ellipse at 70% 20%,#38312f,#141414 65%);color:#999;font:20px Inter}.fade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,transparent 10%,rgba(0,0,0,.3) 36%,rgba(0,0,0,.96) 76%,#000)}.slide:not(:has(.scene)) .fade{display:none}.profile{display:flex;align-items:center;gap:20px;font-family:Inter}.ring{padding:4px;border-radius:50%;background:linear-gradient(35deg,#FFA301,#FF6724,#8E48AF);width:88px;height:88px}.ring img,.initials{display:grid;place-items:center;width:80px;height:80px;border:4px solid #0b0b0b;border-radius:50%;object-fit:cover;background:#222;color:#ddd;font:500 26px Inter}.name{font-size:27px;font-weight:500}.handle{font-size:22px;color:#c8c8c8;margin-top:6px}.verified{display:inline-block;width:23px;height:23px;margin-left:10px;vertical-align:-3px}.top-profile{position:absolute;left:60px;top:62px}.copy-region{position:absolute;left:60px;right:60px;top:228px;bottom:144px;display:flex;align-items:flex-start}.copy{width:100%;display:flex;flex-direction:column;gap:var(--gap)}h1,p{margin:0;width:100%;white-space:normal;overflow:visible}h1{font-family:var(--headline-font);font-size:var(--headline-size);font-weight:var(--headline-weight);line-height:var(--headline-lh);color:var(--headline)}p{font-family:var(--body-font);font-size:var(--body-size);font-weight:var(--body-weight);line-height:var(--body-lh);color:var(--body)}.text-line{display:block;white-space:pre}.cover .top-profile{display:none}.cover .copy-region{top:510px;bottom:170px;align-items:flex-end}.cover-profile{margin-bottom:4px}.editorial_clean.cover .copy{text-align:center}.editorial_clean.cover .profile{justify-content:center}.cinematic_fade .scene{height:670px}.cinematic_fade .fade{background:linear-gradient(180deg,transparent 20%,#000 52%)}.cinematic_fade .top-profile{display:none}.cinematic_fade .copy-region{top:650px;bottom:140px}.image_card .scene{left:60px;top:700px;width:960px;height:485px;border-radius:32px}.image_card .fade{display:none}.image_card .copy-region{top:228px;bottom:680px}.giant_statement .copy-region,.minimal_pause .copy-region{align-items:center;top:280px;bottom:230px}.minimal_pause .copy{gap:52px}.quote .copy-region{border-left:4px solid #db5941;padding-left:36px;top:280px;bottom:200px;align-items:center}.contrast p{padding-top:36px;border-top:2px solid #444}.align-center .copy{text-align:center}.position-center:not(.cover) .copy-region{align-items:center}.position-bottom:not(.cover) .copy-region{align-items:flex-end}footer{position:absolute;left:50px;right:50px;bottom:41px;display:flex;align-items:center;justify-content:space-between;font-family:Inter;gap:24px;height:53px}.pill{font-size:20px;font-weight:600;padding:13px 20px;border:1px solid #2e2e2e;border-radius:32px;background:#0d0d0d;white-space:nowrap}.cue{font-size:20px;color:#aaa;text-align:right;max-width:600px}.page-number{font-size:16px;color:#747474}.cue:empty+.page-number{display:none}
+/* Slide layout. Every measure comes from design/tokens.json through the custom properties set by the composer. */
+*{box-sizing:border-box}
+html,body{margin:0;width:1080px;height:1350px;background:var(--bg);color:var(--headline);font-synthesis:none;-webkit-font-smoothing:antialiased}
+body{overflow:hidden}
+.slide{position:relative;width:1080px;height:1350px;overflow:hidden;background:var(--bg)}
 
-/* Keep image zoom inside its own frame and honor inspector alignment. */
-.image-slot{position:absolute;left:0;top:0;width:1080px;height:1350px;overflow:hidden}.image-slot .scene{left:0;top:0;width:100%;height:100%}.cinematic_fade .image-slot{height:670px}.image_card .image-slot{left:60px;top:700px;width:960px;height:485px;border-radius:32px}.image_card .image-slot .scene{border-radius:0}.cover.align-left .copy{text-align:left}.cover.align-left .profile{justify-content:flex-start}.cover.align-center .copy{text-align:center}.cover.align-center .profile{justify-content:center}.cover.position-top .copy-region{align-items:flex-start}.cover.position-center .copy-region{align-items:center}.cover.position-bottom .copy-region{align-items:flex-end}
+/* Image slot: the image never leaves its frame; zoom and vertical shift come from tweaks. */
+.image-slot{position:absolute;left:0;top:0;width:1080px;height:1350px;overflow:hidden}
+.scene{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;transform:translateY(var(--image-y)) scale(var(--image-scale))}
+.placeholder{display:flex;flex-direction:column;justify-content:flex-start;gap:10px;padding:56px var(--margin);background:
+ repeating-linear-gradient(135deg,rgba(255,255,255,.025) 0 2px,transparent 2px 22px),radial-gradient(ellipse at 70% 25%,#2a2624,#101010 70%);font-family:Inter}
+.ph-label{font-size:18px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--placeholder)}
+.ph-concept{font-size:22px;color:#8a8a8a;max-width:720px;line-height:1.35}
+.shade{position:absolute;inset:0;pointer-events:none;display:none}
 
-/* Emphasis: color only, so line measurement stays exact. */
-h1 em,p em{font-style:normal;color:var(--emphasis)}
+/* Copy region: the fit runtime keeps text inside it. */
+.copy-region{position:absolute;left:var(--margin);right:var(--margin);top:110px;bottom:150px;display:flex;flex-direction:column;justify-content:flex-start}
+.copy{width:100%;display:flex;flex-direction:column;gap:var(--gap)}
+.position-center .copy-region{justify-content:center;padding-bottom:40px}
+.position-bottom .copy-region{justify-content:flex-end}
+h1,p{margin:0;width:100%;white-space:normal;overflow:visible}
+h1{font-family:var(--headline-font);font-size:var(--headline-size);font-weight:var(--headline-weight);line-height:var(--headline-lh);color:var(--headline)}
+p{font-family:var(--body-font);font-size:var(--body-size);font-weight:var(--body-weight);line-height:var(--body-lh);color:var(--body)}
+.text-line{display:block;white-space:pre}
+/* Emphasis changes color (and weight only where the runtime measures it). */
+h1 em{font-style:normal;color:var(--em-headline)}
+p em{font-style:normal;color:var(--em-body);font-weight:var(--em-weight)}
+.align-center .copy{text-align:center}
+
+/* Profile: cover only, unless branding.profile_on is "all". */
+.profile{display:flex;align-items:center;gap:20px;font-family:Inter}
+.ring{padding:4px;border-radius:50%;background:linear-gradient(35deg,#FFA301,#FF6724,#8E48AF);width:88px;height:88px;flex:none}
+.ring img,.initials{display:grid;place-items:center;width:80px;height:80px;border:4px solid var(--bg);border-radius:50%;object-fit:cover;background:#222;color:#ddd;font:500 26px Inter}
+.identity{text-align:left}
+.name{font-size:27px;font-weight:500;color:#F6F6F6;display:flex;align-items:center}
+.handle{font-size:22px;color:var(--handle);margin-top:6px}
+.verified{display:inline-block;width:23px;height:23px;margin-left:10px}
+.top-profile{position:absolute;left:var(--margin);top:62px}
+.cover-profile{margin-bottom:6px}
+.align-center .profile{justify-content:center}
+
+/* Footer: handle pill left, cue right; the follow CTA carries a red icon. No page numbers. */
+footer{position:absolute;left:49px;right:49px;bottom:41px;height:53px;display:flex;align-items:center;justify-content:space-between;gap:24px;font-family:Inter}
+.pill{font-size:20px;font-weight:600;padding:0 20px;height:53px;display:inline-flex;align-items:center;border:1px solid var(--pill-border);border-radius:32px;background:var(--pill-bg);white-space:nowrap;color:#F1F1F1}
+.cue{font-size:var(--cue-size);color:var(--muted);text-align:right;white-space:nowrap}
+.cue.follow{color:#D6D6D6;display:inline-flex;align-items:center;gap:12px}
+.follow-icon{width:30px;height:30px;color:var(--follow);flex:none}
+.cover-cue{font-family:Inter;font-size:24px;font-weight:500;color:#F6F6F6;margin-top:6px}
+
+/* Text compositions: the block sits balanced in the free area instead of hugging the top. */
+.text-composition .copy-region{top:110px;bottom:150px}
+.giant_statement .copy{gap:calc(var(--gap) + 8px)}
+.minimal_pause .copy{text-align:center;gap:48px}
+.minimal_pause p{color:var(--muted)}
+.quote .quote-mark{font-family:Inter;font-weight:800;font-size:160px;line-height:.7;height:80px;color:var(--muted);margin-bottom:-8px}
+.contrast p::before{content:"";display:block;width:96px;height:2px;background:var(--divider);margin-bottom:36px}
+.align-center.contrast p::before{margin-left:auto;margin-right:auto}
+
+/* Image on top with a fade into the background (Family A body slides). */
+.cinematic_fade .image-slot{height:var(--image-top-h)}
+.cinematic_fade .shade{display:block;height:var(--image-top-h);background:linear-gradient(180deg,transparent calc(100% - var(--fade)),var(--bg) 100%)}
+.cinematic_fade .copy-region{top:calc(var(--image-top-h) + 6px)}
+.cinematic_fade.position-top .copy-region{justify-content:flex-start}
+
+/* Image in a rounded card under the text (Family B). */
+.image_card .image-slot{left:var(--margin);right:var(--margin);width:auto;top:var(--card-top);height:var(--card-h);border-radius:var(--card-r)}
+.image_card .placeholder{padding:32px 36px}
+.image_card .copy-region{top:110px;bottom:calc(1350px - var(--card-top) + 34px);justify-content:center}
+.image_card.position-top .copy-region{justify-content:flex-start}
+
+/* Full-bleed image with the text on a gradient at the bottom (covers). */
+.full_bleed.has-image .shade{display:block;background:linear-gradient(180deg,rgba(0,0,0,0) 30%,rgba(0,0,0,.55) 55%,var(--bg) 88%)}
+.full_bleed .copy-region{top:480px;bottom:150px;justify-content:flex-end}
+.full_bleed.cover .copy-region{bottom:90px}
+.editorial_clean.full_bleed.cover .copy-region{bottom:110px}
+.cover .copy{gap:28px}
