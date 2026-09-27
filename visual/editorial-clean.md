@@ -1,3 +1,11 @@
-# Editorial Clean
+# Família B — Editorial Clean
 
-Fundo #0B0B0B; Inter 800 para headline e Inter 400 para body. Headline inicial 64 px, body 38 px. Margem horizontal de 60 px. Card de imagem 960×485 com raio 32 px. Referência inicial: post7:7. Capa centralizada; perfil, nome e selo próximos do título.
+Referência: post7:7 ("Mais de 25 anos e continua solteiro?"). Fundo `#0B0B0B` liso, muito espaço
+negativo, composição previsível e limpa.
+
+- **Título:** Inter 800, caixa de frase, `#F1F1F1`, 64 px, entrelinha ~1.17, margem 60 px.
+- **Body:** Inter 400, `#CBCBCB`, 38 px, entrelinha ~52 px.
+- **Imagem no miolo:** `image_card` 960×485, raio 32 px, em y 645; texto centralizado acima.
+- **Capa:** foto full-bleed com gradiente; tudo centralizado — avatar, nome, selo, @, título Inter
+  700 ~70 px e "Arrasta para o lado >" em branco logo abaixo; sem pílula.
+- **Ênfase:** no body, `#F1F1F1` semibold; no título, nenhuma.

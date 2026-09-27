@@ -1,5 +1,18 @@
 # Revisão visual
 
-Inspecionar contact sheet e cada PNG no tamanho completo. Conferir leitura, acentos, margens, contraste, associação da imagem, crop, ritmo e CTA. Verificar a ausência de cue de swipe no último painel.
+Abrir `qa/contact-sheet.png` e **cada** PNG de `qa/render/` no tamanho real. Conferir:
 
-Rodar validate antes de registrar review. Máximo de três ciclos automáticos; depois revisão humana. Não registrar aprovação sem realmente abrir as imagens. Gates atuais: fit, geometria, pisos, fontes efetivamente usadas via CDP, requests, console, dimensão e hashes. Mapa de tinta e contraste medido ainda não estão implementados.
+- leitura, hierarquia, acentos (ver também `qa/ink/NN.png` e os avisos do render);
+- margens, alinhamento, dead space acidental, elementos competindo com o título;
+- imagem: associação com a ideia, crop, rosto cortado, texto dentro da imagem (proibido);
+- ritmo entre painéis (nada de dez layouts iguais), densidade (nunca tudo HIGH);
+- rodapé: cue presente até o antepenúltimo, CTA com ícone no penúltimo, nada no último;
+- perfil só na capa; capa A sem rodapé.
+
+Gates automáticos (render/validate): fit, pisos, geometria e margens, fontes efetivas via CDP (sem
+fallback), requests, console, dimensão, hashes, mapa de tinta. Aprovação técnica não aprova o
+conceito visual.
+
+Registrar cada inspeção: `review <projeto> --reviewer Claude --note "…" [--approved]`. Máximo de
+`qa.max_auto_revision_cycles` ciclos automáticos; depois, revisão humana. Nunca registrar sem abrir
+as imagens.
