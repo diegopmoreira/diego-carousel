@@ -55,7 +55,7 @@ for(const f of fixtures.filter(x=>!only||only.includes(x.id))){
   f.mode==='full'?`Modo full, sem checkpoint: fonte ${f.source}. Crie o projeto com o slug ${f.name}.`:`Copy pronta (design-only): crie o projeto com from-copy ${f.name} ${expand(f.source)}.`,
   'Vá até render, validate e uma revisão visual real (review --reviewer Claude). Não exporte. Não gere imagens pagas: deixe placeholders.',
   'Na última linha escreva apenas: PROJETO: <caminho do projeto>'].join('\n');
- const r=await run('claude',['-p',prompt,'--output-format','text','--allowedTools','Bash(npm run carousel:*),Bash(npm run -s carousel:*),Read,Write,Edit,Glob,Grep,Task'],45*60_000);
+ const r=await run('claude',['-p',prompt,'--output-format','text','--allowedTools','Bash(npm run carousel:*),Bash(npm run -s carousel:*),Read,Write,Edit,Glob,Grep,Task,Agent'],45*60_000);
  const dir=await projectFor(f.name);
  report.push({fixture:f.id,name:f.name,status:dir?'executado':'falhou',exit:r.code,seconds:Math.round((Date.now()-started)/1000),checks:dir?await check(f,dir):[],transcript_tail:r.out.slice(-3000)});
 }
