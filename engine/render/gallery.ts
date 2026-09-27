@@ -20,7 +20,7 @@ export async function gallery({out=path.join(ROOT,'gallery'),image}:{out?:string
    await writeJson(path.join(dir,'carousel.json'),c);await writeJson(path.join(dir,'tweaks.json'),{schema_version:1,slides:{}});await writeJson(path.join(dir,'assets/manifest.json'),{schema_version:1,assets:[]});
    await importCopy(dir,path.join(ROOT,'fixtures/copy-gallery.md'));
    const a=await readJson(path.join(dir,'art-direction.json')),carousel=await readJson(path.join(dir,'carousel.json'));a.family=family;
-   carousel.slides.forEach((s:any,i:number)=>{const d=a.slides[s.id];d.composition=COMPOSITIONS[i];const img=['full_bleed','cinematic_fade','image_card'].includes(COMPOSITIONS[i]);d.image={...d.image,need:img,placeholder:img,concept:img?'cena de exemplo':''};d.layout.headline_position=i===0?'bottom':img?'top':'center';d.fit.headline=i===0||COMPOSITIONS[i]==='giant_statement'?'fill':'preferred';});
+   carousel.slides.forEach((s:any,i:number)=>{const d=a.slides[s.id];d.composition=COMPOSITIONS[i];const img=['full_bleed','cinematic_fade','image_card'].includes(COMPOSITIONS[i]);d.image={...d.image,need:img,placeholder:img,concept:img?'cena de exemplo':''};d.layout.headline_position=i===0||COMPOSITIONS[i]==='image_card'?'bottom':img?'top':'center';d.fit.headline=i===0||COMPOSITIONS[i]==='giant_statement'?'fill':'preferred';});
    await writeJson(path.join(dir,'art-direction.json'),a);
    if(image)for(const s of carousel.slides.slice(0,3))await addAsset(dir,await readFile(image),'Imagem de teste da galeria',s.id);
    const manifest=await render(dir);

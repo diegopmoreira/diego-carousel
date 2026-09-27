@@ -28,7 +28,8 @@ export function initialDirection(family:Family,slides:{narrative_role:string;bod
  return comps.map((composition,i)=>{
   const s=slides[i],cover=i===0,image=WITH_IMAGE.has(composition),needed=images&&image;
   return {visual_role:s.narrative_role,composition,density:(image&&s.body?'HIGH':s.body?'MEDIUM':'LOW') as 'LOW'|'MEDIUM'|'HIGH',
-   layout:{headline_position:cover?'bottom':image?'top':'center',align:cover&&family==='editorial_clean'?'center':'left'} as ArtData['slides'][string]['layout'],
+   // image_card text sits right above the card (calibrated on post7:7); under a top image it starts at the top.
+   layout:{headline_position:cover||composition==='image_card'?'bottom':image?'top':'center',align:cover&&family==='editorial_clean'?'center':'left'} as ArtData['slides'][string]['layout'],
    image:{need:needed,placeholder:needed,concept:s.visual_intent??'',mood:'',subject_priority:'',crop:'cover',negative_space:cover?'lower third':'',strategy:needed?'generated':'none',alternatives:[],focal_point:{x:.5,y:composition==='cinematic_fade'?.4:.5}} as ArtData['slides'][string]['image'],
    fit:{headline:(cover||composition==='giant_statement')?'fill':'preferred'} as ArtData['slides'][string]['fit']};
  });

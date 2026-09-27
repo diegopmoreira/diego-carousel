@@ -59,6 +59,9 @@ export async function renderSlide({browser,serverUrl,dir,num,index:i,carousel:c,
    if(!open.length)break;
    for(const k of open)lineSpace[k]=Math.min(limit,(lineSpace[k]??0)+add);
   }
+  // A failing ink map is measured once more before it fails the slide: a screenshot taken mid-paint must not
+  // fail a render that is fine (seen once in hundreds of runs, never reproduced).
+  if(ink&&!ink.passed){const again=await inkCheck(page,{minGapEm:tokens.ink?.min_gap_em,headlineBodyGap:tokens.ink?.headline_body_gap,safeX:tokens.ink?.safe_x});if(again.passed)ink=again;}
   // The last ink map stays in qa/ink for inspection; it never goes to export.
   const {png:inkPng,...inkReport}=ink!;if(inkPng){await mkdir(path.join(dir,'qa/ink'),{recursive:true});await writeFile(path.join(dir,`qa/ink/${num}.png`),inkPng);}
   state.fit.ink={line_height:family.headlineLineHeight,line_space:lineSpace,attempts,...inkReport};

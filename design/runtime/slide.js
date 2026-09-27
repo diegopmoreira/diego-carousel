@@ -59,7 +59,10 @@ window.__fitError = null;
       }
     } else if(blocks[0].dataset.fill==='true') {
       const max=Number(blocks[0].dataset.ceiling);let low=sizes[0],high=max;
-      while(low<high){const mid=Math.ceil((low+high)/2);apply([mid,...sizes.slice(1)]);if(fits())low=mid;else high=mid-1;}
+      // Filling stops before a line is left with a single word ("PEDE" alone between two lines): a slightly smaller
+      // title that pairs every word reads better than the largest one that fits.
+      const paired=()=>{const lines=[...blocks[0].children].map(l=>l.textContent.replace(/\u200b/g,'').trim().split(/\s+/).filter(Boolean).length).filter(n=>n>0);const words=lines.reduce((a,b)=>a+b,0);return lines.length<2||words<=lines.length||lines.every(n=>n>1);};
+      while(low<high){const mid=Math.ceil((low+high)/2);apply([mid,...sizes.slice(1)]);if(fits()&&paired())low=mid;else high=mid-1;}
       if(low>sizes[0])stages.push('headline-fill');
       sizes[0]=low;apply(sizes);
     }
