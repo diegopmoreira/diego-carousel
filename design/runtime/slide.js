@@ -25,6 +25,8 @@ window.__fitError = null;
       if(!line.textContent)line.textContent='\u200b';
       return line;
     }));
+    // Extra space above specific headline lines, opened by the ink map where accents and cedillas collide.
+    if(el.dataset.role==='headline'){const space=window.__lineSpace||{};[...el.children].forEach((line,i)=>{if(space[i])line.style.marginTop=space[i]+'px';});}
   }
   const plain=t=>t.replace(/\*\*/g,'');
   // Lines are stored with their **markers**, so a frozen fit redraws the same emphasis.

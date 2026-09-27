@@ -26,6 +26,8 @@ try{
  for(const old of b.slides){const now=edited.slides.find(s=>s.id===old.id);assert.equal(now.png_hash===old.png_hash,old.id!==target,'only the adjusted slide changes');}
  a.family='cinematic_condensed';await writeJson(path.join(dir,'art-direction.json'),a);
  const familyA=await render(dir);assert.ok(familyA.slides.every(s=>s.passed),JSON.stringify(familyA.slides.filter(s=>!s.passed)));
+ // Ink map ran on every slide and left no collision behind.
+ for(const r of familyA.slides){const fit=await readJson(path.join(dir,`fit/${r.id}.json`));assert.ok(fit.ink&&fit.ink.errors.length===0,JSON.stringify(fit.ink));}
  // Review cycles: counted per distinct render reviewed by the agent; the name never bypasses the limit.
  const agent={name:'Diego',kind:'agent' as const};
  await review(dir,agent,'ciclo 1',false);await review(dir,agent,'mesmo render, mesmo ciclo',false);

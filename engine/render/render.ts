@@ -8,13 +8,14 @@ import { ROOT, loadProject, jsonHash, hash, writeJson, readJson, optionalJson, s
 import { lint, visualLint } from '../qa/lint.js';
 import { serve } from '../preview/server.js';
 import { compose } from './compose.js';
+import { inkCheck, type InkReport } from './ink.js';
 import { VERSION } from '../schema/index.js';
 import { zipFiles } from '../export/zip.js';
 import { workbenchHtml } from '../preview/page.js';
 import { toCopy } from '../source/copy.js';
 // Only files that reach the pixels: the slide runtime, CSS, tokens, fonts, processed avatar and HTML composer.
 // Tests, the studio UI and unrelated engine code must not invalidate renders.
-export const PIXEL_FILES=['design/base.css','design/runtime/slide.js','design/runtime/linebreak.js','design/tokens.json','design/fonts/fonts.css','engine/render/compose.ts','engine/source/copy.ts'];
+export const PIXEL_FILES=['design/base.css','design/runtime/slide.js','design/runtime/linebreak.js','design/tokens.json','design/fonts/fonts.css','engine/render/compose.ts','engine/render/ink.ts','engine/source/copy.ts'];
 export async function environmentHash(config:ConfigData,root=ROOT){
  const fonts=(await readJson(path.join(root,'design/fonts/manifest.json'))).map((f:any)=>'design/fonts/'+f.file);
  const files=[...PIXEL_FILES,...fonts,...(config.branding.avatar?['design/'+config.branding.avatar]:[])];
@@ -71,21 +72,43 @@ async function renderUnlocked(dir:string,only?:string[]){
    if(only&&!only.includes(s.id)){if(old)records.push(old);continue;}
    const asset=input.assets.assets.find(x=>x.id===a.slides[s.id].image.asset_id);const assetUrl=asset?'/project/'+asset.file.split('/').map(encodeURIComponent).join('/'):undefined;
    const file=path.join(dir,`html/slide-${num}.html`);
-   await writeFile(file,compose(c,a,t,i,config,tokens,assetUrl));
    const page=await browser.newPage({viewport:{width:1080,height:1350},deviceScaleFactor:1,colorScheme:'dark'});
-   const errors:string[]=[];
+   let errors:string[]=[];
+   // tsx keeps function names with a __name helper that does not exist inside the page; evaluate callbacks need it.
+   await page.addInitScript('globalThis.__name=globalThis.__name||(f=>f)');
    await page.route('**/*',route=>route.request().url().startsWith(server.url+'/')?route.continue():route.abort());
    page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('requestfailed',r=>errors.push(`Request falhou: ${r.url()}`));page.on('response',r=>{if(r.status()>=400)errors.push(`HTTP ${r.status()}: ${r.url()}`);});
-   await page.goto(`${server.url}/project/html/slide-${num}.html`);
-   await page.waitForFunction(()=> (window as any).__slideReady===true,{},{timeout:30000});
-   const state=await page.evaluate(()=>({fit:(window as any).__fit,error:(window as any).__fitError}));
-   if(state.error)throw Error(state.error);
-   const checks=await browserChecks(page);errors.push(...checks.errors);
+   // Fit, then the ink map. When accents or cedillas of neighbouring headline lines touch, the headline gets more
+   // leading and the fit runs again (the ladder of editorial/visual decisions is unchanged).
+   const family=tokens.families[a.family],maxExtra=(tokens.ink?.max_extra_em??.25),step=tokens.ink?.step??.03;
+   const lineSpace:Record<number,number>={};let state:any,ink:InkReport|undefined,attempts=0;
+   for(;;attempts++){
+    errors=[];
+    await writeFile(file,compose(c,a,t,i,config,tokens,assetUrl,undefined,{lineSpace}));
+    await page.goto(`${server.url}/project/html/slide-${num}.html`);
+    await page.waitForFunction(()=> (window as any).__slideReady===true,{},{timeout:30000});
+    state=await page.evaluate(()=>({fit:(window as any).__fit,error:(window as any).__fitError}));
+    if(state.error)throw Error(state.error);
+    ink=await inkCheck(page,{minGapEm:tokens.ink?.min_gap_em,headlineBodyGap:tokens.ink?.headline_body_gap,safeX:tokens.ink?.safe_x});
+    if(ink.headline_ok)break;
+    const size=state.fit.blocks.headline.size,limit=Math.round(maxExtra*size),add=Math.ceil(step*size);
+    const open=ink.collisions.filter(k=>(lineSpace[k]??0)<limit);
+    if(!open.length)break;
+    for(const k of open)lineSpace[k]=Math.min(limit,(lineSpace[k]??0)+add);
+   }
+   // The last ink map stays in qa/ink for inspection; it never goes to export.
+   const {png:inkPng,...inkReport}=ink!;if(inkPng){await mkdir(path.join(dir,'qa/ink'),{recursive:true});await writeFile(path.join(dir,`qa/ink/${num}.png`),inkPng);}
+   state.fit.ink={line_height:family.headlineLineHeight,line_space:lineSpace,attempts,...inkReport};
+   // Large openings keep the text legible but break the rhythm: flagged for the visual review, not a failure.
+   const warnings:string[]=[];const warnAt=Math.round((tokens.ink?.warn_extra_em??.4)*state.fit.blocks.headline.size);
+   for(const [k,v] of Object.entries(lineSpace))if(v>warnAt)warnings.push(`Mapa de tinta: ${v}px extras acima da linha ${Number(k)+1} do título (acentos colidindo); considerar outra quebra ou tamanho`);
+   if(Object.keys(lineSpace).length)state.fit.stages.push(`ink-space:${Object.entries(lineSpace).map(([k,v])=>`L${Number(k)+1}+${v}px`).join(',')}`);
+   const checks=await browserChecks(page);errors.push(...checks.errors,...ink!.errors.map(e=>`Mapa de tinta: ${e}`));
    if(!state.fit.passed)errors.push('Texto não cabe: ajustar composição ou solicitar compressão editorial');
    await writeJson(path.join(dir,`fit/${s.id}.json`),state.fit);
-   await writeFile(file,compose(c,a,t,i,config,tokens,assetUrl,state.fit));
+   await writeFile(file,compose(c,a,t,i,config,tokens,assetUrl,state.fit,{lineSpace}));
    const png=await page.screenshot({type:'png'});await writeFile(path.join(dir,`qa/render/${num}.png`),png);
-   records.push({position:i+1,...fingerprint,png_hash:hash(png),fit_hash:hash(await readFile(path.join(dir,`fit/${s.id}.json`))),html_hash:hash(await readFile(file)),passed:!errors.length,errors,fonts:checks.fonts});
+   records.push({position:i+1,...fingerprint,warnings,png_hash:hash(png),fit_hash:hash(await readFile(path.join(dir,`fit/${s.id}.json`))),html_hash:hash(await readFile(file)),passed:!errors.length,errors,fonts:checks.fonts});
    await log(dir,'FIT',`${s.id}: ${state.fit.stages.join(' → ')}; overflow=${Math.round(state.fit.overflow_px)}px${state.fit.needs.length?`; requer ${state.fit.needs.join(' ou ')}`:''}; ${errors.length?'FALHA':'OK'}`);
    await page.close();
   }

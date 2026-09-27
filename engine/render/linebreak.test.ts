@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-type Break=(text:string,measure:(t:string)=>number,width:number,options?:{balance?:boolean})=>string[];
+type Break=typeof globalThis.__breakText;
 let breakText:Break;
 const mono=(t:string)=>t.length*10; // 10 px per character keeps the expectations readable
 beforeAll(async()=>{await import('../../design/runtime/linebreak.js');breakText=globalThis.__breakText;});
@@ -24,4 +24,10 @@ describe('quebra de linha',()=>{
  });
  it('preserva parágrafos e linhas vazias',()=>expect(breakText('Um.\n\nDois.',mono,300)).toEqual(['Um.','','Dois.']));
  it('uma palavra maior que a caixa fica sozinha na linha para o fit reprovar',()=>expect(breakText('curto extraordinariamente curto',mono,100)).toEqual(['curto','extraordinariamente','curto']));
+});
+describe('quebra de títulos com frases',()=>{
+ it('não deixa uma palavra solta depois de ponto final na mesma linha',()=>{
+  const lines=breakText('NÃO É A MALDADE QUE ATRAI. É A FORÇA',(t:string)=>t.length*30,540,{balance:true});
+  for(const l of lines)expect(l).not.toMatch(/[.!?] \S+$/);
+ });
 });

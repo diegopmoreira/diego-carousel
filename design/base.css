@@ -74,3 +74,10 @@ footer{position:absolute;left:49px;right:49px;bottom:41px;height:53px;display:fl
 .full_bleed.cover .copy-region{bottom:90px}
 .editorial_clean.full_bleed.cover .copy-region{bottom:110px}
 .cover .copy{gap:28px}
+
+/* Ink map (engine/render/ink.ts): text only, one color per headline line, body green. Never in exported PNGs. */
+.ink-map .image-slot,.ink-map .shade,.ink-map footer,.ink-map .cover-profile,.ink-map .top-profile,.ink-map .quote-mark,.ink-map .cover-cue{visibility:hidden}
+.ink-map,.ink-map .slide{background:#000}
+.ink-map h1 em,.ink-map p em{color:inherit}
+.ink-map p{color:#00FF00}
+.ink-map .contrast p::before,.ink-map.contrast p::before{visibility:hidden}

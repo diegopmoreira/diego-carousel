@@ -6,7 +6,8 @@ const FOLLOW='<svg class="follow-icon" viewBox="0 0 24 24" aria-hidden="true"><r
 export const escapeHtml=(t:string)=>t.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 export const scriptJson=(v:unknown)=>JSON.stringify(v).replaceAll('<','\\u003c');
 const TEXT_COMPOSITIONS=new Set(['text_only','quote','contrast','minimal_pause','giant_statement']);
-export type ComposeOptions={headlineLineHeight?:number};
+// lineSpace: extra px above given headline lines, opened by the ink map only where two lines collide.
+export type ComposeOptions={headlineLineHeight?:number;lineSpace?:Record<number,number>};
 export function compose(c:CarouselData,a:ArtData,t:TweaksData,index:number,config:any,tokens:any,assetUrl?:string,frozen?:unknown,options:ComposeOptions={}){
  const s=c.slides[index],d=a.slides[s.id],tw=t.slides[s.id],p=tw?.params??{},comp=tw?.composition??d.composition;
  const fam=tokens.families[a.family],floors=tokens.floors,cover=index===0,last=index===c.slides.length-1,penultimate=index===c.slides.length-2;
@@ -47,5 +48,5 @@ export function compose(c:CarouselData,a:ArtData,t:TweaksData,index:number,confi
  +`<div class="copy-region"><div class="copy">${cover?`<div class="cover-profile">${badge}</div>`:''}${comp==='quote'?'<div class="quote-mark" aria-hidden="true">“</div>':''}`
  +`<h1 data-role="headline" data-floor="${headlineFloor}" data-ceiling="${ceiling}" data-max-lines="${maxLines}" data-fill="${d.fit.headline==='fill'}">${escapeHtml(headline)}</h1>`
  +`${s.body?`<p data-role="body" data-floor="${floors.body}" data-max-lines="${bodyLines}">${escapeHtml(emphasis(s.body))}</p>`:''}${coverCue}</div></div>`
- +`${footer}</main><script>window.__frozenFit=${scriptJson(frozen??null)}</script><script src="/design/runtime/linebreak.js"></script><script src="/design/runtime/slide.js"></script></body></html>`;
+ +`${footer}</main><script>window.__frozenFit=${scriptJson(frozen??null)};window.__lineSpace=${scriptJson(options.lineSpace??{})}</script><script src="/design/runtime/linebreak.js"></script><script src="/design/runtime/slide.js"></script></body></html>`;
 }
