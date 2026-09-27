@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, rename, readdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,5 +22,4 @@ export async function loadProject(dir:string) {
  return {carousel:Carousel.parse(c),art:ArtDirection.parse(a),tweaks:Tweaks.parse(t),assets:Assets.parse(m)};
 }
 export async function log(dir:string,tag:string,message:string){await writeFile(path.join(dir,'run.log'),`${new Date().toISOString()} [${tag.replace(/[^A-Z_]/g,'')}] ${message.replace(/\n/g,' ')}\n`,{flag:'a'});}
-export async function treeHash(dir:string):Promise<string>{const files=await readdir(dir,{withFileTypes:true}); const rows=await Promise.all(files.sort((a,b)=>a.name.localeCompare(b.name)).map(async f=>[f.name,f.isDirectory()?await treeHash(path.join(dir,f.name)):hash(await readFile(path.join(dir,f.name)))]));return jsonHash(rows);}
 export function safeChild(dir:string,relative:string){const p=path.resolve(dir,relative);if(!p.startsWith(path.resolve(dir)+path.sep))throw Error('Caminho fora do projeto');return p;}

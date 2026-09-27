@@ -1,0 +1,20 @@
+import { it, expect, afterEach } from 'vitest';
+import { mkdtemp, cp, writeFile, appendFile, rm, mkdir } from 'node:fs/promises';
+import path from 'node:path'; import os from 'node:os';
+import { ROOT } from '../project/io.js';
+import { loadConfig } from '../project/config.js';
+import { environmentHash } from './render.js';
+const dirs:string[]=[];
+afterEach(async()=>{await Promise.all(dirs.splice(0).map(d=>rm(d,{recursive:true,force:true})));});
+it('só arquivos que chegam ao pixel invalidam renders',async()=>{
+ const root=await mkdtemp(path.join(os.tmpdir(),'env-hash-'));dirs.push(root);
+ for(const d of ['design','engine'])await cp(path.join(ROOT,d),path.join(root,d),{recursive:true,filter:src=>!src.endsWith('avatar-source.png')});
+ const config=await loadConfig(),before=await environmentHash(config,root);
+ await appendFile(path.join(root,'engine/qa/lint.test.ts'),'\n// edição alheia\n');
+ await appendFile(path.join(root,'design/workbench.js'),'\n// UI\n');
+ await writeFile(path.join(root,'design/.DS_Store'),'x');await mkdir(path.join(root,'engine/novo'));await writeFile(path.join(root,'engine/novo/x.ts'),'');
+ expect(await environmentHash(config,root)).toBe(before);
+ await appendFile(path.join(root,'design/base.css'),'\n.x{}');
+ expect(await environmentHash(config,root)).not.toBe(before);
+ expect(await environmentHash({...config,branding:{...config.branding,handle:'@outro'}},ROOT)).not.toBe(await environmentHash(config,ROOT));
+});

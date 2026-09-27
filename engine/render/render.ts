@@ -1,9 +1,10 @@
 import type { Page } from 'playwright';
-import { launchChromium } from './browser.js';
+import { loadConfig, type ConfigData } from '../project/config.js';
+import { launchChromium, chromiumPath } from './browser.js';
 import sharp from 'sharp';
 import { readFile, writeFile, mkdir, readdir, unlink, copyFile, rename } from 'node:fs/promises';
 import path from 'node:path';
-import { ROOT, loadProject, jsonHash, treeHash, hash, writeJson, readJson, optionalJson, safeChild, log, contentDir } from '../project/io.js';
+import { ROOT, loadProject, jsonHash, hash, writeJson, readJson, optionalJson, safeChild, log, contentDir } from '../project/io.js';
 import { lint, visualLint } from '../qa/lint.js';
 import { serve } from '../preview/server.js';
 import { compose, escapeHtml } from './compose.js';
@@ -11,10 +12,19 @@ import { VERSION } from '../schema/index.js';
 import { zipFiles } from '../export/zip.js';
 import { workbenchHtml } from '../preview/page.js';
 import { toCopy } from '../source/copy.js';
+// Only files that reach the pixels: the slide runtime, CSS, tokens, fonts, processed avatar and HTML composer.
+// Tests, the studio UI and unrelated engine code must not invalidate renders.
+export const PIXEL_FILES=['design/base.css','design/runtime/slide.js','design/tokens.json','design/fonts/fonts.css','engine/render/compose.ts','engine/source/copy.ts'];
+export async function environmentHash(config:ConfigData,root=ROOT){
+ const fonts=(await readJson(path.join(root,'design/fonts/manifest.json'))).map((f:any)=>'design/fonts/'+f.file);
+ const files=[...PIXEL_FILES,...fonts,...(config.branding.avatar?['design/'+config.branding.avatar]:[])];
+ const hashes=await Promise.all(files.map(async f=>[f,hash(await readFile(path.join(root,f)))]));
+ const playwright=(await readJson(path.join(ROOT,'node_modules/playwright/package.json'))).version;
+ return jsonHash({files:hashes,branding:config.branding,version:VERSION,playwright,chromium:chromiumPath()});
+}
 export async function renderInputs(dir:string){
- const base=await contentDir(dir),p=await loadProject(dir),config=await readJson(path.join(ROOT,'config.json')),tokens=await readJson(path.join(ROOT,'design/tokens.json'));
- const [designHash,engineHash,lock]=await Promise.all([treeHash(path.join(ROOT,'design')),treeHash(path.join(ROOT,'engine')),readFile(path.join(ROOT,'package-lock.json'))]);
- const environment=jsonHash({designHash,engineHash,lock:hash(lock),config,version:VERSION});
+ const base=await contentDir(dir),p=await loadProject(dir),config=await loadConfig(),tokens=await readJson(path.join(ROOT,'design/tokens.json'));
+ const environment=await environmentHash(config);
  const assetHashes:Record<string,string>={};
  for(const asset of p.assets.assets){const bytes=await readFile(safeChild(base,asset.file));const h=hash(bytes);if(h!==asset.sha256)throw Error(`Asset ${asset.id}: SHA-256 difere do manifesto`);assetHashes[asset.id]=h;}
  const slides=p.carousel.slides.map((s,i)=>({id:s.id,input_hash:jsonHash({s,d:p.art.slides[s.id],family:p.art.family,t:p.tweaks.slides[s.id],environment,index:i,total:p.carousel.slides.length,asset:p.art.slides[s.id]?.image.asset_id?assetHashes[p.art.slides[s.id].image.asset_id!]:null})}));

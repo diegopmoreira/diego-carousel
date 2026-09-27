@@ -14,8 +14,9 @@
   "branding": {
     "name": "Diego Moreira",
     "handle": "@odiego.moreira",
-    "avatar": "brand/avatar-source.png",
+    "avatar": "brand/avatar.png",
     "verified": true,
+    "profile_on": "cover",
     "swipe_text": "Arrasta para o lado >",
     "follow_text": "Segue o perfil para mais conteúdos como esse!"
   },

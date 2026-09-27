@@ -15,7 +15,8 @@
     "preview": "node --import tsx engine/cli.ts preview",
     "check": "npm run typecheck && npm test",
     "test:e2e": "node --import tsx scripts/e2e.ts",
-    "test:studio": "node --import tsx scripts/studio-e2e.ts"
+    "test:studio": "node --import tsx scripts/studio-e2e.ts",
+    "brand": "node --import tsx scripts/process-avatar.ts"
   },
   "dependencies": {
     "@fontsource-variable/inter": "5.3.0",

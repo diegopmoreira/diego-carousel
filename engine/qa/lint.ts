@@ -2,11 +2,13 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { loadProject, jsonHash, writeJson, hash, contentDir } from '../project/io.js';
 import { parseCopy, plainText } from '../source/copy.js';
+import { loadConfig } from '../project/config.js';
 export type Issue={severity:'error'|'warning';path:string;message:string};
 export async function lint(dir:string){
  const base=await contentDir(dir),p=await loadProject(dir),c=p.carousel,issues:Issue[]=[];
  const add=(severity:Issue['severity'],at:string,message:string)=>issues.push({severity,path:at,message});
- if(c.slides.length<8||c.slides.length>12)add('error','slides','São necessários 8–12 painéis');
+ const {slides:range}=await loadConfig();
+ if(c.slides.length<range.min||c.slides.length>range.max)add('error','slides',`São necessários ${range.min}–${range.max} painéis`);
  const forbidden=['antes de começar','neste carrossel','siga meu perfil','compartilhe com seus amigos','5 dicas','você merece','transforme sua vida','descubra o segredo','junto com você nessa jornada','vamos juntos','acredite em si mesmo'];
  c.slides.forEach((s,i)=>{
   const t=plainText(s.headline+'\n'+(s.body??'')).toLocaleLowerCase('pt-BR');

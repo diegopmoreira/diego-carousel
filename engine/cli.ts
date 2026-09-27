@@ -3,6 +3,7 @@ import path from 'node:path';
 import { readFile, writeFile, access, readdir } from 'node:fs/promises';
 import sharp from 'sharp';
 import { chromiumPath } from './render/browser.js';
+import { loadConfig } from './project/config.js';
 import { z } from 'zod';
 import { createProject, importCopy } from './project/create.js';
 import { ROOT, readJson, writeJson, loadProject, opaqueId, hash, log, optionalJson, jsonHash } from './project/io.js';
@@ -52,7 +53,7 @@ try{
  case 'export':print(await exportProject(project()));break;
  case 'review':await review(project(),required(flag('reviewer'),'Informe --reviewer'),required(flag('note'),'Informe --note com o resultado da inspeção visual'),args.includes('--approved'));print('Revisão registrada.');break;
  case 'status':{const dir=project(),p=await renderInputs(dir),l=await optionalJson(path.join(dir,'qa/editorial-lint.json')),r=await optionalJson(path.join(dir,'render-manifest.json')),v=await optionalJson(path.join(dir,'qa/visual-review.json'));print({project:dir,mode:p.carousel.project.mode,slides:p.carousel.slides.length,lint_current:!!l?.passed&&l.content_hash===jsonHash(p.carousel),render_current:r?.project_hash===p.project_hash,visual_review_current:!!v?.approved&&v.render_hash===r?.render_hash,source:p.carousel.source});break;}
- case 'preview':{let dir=args[0];if(!dir||dir.startsWith('--')){const projects=await readdir(path.join(ROOT,'projects'));dir=path.join(ROOT,'projects',projects.sort().at(-1)??'');}const config=await readJson(path.join(ROOT,'config.json'));const server=await serve(path.resolve(dir),Number(flag('port')??config.preview.port),true);print(server.url);for(const sig of ['SIGINT','SIGTERM'] as const)process.on(sig,()=>void server.close().then(()=>process.exit(0)));break;}
+ case 'preview':{let dir=args[0];if(!dir||dir.startsWith('--')){const projects=await readdir(path.join(ROOT,'projects'));dir=path.join(ROOT,'projects',projects.sort().at(-1)??'');}const config=await loadConfig();const server=await serve(path.resolve(dir),Number(flag('port')??config.preview.port),true);print(server.url);for(const sig of ['SIGINT','SIGTERM'] as const)process.on(sig,()=>void server.close().then(()=>process.exit(0)));break;}
  case 'asset':{
   const sub=args.shift(),dir=project();
   if(sub==='list'){print((await loadProject(dir)).assets);break;}
@@ -66,7 +67,7 @@ try{
   checks.push({check:'Node 24 LTS',ok:process.versions.node.startsWith('24.'),detail:process.versions.node});
   for(const file of ['design/fonts/manifest.json','engine/schema/generated/carousel.schema.json']){try{await access(path.join(ROOT,file));checks.push({check:file,ok:true});}catch{checks.push({check:file,ok:false});}}
   try{await access(chromiumPath());checks.push({check:'Chromium instalado',ok:true,detail:chromiumPath()});}catch{checks.push({check:'Chromium instalado',ok:false});}
-  const config=await readJson(path.join(ROOT,'config.json'));checks.push({check:'Avatar oficial',ok:!!config.branding.avatar,optional:true});
+  const config=await loadConfig();checks.push({check:'Avatar oficial',ok:!!config.branding.avatar,optional:true});
   print({passed:checks.every(c=>c.ok||c.optional),checks});if(checks.some(c=>!c.ok&&!c.optional))process.exitCode=1;break;
  }
  case undefined:case 'help':case '--help':print(help);break;
