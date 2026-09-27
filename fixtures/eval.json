@@ -1,0 +1,15 @@
+{
+ "schema_version": 1,
+ "fixtures": [
+  {"id": 1, "name": "emocional-conceitual", "mode": "full", "source": "~/Downloads/Texto colado.txt", "expect": {"family": "cinematic_condensed"},
+   "note": "O tipo de homem que sempre se arrebenta (Jung/anima)."},
+  {"id": 2, "name": "diagnostico-denso", "mode": "full", "source": "corpus:ESCOLHER", "expect": {"family": "editorial_clean"},
+   "note": "Vídeo público com vários mecanismos; escolher o id no Corpus (nunca supervisão) e trocar ESCOLHER."},
+  {"id": 3, "name": "metafora-forte", "mode": "full", "source": "corpus:ESCOLHER", "expect": {"central_metaphor": true},
+   "note": "Carência afetiva: sede → água salgada → poça → poço. Escolher o id no Corpus e trocar ESCOLHER."},
+  {"id": 4, "name": "copy-pronta-publicada", "mode": "design-only", "source": "references/diego/fixture-4.md", "expect": {"identical_copy": true},
+   "note": "Um carrossel publicado transcrito no formato do plugin Figma (fora do Git)."},
+  {"id": 5, "name": "body-excessivo", "mode": "design-only", "source": "fixtures/copy-excessiva.md", "expect": {"floors": true},
+   "note": "Bodies de 600+ caracteres: compor/ajustar antes de encolher; nunca abaixo do piso; compressão só com aval."}
+ ]
+}

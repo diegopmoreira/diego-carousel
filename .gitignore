@@ -10,3 +10,4 @@ references/diego/*
 library/images/
 .playwright/
 gallery/
+eval/
