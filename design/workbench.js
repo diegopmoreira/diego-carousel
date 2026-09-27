@@ -37,6 +37,7 @@
   const fitSummary=$('#fit-summary');fitSummary.classList.toggle('error',!render?.passed||!data.render_current);
   fitSummary.textContent=!data.render_current?'Há alterações ainda não renderizadas. Atualiza antes de exportar.':!render?.passed?(render?.errors.join(' · ')??'Render pendente'):fit?'✓ Cabe no slide · título '+fit.blocks.headline.size+' px'+(fit.blocks.body?' · corpo '+fit.blocks.body.size+' px':'')+(render.warnings?.length?' · ⚠ '+render.warnings.join(' · '):''):'Aguardando render';
   hideLive();if(view==='instagram')drawInstagram();
+  const pending=data.pending??[];$('#pending').hidden=!pending.length;if(pending.length)$('#pending-text').textContent=pending.map(p=>p.type==='voice'?'Proposta de voz (você → tu) aguardando tua aprovação':'Proposta de edição da copy aguardando tua aprovação').join(' · ');
   if(grid)drawGrid();
  }
  // Live preview: the frozen slide HTML in an iframe, with the inspector values applied as they change.
@@ -77,6 +78,8 @@
  $('.ig-prev').onclick=()=>{igIndex--;drawInstagram();};$('.ig-next').onclick=()=>{igIndex++;drawInstagram();};
  function setView(v){view=v;$$('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===v)));$('#frame').hidden=v!=='slide';$('#instagram').hidden=v!=='instagram';if(v==='instagram'){igIndex=index;drawInstagram();}}
  $$('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+ $('#pending-open').onclick=()=>{const p=(data.pending??[])[0];if(!p)return;$('#approve-title').textContent=p.type==='voice'?'Voz: você → tu':'Edição da copy';$('#approve-text').textContent=p.markdown;$('#approve-form').dataset.type=p.type;try{$('#approve-form').elements.by.value||=localStorage.getItem('carousel-reviewer')??'';}catch{}$('#approve-dialog').showModal();};
+ $('#approve-form').onsubmit=async e=>{e.preventDefault();const f=e.target;$('#approve-dialog').close();try{await action('approve',{type:f.dataset.type,by:f.elements.by.value.trim(),confirmed:f.elements.confirmed.checked});notice('Aprovado e aplicado. Slides atualizados.');}catch{}};
  function drawGrid(){$('#grid').replaceChildren(...data.carousel.slides.map((s,n)=>{const button=document.createElement('button'),im=document.createElement('img'),label=document.createElement('span');im.src=imageUrl(n);im.alt=s.headline;label.textContent='Slide '+(n+1);button.append(im,label);button.onclick=()=>{changeIndex(n);toggleGrid();};return button;}));}
  function toggleGrid(){grid=!grid;$('#stage').hidden=grid;$('#grid').hidden=!grid;$('#grid-toggle').setAttribute('aria-pressed',String(grid));$('#grid-toggle').textContent=grid?'Slide':'Grade';if(grid)drawGrid();}
  form.onchange=e=>{if(LIVE.includes(e.target.name)&&view==='slide'&&data.fits[data.carousel.slides[index].id])showLive();};

@@ -25,3 +25,5 @@
 @media(max-width:780px){#frame #canvas{max-height:calc(62dvh - 16px)}.view-controls{gap:8px}.safe-toggle{display:none}}
 .ig-grid{width:180px;margin-left:24px}.ig-grid-tile{margin-top:10px;width:180px;aspect-ratio:3/4;overflow:hidden;border:1px solid #262626;line-height:0}.ig-grid-tile img{width:100%;height:100%;object-fit:cover}
 @media(max-width:780px){#instagram{flex-direction:column;align-items:center}.ig-grid{margin:16px 0 0}}
+#pending{display:flex;align-items:center;gap:12px;padding:10px 28px;background:#2b2618;border-bottom:1px solid #594733;color:#e4c18c;font-size:12px}#pending button{padding:6px 10px;font-size:11px}
+#approve-dialog{width:min(760px,94vw)}#approve-text{white-space:pre-wrap;max-height:50vh;overflow:auto;background:#17181b;border:1px solid var(--line);border-radius:8px;padding:14px;font:12px/1.6 Inter,system-ui,sans-serif;color:#d8d8d8}

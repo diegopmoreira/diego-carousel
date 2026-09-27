@@ -1,6 +1,6 @@
 import { launchChromium } from '../engine/render/browser.js';
 import assert from 'node:assert/strict';
-import { mkdtemp,mkdir,readFile,rm } from 'node:fs/promises';
+import { mkdtemp,mkdir,readFile,rm,readdir } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import http from 'node:http';
 import path from 'node:path';import os from 'node:os';
@@ -8,6 +8,7 @@ import { ROOT,readJson,writeJson,loadProject } from '../engine/project/io.js';
 import { importCopy } from '../engine/project/create.js';
 import { render } from '../engine/render/render.js';
 import { serve } from '../engine/preview/server.js';
+import { proposeVoice } from '../engine/qa/voice.js';
 const dir=await mkdtemp(path.join(os.tmpdir(),'studio-e2e-'));let server:Awaited<ReturnType<typeof serve>>|undefined,browser:Awaited<ReturnType<typeof launchChromium>>|undefined;
 // Everything this test creates lives in a temporary folder: real projects and fixtures stay untouched.
 process.env.CAROUSEL_PROJECTS_DIR=path.join(dir,'projects');
@@ -46,7 +47,7 @@ try{
  delete tw.slides[someId];await writeJson(tweaksFile,tw);await page.waitForFunction(()=>document.querySelector('#status')?.textContent!=='Precisa atualizar',{},{timeout:10000});
  await page.locator('#new-version').click();await page.locator('#variant-form [name="name"]').fill('cinematica');await page.locator('#variant-form button[type="submit"]').click();await page.waitForURL('**/*variant=cinematica');await page.locator('#studio').waitFor({state:'visible'});assert.equal((await loadProject(dir)).art.family,'editorial_clean');assert.equal((await loadProject(path.join(dir,'variants/cinematica'))).art.family,'cinematic_condensed');assert.equal(await readFile(path.join(dir,'carousel.json'),'utf8'),before);
  await page.locator('#version').selectOption('');await page.waitForURL(url=>!url.search);await page.locator('#studio').waitFor({state:'visible'});
- await page.locator('#export').click();await page.locator('#export-form [name="reviewer"]').fill('Teste automático');await page.locator('[name="confirmed"]').check();await page.locator('#export-form textarea').fill('Fixture automática isolada: teste técnico do download.');
+ await page.locator('#export').click();await page.locator('#export-form [name="reviewer"]').fill('Teste automático');await page.locator('#export-form [name="confirmed"]').check();await page.locator('#export-form textarea').fill('Fixture automática isolada: teste técnico do download.');
  const downloadPromise=page.waitForEvent('download');await page.locator('#export-form button[type="submit"]').click();const download=await downloadPromise;const zip=path.join(dir,'test.zip');await download.saveAs(zip);
  execFileSync('python3',['-c','import zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); assert len(z.namelist())==10; assert z.testzip() is None; assert all(z.read(n).startswith(bytes.fromhex("89504e470d0a1a0a")) for n in z.namelist())',zip]);
  assert.equal(errors.length,0,errors.join('\n'));
@@ -61,9 +62,16 @@ try{
  const emptyProjects=path.join(dir,'empty-projects');process.env.CAROUSEL_PROJECTS_DIR=emptyProjects;
  const empty=await serve(null,0,true);try{
   const p2=await browser!.newPage({viewport:{width:1440,height:1000}});await p2.goto(empty.url);await p2.locator('#create-dialog').waitFor({state:'visible'});
-  await p2.locator('#create-form [name="slug"]').fill('primeiro');await p2.locator('#create-form [name="copy"]').fill(await readFile(path.join(ROOT,'fixtures/copy-pronta.md'),'utf8'));
+  await p2.locator('#create-form [name="slug"]').fill('primeiro');await p2.locator('#create-form [name="copy"]').fill((await readFile(path.join(ROOT,'fixtures/copy-pronta.md'),'utf8')).replace('Tu não precisa vencer','Você não precisa vencer'));
   await p2.locator('#create-form button[type="submit"]').click();await p2.waitForURL('**/*project=*');await p2.locator('#studio').waitFor({state:'visible'});
-  assert.equal(await p2.locator('#slides button').count(),10);await p2.close();
+  assert.equal(await p2.locator('#slides button').count(),10);
+  // A voice proposal waits in the studio; Diego approves it on screen and the copy changes only then.
+  const created=path.join(emptyProjects,(await readdir(emptyProjects))[0]);await proposeVoice(created);await p2.reload();
+  await p2.locator('#pending').waitFor({state:'visible'});await p2.locator('#pending-open').click();
+  await p2.locator('#approve-form [name="by"]').fill('Diego');await p2.locator('#approve-form [name="confirmed"]').check();await p2.locator('#approve-form button[type="submit"]').click();
+  await p2.waitForFunction(()=>document.querySelector('#notice')?.textContent?.startsWith('Aprovado'));
+  assert.equal((await loadProject(created)).carousel.slides[0].headline,'Tu não precisa vencer toda discussão');
+  assert.equal((await readJson(path.join(created,'approvals.json'))).approvals[0].by,'Diego');await p2.close();
  }finally{await empty.close();process.env.CAROUSEL_PROJECTS_DIR=path.join(dir,'projects');}
- console.log('Estúdio E2E aprovado: UI, prévia ao vivo, Instagram, área segura, eventos do servidor, ajuste isolado, copy preservada, versão, proteção de escrita, revisão e ZIP íntegro.');
+ console.log('Estúdio E2E aprovado: UI, prévia ao vivo, Instagram, área segura, eventos do servidor, estúdio vazio, aprovação de proposta, ajuste isolado, copy preservada, versão, proteção de escrita, revisão e ZIP íntegro.');
 }finally{await browser?.close();await server?.close();await rm(dir,{recursive:true,force:true});}

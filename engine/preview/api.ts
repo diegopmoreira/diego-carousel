@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import path from 'node:path';
-import { readdir } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { ArtDirection, Family, Composition, Tweaks, Assets, IMAGE_COMPOSITIONS } from '../schema/index.js';
 import { projectsDir, contentDir, loadProject, jsonHash, writeJson, optionalJson, log } from '../project/io.js';
 import { listVariants } from '../project/variants.js';
@@ -48,5 +48,8 @@ export async function state(dir:string){
  const p=await loadProject(dir),manifest=await optionalJson(path.join(dir,'render-manifest.json')),review=await optionalJson(path.join(dir,'qa/visual-review.json'));
  const {renderInputs}=await import('../render/render.js');const current=await renderInputs(dir);
  const projects=await listProjects();
- return {projects,handle:(await loadConfig()).branding.handle,project_name:path.basename(await contentDir(dir)),revision:jsonHash(p),title:p.carousel.source.title,...p,variants:await listVariants(dir),active_variant:path.basename(path.dirname(dir))==='variants'?path.basename(dir):null,render_current:manifest?.project_hash===current.project_hash,review_current:!!review?.approved&&review.render_hash===manifest?.render_hash&&manifest?.project_hash===current.project_hash,manifest,fits:Object.fromEntries(await Promise.all(p.carousel.slides.map(async s=>[s.id,await optionalJson(path.join(dir,`fit/${s.id}.json`))]))),lint:await optionalJson(path.join(dir,'qa/editorial-lint.json'))};
+ // Proposals waiting for Diego (voice, edit), shown in the studio with an approve button.
+ const base=await contentDir(dir),pending=[];
+ for(const type of ['voice','edit'] as const){const proposal=await optionalJson(path.join(base,`qa/${type}-proposal.json`));if(proposal&&proposal.base_hash===jsonHash(p.carousel.slides.map(({headline,body})=>({headline,body}))))pending.push({type,markdown:await readFile(path.join(base,`qa/${type}-proposal.md`),'utf8').catch(()=>'')});}
+ return {pending,projects,handle:(await loadConfig()).branding.handle,project_name:path.basename(await contentDir(dir)),revision:jsonHash(p),title:p.carousel.source.title,...p,variants:await listVariants(dir),active_variant:path.basename(path.dirname(dir))==='variants'?path.basename(dir):null,render_current:manifest?.project_hash===current.project_hash,review_current:!!review?.approved&&review.render_hash===manifest?.render_hash&&manifest?.project_hash===current.project_hash,manifest,fits:Object.fromEntries(await Promise.all(p.carousel.slides.map(async s=>[s.id,await optionalJson(path.join(dir,`fit/${s.id}.json`))]))),lint:await optionalJson(path.join(dir,'qa/editorial-lint.json'))};
 }
