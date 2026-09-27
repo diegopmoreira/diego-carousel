@@ -104,8 +104,13 @@ export async function serve(initialDir:string|null,port=0,editable=false){
        // Diego approves a pending voice or edit proposal on screen; the approval is recorded with the name given.
        const approval=z.object({revision:z.string(),type:z.enum(['voice','edit']),by:z.string().trim().min(2).max(80),confirmed:z.literal(true)}).strict().parse(input);
        const {approveVoice,approveEdit}=await import('../qa/voice.js');
-       if(approval.type==='voice')await approveVoice(dir,approval.by,'Aprovado no estúdio');else await approveEdit(dir,approval.by,'');
-       await render(dir).catch(()=>{});
+       // Diego read the whole proposal on screen (changes outside the rule are marked ⚠ there), so his approval
+       // covers them. The copy lives in the main project, shared by every version: lock it and render it too.
+       await withLock(base,async()=>{
+        if(approval.type==='voice')await approveVoice(base,approval.by,'Aprovado no estúdio',{allowOther:true});else await approveEdit(base,approval.by,'');
+        await render(base).catch(()=>{});
+       });
+       if(dir!==base)await render(dir).catch(()=>{});
       }else if(pathname==='/api/export'){
        const approval=z.object({revision:z.string(),confirmed:z.literal(true),reviewer:z.string().trim().min(2).max(80),note:z.string().min(5)}).strict().parse(input);
        await review(dir,{name:approval.reviewer,kind:'human'},approval.note,true);await exportProject(dir);
