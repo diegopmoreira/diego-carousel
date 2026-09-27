@@ -5,9 +5,22 @@ window.__fitError = null;
   const measure=document.createElement('canvas').getContext('2d');
   function linesFor(text,el,size){
     const style=getComputedStyle(el);measure.font=`${style.fontWeight} ${size}px ${style.fontFamily}`;
-    return window.__breakText(text,t=>measure.measureText(t).width,el.clientWidth,{balance:el.dataset.role==='headline'});
+    return window.__breakText(text,t=>measure.measureText(t.replace(/\*\*/g,'')).width,el.clientWidth,{balance:el.dataset.role==='headline'});
   }
-  function setLines(el,lines,size){el.style.fontSize=size+'px';el.replaceChildren(...lines.map(t=>{const s=document.createElement('span');s.className='text-line';s.textContent=t||'​';return s;}));}
+  // **emphasis** may span lines; the open/closed state carries from one line to the next. Emphasis changes color only,
+  // so the measured widths stay exact.
+  function setLines(el,lines,size){
+    el.style.fontSize=size+'px';let open=false;
+    el.replaceChildren(...lines.map(t=>{
+      const line=document.createElement('span');line.className='text-line';
+      t.split('**').forEach((part,i)=>{if(i>0)open=!open;if(!part)return;if(open){const em=document.createElement('em');em.textContent=part;line.append(em);}else line.append(part);});
+      if(!line.textContent)line.textContent='\u200b';
+      return line;
+    }));
+  }
+  const plain=t=>t.replace(/\*\*/g,'');
+  // Lines are stored with their **markers**, so a frozen fit redraws the same emphasis.
+  const linesOf=el=>[...el.children].map(line=>[...line.childNodes].map(n=>n.nodeName==='EM'?`**${n.textContent}**`:n.textContent.replace(/\u200b/g,'')).join(''));
   try {
     const blocks=[...document.querySelectorAll('[data-role="headline"],[data-role="body"]')];
     await Promise.all(blocks.map(el=>{const s=getComputedStyle(el);return document.fonts.load(`${s.fontWeight} ${s.fontSize} ${s.fontFamily}`,el.textContent);}));
@@ -41,13 +54,13 @@ window.__fitError = null;
     const passed=fits(),overflow=Math.max(0,copy.getBoundingClientRect().height-region().height);
     // How much of each text fits at the final sizes: whole words, measured by the same layout.
     const charsThatFit=blocks.map((el,i)=>{
-      if(passed)return original[i].length;
+      if(passed)return plain(original[i]).length;
       const words=original[i].split(/(\s+)/);let low=0,high=words.length;
       while(low<high){const mid=Math.ceil((low+high)/2);const texts=[...original];texts[i]=words.slice(0,mid).join('');apply(sizes,texts);if(fits())low=mid;else high=mid-1;}
-      apply(sizes);return words.slice(0,low).join('').trimEnd().length;
+      apply(sizes);return plain(words.slice(0,low).join('')).trimEnd().length;
     });
     const needs=passed?[]:['alternative-composition','editorial-compression'];
-    window.__fit={passed,gap,stages,needs,overflow_px:overflow,blocks:Object.fromEntries(blocks.map((el,i)=>[el.dataset.role,{size:parseFloat(getComputedStyle(el).fontSize),floor:floors[i],lines:[...el.children].map(s=>s.textContent),line_height:parseFloat(getComputedStyle(el).lineHeight),chars:original[i].length,chars_that_fit:charsThatFit[i]}]))};
+    window.__fit={passed,gap,stages,needs,overflow_px:overflow,blocks:Object.fromEntries(blocks.map((el,i)=>[el.dataset.role,{size:parseFloat(getComputedStyle(el).fontSize),floor:floors[i],lines:linesOf(el),line_height:parseFloat(getComputedStyle(el).lineHeight),chars:plain(original[i]).length,chars_that_fit:charsThatFit[i]}]))};
     window.__slideReady=true;
   }catch(e){window.__fitError=String(e);window.__slideReady=true;}
 })();

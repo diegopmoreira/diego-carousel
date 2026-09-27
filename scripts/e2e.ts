@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {mkdtemp,readFile,writeFile,rm,mkdir} from 'node:fs/promises';
 import os from 'node:os';import path from 'node:path';
-import {ROOT,readJson,writeJson,loadProject,hash} from '../engine/project/io.js';
+import {ROOT,readJson,writeJson,hash} from '../engine/project/io.js';
 import {render,validate,exportProject,review} from '../engine/render/render.js';
 import {importCopy} from '../engine/project/create.js';
 const dir=await mkdtemp(path.join(os.tmpdir(),'diego-carousel-e2e-'));

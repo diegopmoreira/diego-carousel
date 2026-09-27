@@ -2,3 +2,6 @@
 
 /* Keep image zoom inside its own frame and honor inspector alignment. */
 .image-slot{position:absolute;left:0;top:0;width:1080px;height:1350px;overflow:hidden}.image-slot .scene{left:0;top:0;width:100%;height:100%}.cinematic_fade .image-slot{height:670px}.image_card .image-slot{left:60px;top:700px;width:960px;height:485px;border-radius:32px}.image_card .image-slot .scene{border-radius:0}.cover.align-left .copy{text-align:left}.cover.align-left .profile{justify-content:flex-start}.cover.align-center .copy{text-align:center}.cover.align-center .profile{justify-content:center}.cover.position-top .copy-region{align-items:flex-start}.cover.position-center .copy-region{align-items:center}.cover.position-bottom .copy-region{align-items:flex-end}
+
+/* Emphasis: color only, so line measurement stays exact. */
+h1 em,p em{font-style:normal;color:var(--emphasis)}

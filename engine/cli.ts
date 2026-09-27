@@ -1,19 +1,17 @@
 #!/usr/bin/env node
 import path from 'node:path';
-import { readFile, writeFile, access, readdir } from 'node:fs/promises';
-import sharp from 'sharp';
+import { readFile, access } from 'node:fs/promises';
 import { chromiumPath } from './render/browser.js';
 import { loadConfig } from './project/config.js';
 import { z } from 'zod';
 import { createProject, importCopy } from './project/create.js';
-import { ROOT, projectsDir, readJson, writeJson, loadProject, opaqueId, hash, log, optionalJson, jsonHash } from './project/io.js';
+import { ROOT, projectsDir, readJson, writeJson, loadProject, log, optionalJson, jsonHash } from './project/io.js';
 import { lint } from './qa/lint.js';
 import { render, validate, exportProject, review, renderInputs } from './render/render.js';
 import { serve } from './preview/server.js';
 import { listProjects } from './preview/api.js';
 import { createVariant, promoteVariant } from './project/variants.js';
 import { addAsset } from './project/assets.js';
-import { Assets } from './schema/index.js';
 const args=process.argv.slice(2),command=args.shift();
 const flag=(name:string)=>{const i=args.indexOf('--'+name);return i<0?undefined:args[i+1];};
 const required=(v:string|undefined,usage:string)=>{if(!v||v.startsWith('--'))throw Error(usage);return v;};

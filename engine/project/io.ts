@@ -11,7 +11,16 @@ export const opaqueId = () => 'k'+randomBytes(5).toString('hex');
 export const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 export const jsonHash = (value: unknown) => hash(JSON.stringify(value));
 export async function readJson(file:string) { return JSON.parse(await readFile(file,'utf8')); }
-export async function writeJson(file:string, value:unknown) {await mkdir(path.dirname(file),{recursive:true}); const tmp=`${file}.${randomBytes(4).toString('hex')}.tmp`; await writeFile(tmp,JSON.stringify(value,null,2)+'\n'); await rename(tmp,file);}
+// Project documents always point at their JSON Schema, relative to where they live (projects, variants or tests).
+const SCHEMAS:Record<string,string>={'carousel.json':'carousel','art-direction.json':'art-direction','tweaks.json':'tweaks','manifest.json':'assets'};
+function withSchema(file:string,value:unknown){
+ const name=SCHEMAS[path.basename(file)];
+ if(!name||!value||typeof value!=='object'||Array.isArray(value)||!('schema_version' in value))return value;
+ if(name==='assets'&&path.basename(path.dirname(file))!=='assets')return value;
+ const ref=path.relative(path.dirname(file),path.join(ROOT,`engine/schema/generated/${name}.schema.json`)).split(path.sep).join('/');
+ const {$schema:_,...rest}=value as Record<string,unknown>;return {$schema:ref,...rest};
+}
+export async function writeJson(file:string, value:unknown) {value=withSchema(file,value);await mkdir(path.dirname(file),{recursive:true}); const tmp=`${file}.${randomBytes(4).toString('hex')}.tmp`; await writeFile(tmp,JSON.stringify(value,null,2)+'\n'); await rename(tmp,file);}
 export async function optionalJson(file:string) {try{return await readJson(file);}catch(e){if((e as NodeJS.ErrnoException).code==='ENOENT')return null;throw e;}}
 export async function contentDir(dir:string){
  const marker=await optionalJson(path.join(dir,'variant.json'));

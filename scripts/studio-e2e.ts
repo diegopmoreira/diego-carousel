@@ -1,6 +1,6 @@
 import { launchChromium } from '../engine/render/browser.js';
 import assert from 'node:assert/strict';
-import { mkdtemp,mkdir,readFile,rm,writeFile } from 'node:fs/promises';
+import { mkdtemp,mkdir,readFile,rm } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import http from 'node:http';
 import path from 'node:path';import os from 'node:os';

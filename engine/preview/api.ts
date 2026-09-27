@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import path from 'node:path';
-import { readFile, readdir } from 'node:fs/promises';
+import { readdir } from 'node:fs/promises';
 import { ArtDirection, Family, Composition, Tweaks, IMAGE_COMPOSITIONS } from '../schema/index.js';
 import { projectsDir, contentDir, loadProject, jsonHash, writeJson, optionalJson, log } from '../project/io.js';
 import { listVariants } from '../project/variants.js';
