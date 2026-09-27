@@ -14,7 +14,7 @@ import { workbenchHtml } from './page.js';
 const types:Record<string,string>={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.png':'image/png','.woff2':'font/woff2'};
 // Static files are served from an exact allowlist. ZIPs, original uploads and project JSON go through the API only.
 const STATIC:[RegExp,'design'|'dir'|'base'][]=[
- [/^\/design\/(base\.css|workbench\.css|workbench\.js|runtime\/slide\.js|fonts\/fonts\.css|fonts\/[a-z0-9-]+\.woff2|brand\/[a-z0-9-]+\.png)$/,'design'],
+ [/^\/design\/(base\.css|workbench\.css|workbench\.js|runtime\/(?:slide|linebreak)\.js|fonts\/fonts\.css|fonts\/[a-z0-9-]+\.woff2|brand\/[a-z0-9-]+\.png)$/,'design'],
  [/^\/project\/(html\/slide-\d{2}\.html|qa\/render\/\d{2}\.png|qa\/contact-sheet\.png|preview\/index\.html)$/,'dir'],
  [/^\/project\/(assets\/processed\/k[a-f0-9]{10}\.png)$/,'base'],
 ];

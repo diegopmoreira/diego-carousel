@@ -14,7 +14,7 @@ import { workbenchHtml } from '../preview/page.js';
 import { toCopy } from '../source/copy.js';
 // Only files that reach the pixels: the slide runtime, CSS, tokens, fonts, processed avatar and HTML composer.
 // Tests, the studio UI and unrelated engine code must not invalidate renders.
-export const PIXEL_FILES=['design/base.css','design/runtime/slide.js','design/tokens.json','design/fonts/fonts.css','engine/render/compose.ts','engine/source/copy.ts'];
+export const PIXEL_FILES=['design/base.css','design/runtime/slide.js','design/runtime/linebreak.js','design/tokens.json','design/fonts/fonts.css','engine/render/compose.ts','engine/source/copy.ts'];
 export async function environmentHash(config:ConfigData,root=ROOT){
  const fonts=(await readJson(path.join(root,'design/fonts/manifest.json'))).map((f:any)=>'design/fonts/'+f.file);
  const files=[...PIXEL_FILES,...fonts,...(config.branding.avatar?['design/'+config.branding.avatar]:[])];
@@ -40,11 +40,14 @@ async function browserChecks(page:Page){
   return errors;
  });
  const cdp=await page.context().newCDPSession(page);await cdp.send('DOM.enable');await cdp.send('CSS.enable');
- const {root}=await cdp.send('DOM.getDocument');const {nodeIds}=await cdp.send('DOM.querySelectorAll',{nodeId:root.nodeId,selector:'.text-line'});
+ // Every element that draws text, not only headline/body lines: badge, handle, cue and page number too.
+ const {root}=await cdp.send('DOM.getDocument');const {nodeIds}=await cdp.send('DOM.querySelectorAll',{nodeId:root.nodeId,selector:'.slide *'});
  const fonts=[];
- for(const nodeId of nodeIds){const r=await cdp.send('CSS.getPlatformFontsForNode',{nodeId});fonts.push(...r.fonts);}
+ const fallback:string[]=[];
+ for(const nodeId of nodeIds){const r=await cdp.send('CSS.getPlatformFontsForNode',{nodeId});fonts.push(...r.fonts);for(const f of r.fonts)if(f.glyphCount>0&&!f.isCustomFont){const {outerHTML}=await cdp.send('DOM.getOuterHTML',{nodeId});fallback.push(`${f.familyName} em ${outerHTML.slice(0,60)}`);}}
  await cdp.detach();
- if(!fonts.length||fonts.some(f=>f.glyphCount>0&&!f.isCustomFont))geometry.push('Fonte fallback detectada pelo Chromium');
+ if(!fonts.length)geometry.push('Nenhuma fonte registrada pelo Chromium');
+ for(const f of fallback)geometry.push(`Fonte fallback detectada: ${f}`);
  return {errors:geometry,fonts:[...new Set(fonts.map(f=>f.familyName))]};
 }
 export function render(dir:string,only?:string[]){return withLock(dir,()=>renderUnlocked(dir,only));}
@@ -83,7 +86,7 @@ async function renderUnlocked(dir:string,only?:string[]){
    await writeFile(file,compose(c,a,t,i,config,tokens,assetUrl,state.fit));
    const png=await page.screenshot({type:'png'});await writeFile(path.join(dir,`qa/render/${num}.png`),png);
    records.push({position:i+1,...fingerprint,png_hash:hash(png),fit_hash:hash(await readFile(path.join(dir,`fit/${s.id}.json`))),html_hash:hash(await readFile(file)),passed:!errors.length,errors,fonts:checks.fonts});
-   await log(dir,'FIT',`${s.id}: ${state.fit.stages.join(' → ')}; overflow=${state.fit.overflow_px}; ${errors.length?'FALHA':'OK'}`);
+   await log(dir,'FIT',`${s.id}: ${state.fit.stages.join(' → ')}; overflow=${Math.round(state.fit.overflow_px)}px${state.fit.needs.length?`; requer ${state.fit.needs.join(' ou ')}`:''}; ${errors.length?'FALHA':'OK'}`);
    await page.close();
   }
   const manifest={schema_version:1,engine_version:VERSION,browser:browserVersion,environment:input.environment,project_hash:input.project_hash,created_at:new Date().toISOString(),slides:records,render_hash:jsonHash(records)};

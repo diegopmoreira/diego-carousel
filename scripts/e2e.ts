@@ -42,5 +42,9 @@ try{
  c.slides=[];await writeJson(path.join(dir,'carousel.json'),c);await writeJson(path.join(dir,'tweaks.json'),{schema_version:1,slides:{}});
  const input=path.join(dir,'long-copy.md');await writeFile(input,long);await importCopy(dir,input);
  const before=await readFile(path.join(dir,'carousel.json'),'utf8');const overflow=await render(dir);assert.ok(overflow.slides.some(s=>!s.passed),'overflow must be reported');assert.equal(await readFile(path.join(dir,'carousel.json'),'utf8'),before);assert.equal((await validate(dir)).passed,false);
- console.log('E2E aprovado: duas famílias, oito composições, gate de revisão, hashes, rerender isolado e overflow sem reescrita.');
+ // A glyph outside the vendored fonts must be reported, wherever it appears.
+ c.slides=[];await writeJson(path.join(dir,'carousel.json'),c);await writeJson(path.join(dir,'tweaks.json'),{schema_version:1,slides:{}});
+ const glyph=path.join(dir,'glyph-copy.md');await writeFile(glyph,source.replace('Tu não precisa vencer toda discussão','Tu não precisa vencer toda discussão ★'));await importCopy(dir,glyph);
+ const fallback=await render(dir);assert.ok(fallback.slides[0].errors.some((e:string)=>/fallback/.test(e)),JSON.stringify(fallback.slides[0].errors));
+ console.log('E2E aprovado: duas famílias, oito composições, gate de revisão, hashes, rerender isolado, overflow sem reescrita e fonte fallback detectada.');
 }finally{await rm(dir,{recursive:true,force:true});}
