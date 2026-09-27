@@ -10,7 +10,10 @@
   "family": "auto",
   "editorial": {
     "checkpoint_after_thesis": true,
-    "body_range": [120, 350]
+    "body_range": [
+      150,
+      280
+    ]
   },
   "qa": {
     "max_auto_revision_cycles": 3
