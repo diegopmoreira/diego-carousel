@@ -1,20 +1,53 @@
 {
  "video_id": "exemplo-conversa",
- "titulo": "Exemplo sintético",
- "tipo": "video_publico",
- "texto": "x",
- "segmentos": [
+ "modelo": "large-v3-turbo",
+ "texto": "Pergunta do entrevistador. Resposta sintética.",
+ "palavras": [
   {
-   "inicio": 0,
-   "fim": 3,
-   "texto": "Pergunta do entrevistador.",
-   "falante": "Entrevistador"
+   "word": " Pergunta",
+   "start": 0.0,
+   "end": 1.0,
+   "probability": 0.9
   },
   {
-   "inicio": 3,
-   "fim": 8,
-   "texto": "Resposta de Diego.",
-   "falante": "Diego"
+   "word": " do",
+   "start": 1.0,
+   "end": 2.0,
+   "probability": 0.9
+  },
+  {
+   "word": " entrevistador.",
+   "start": 2.0,
+   "end": 3.0,
+   "probability": 0.9
+  },
+  {
+   "word": " Resposta",
+   "start": 3.0,
+   "end": 5.5,
+   "probability": 0.9
+  },
+  {
+   "word": " sintética.",
+   "start": 5.5,
+   "end": 8.0,
+   "probability": 0.9
+  }
+ ],
+ "segmentos": [
+  {
+   "inicio_s": 0,
+   "fim_s": 3,
+   "compression_ratio": 1.5,
+   "avg_logprob": -0.2,
+   "no_speech_prob": 0.0
+  },
+  {
+   "inicio_s": 3,
+   "fim_s": 8,
+   "compression_ratio": 1.5,
+   "avg_logprob": -0.2,
+   "no_speech_prob": 0.0
   }
  ]
 }

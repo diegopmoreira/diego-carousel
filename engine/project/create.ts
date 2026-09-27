@@ -5,7 +5,7 @@ import { projectsDir, opaqueId, hash, writeJson, log, readJson } from './io.js';
 import { cleanTranscript, parseCopy, toCopy } from '../source/copy.js';
 import { readCorpus, checkCorpusSource, corpusTranscriptText } from '../source/corpus.js';
 import { initialDirection, roleByPosition } from './direction.js';
-export type CreateOptions={allowConversation?:boolean};
+export type CreateOptions={allowConversation?:boolean;allowUnlisted?:boolean;confirmPublic?:boolean};
 // Sources: `copy` (ready copy, imported next), `corpus:<video_id>` or a Corpus v1.json file, or a plain .txt transcript.
 export async function createProject(slug:string,source:string,options:CreateOptions={}){
  if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))throw Error('Slug: usa letras minúsculas, números e hífens');

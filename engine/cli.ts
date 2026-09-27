@@ -34,7 +34,7 @@ const print=(data:unknown)=>console.log(typeof data==='string'?data:JSON.stringi
 const help=`Sistema de Carrosséis Diego Moreira · ${VERSION}
 
 npm run carousel -- <comando>
-  new <slug> --source <arquivo.txt|corpus:ID|v1.json|copy> [--allow-conversation]
+  new <slug> --source <arquivo.txt|corpus:ID|v1.json|copy> [--allow-conversation] [--allow-unlisted] [--confirm-public]
   import-copy <projeto> <copy.md>
   draft <projeto> <copy.md> [--meta editorial.json] [--reset-art]      (modo full)
   slide add <projeto> --headline <t> [--body <t>] [--role r] [--after id|0|--at n]
@@ -72,7 +72,7 @@ Sem --human conta como ciclo automático (limite em config.json qa.max_auto_revi
 Estado e pendências: docs/STATUS.md · o que roda só no Mac: docs/sessao-local.md`;
 try{
  switch(command){
- case 'new':print(await createProject(required(args[0],'new <slug> --source <arquivo|corpus:ID|copy>'),required(flag('source'),'Informe --source'),{allowConversation:args.includes('--allow-conversation')}));break;
+ case 'new':print(await createProject(required(args[0],'new <slug> --source <arquivo|corpus:ID|copy>'),required(flag('source'),'Informe --source'),{allowConversation:args.includes('--allow-conversation'),allowUnlisted:args.includes('--allow-unlisted'),confirmPublic:args.includes('--confirm-public')}));break;
  case 'from-copy':{const dir=await createProject(required(args[0],'Informe o nome'), 'copy');await importCopy(dir,path.resolve(required(args[1],'Informe copy.md')));if(flag('family')){const {Family}=await import('./schema/index.js');const a=await readJson(path.join(dir,'art-direction.json'));a.family=Family.parse(flag('family'));await writeJson(path.join(dir,'art-direction.json'),a);}const result=await render(dir);print({project:dir,passed:result.slides.every(s=>s.passed)});if(result.slides.some(s=>!s.passed))process.exitCode=1;break;}
  case 'draft':print(await draft(project(),path.resolve(required(args[1],'draft <projeto> <copy.md> [--meta editorial.json] [--reset-art]')),flag('meta')?path.resolve(flag('meta')!):undefined,{resetArt:args.includes('--reset-art')}));break;
  case 'slide':{

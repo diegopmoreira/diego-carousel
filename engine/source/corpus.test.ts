@@ -13,7 +13,7 @@ describe('fonte do Corpus',()=>{
   await projects();const dir=await createProject('teste-corpus','corpus:exemplo-publico');
   const c=await readJson(path.join(dir,'carousel.json'));
   expect(c.project.mode).toBe('full');expect(c.source).toMatchObject({type:'corpus_video',ref:'corpus:exemplo-publico',title:'Exemplo sintético de vídeo público'});
-  const t=await readFile(path.join(dir,'source/transcript.txt'),'utf8');expect(t).toContain('[1:05] (Diego) O erro é beber água salgada.');
+  const t=await readFile(path.join(dir,'source/transcript.txt'),'utf8');expect(t).toContain('[1:05] O erro é beber água salgada.');
  });
  it('recusa supervisão e conversa; conversa pode ser liberada explicitamente',async()=>{
   await projects();
@@ -27,8 +27,22 @@ describe('fonte do Corpus',()=>{
   expect((await readJson(path.join(dir,'carousel.json'))).source.ref).toBe('corpus:exemplo-publico');
   await expect(createProject('x','corpus:../../etc')).rejects.toThrow(/inválido/);
  });
+ it('reconstrói segmentos só com tempos a partir das palavras (formato real)',()=>{
+  const t=parseCorpus(JSON.stringify({video_id:'v',texto:' a b c',segmentos:[{inicio_s:0,fim_s:1},{inicio_s:1,fim_s:2}],palavras:[{word:' a',start:0,end:.5},{word:' b',start:.5,end:1},{word:' c',start:1.2,end:1.8}]}));
+  expect(t.segments.map(s=>s.text)).toEqual(['a b','c']);expect(t.segments[1].start).toBe(1);
+ });
+ it('recusa vídeo privado, não listado sem autorização e fonte sem registro',()=>{
+  const base=parseCorpus(JSON.stringify({texto:'x'}),'id');
+  expect(()=>checkCorpusSource({...base,metadata:{tipo:'outro',visibilidade:'privado'}})).toThrow(/privado/);
+  expect(()=>checkCorpusSource({...base,metadata:{tipo:'outro',visibilidade:'nao_listado'}})).toThrow(/não listado|nao_listado/);
+  expect(checkCorpusSource({...base,metadata:{tipo:'aula',visibilidade:'nao_listado'}},{allowUnlisted:true}).conversation).toBe(false);
+  expect(()=>checkCorpusSource(base)).toThrow(/sem registro/);
+  expect(checkCorpusSource(base,{confirmPublic:true}).conversation).toBe(false);
+  expect(()=>checkCorpusSource({...base,metadata:{tipo:'outro',visibilidade:'publico',titulo:'Tema X - feat. Dra. Fulana'}})).toThrow(/conversa/);
+  expect(()=>checkCorpusSource({...base,metadata:{tipo:'outro',visibilidade:'publico',live_status:'concluida'}})).toThrow(/live/);
+ });
  it('lê campos em inglês e timestamps em texto',()=>{
   const t=parseCorpus(JSON.stringify({text:'a b',segments:[{start:'01:02',text:'a',speaker:'Diego Moreira'}]}),'id1');
-  expect(t.segments[0].start).toBe(62);expect(checkCorpusSource(t).conversation).toBe(false);
+  expect(t.segments[0].start).toBe(62);expect(checkCorpusSource(t,{confirmPublic:true}).conversation).toBe(false);
  });
 });

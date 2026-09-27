@@ -1,7 +1,34 @@
 {
  "video_id": "exemplo-supervisao",
- "titulo": "Supervisão clínica — exemplo sintético",
- "tipo": "supervisao",
+ "modelo": "large-v3-turbo",
  "texto": "Caso de terceiro.",
- "segmentos": []
+ "palavras": [
+  {
+   "word": " Caso",
+   "start": 0.0,
+   "end": 0.67,
+   "probability": 0.9
+  },
+  {
+   "word": " de",
+   "start": 0.67,
+   "end": 1.33,
+   "probability": 0.9
+  },
+  {
+   "word": " terceiro.",
+   "start": 1.33,
+   "end": 2.0,
+   "probability": 0.9
+  }
+ ],
+ "segmentos": [
+  {
+   "inicio_s": 0,
+   "fim_s": 2,
+   "compression_ratio": 1.5,
+   "avg_logprob": -0.2,
+   "no_speech_prob": 0.0
+  }
+ ]
 }

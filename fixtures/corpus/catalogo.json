@@ -1,0 +1,29 @@
+{
+ "exemplo-publico": {
+  "titulo": "Exemplo sintético de vídeo público",
+  "tipo": "outro",
+  "visibilidade": "publico",
+  "excluir": 0,
+  "falantes": []
+ },
+ "exemplo-conversa": {
+  "titulo": "Exemplo sintético",
+  "tipo": "outro",
+  "visibilidade": "publico",
+  "excluir": 0,
+  "falantes": [
+   "diego",
+   "outro"
+  ]
+ },
+ "exemplo-supervisao": {
+  "titulo": "SUPERVISÃO sintética",
+  "tipo": "supervisao",
+  "visibilidade": "nao_listado",
+  "excluir": 0,
+  "falantes": [
+   "diego",
+   "misto"
+  ]
+ }
+}
