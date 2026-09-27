@@ -1,12 +1,46 @@
 # Imagens
 
-## Prioridade (spec §56)
+## O processo de Diego: cenas de filme que o público reconhece (estratégia principal)
 
-1. fornecidas por Diego → 2. biblioteca própria (`library/images/`) → 3. frames do próprio vídeo →
-4. licenciadas/autorizadas → 5. geradas por IA → 6. busca externa permitida.
+É assim que os carrosséis de melhor desempenho foram ilustrados (`post10:03`, O Show de Truman;
+`post30:03`, A Substância — ver `genetic-library/`). Para cada slot de imagem, a direção de arte
+propõe **cenas de filmes ou séries** — não imagens genéricas:
 
-Nunca baixar material protegido só porque combina (stills de filme entram apenas se Diego fornecer,
-com `rights` preenchido). Registrar origem e direitos reais, sem presumir licença.
+1. **Filme que está no imaginário.** Sucesso de público, cult ou com fandom forte; de preferência
+   **atual** (lançamentos e séries recentes que estão em alta), sem descartar clássicos que todo mundo
+   conhece.
+2. **Personagem que vive o drama do painel.** A cena precisa comunicar a ideia daquele slide: o
+   personagem compartilha o conflito (Truman preso num palco = "a vida adulta é um teatro"; o duplo
+   de A Substância = narcisismo e vaidade). Um filme só para o carrossel inteiro dá unidade e puxa o
+   fandom; misturar filmes quando cada painel pede um drama diferente.
+3. **Capital erótico como alavanca, quando serve ao tema.** Diego prefere, quando cabe, personagens
+   e atores com forte apelo (ex.: Margaret Qualley e Demi Moore em A Substância): o público responde a
+   isso. Sempre adultos, sem nudez explícita, e só quando a cena também comunica o conteúdo — apelo
+   sem relação com o texto é descartado.
+4. **Hierarquia de escolha:** filme muito famoso **e** personagem sexy que comunica o drama >
+   filme muito famoso que comunica o drama > personagem sexy de filme famoso que comunica o drama.
+
+### Fluxo
+
+- Na Fase 8, escrever em `image.concept` de cada slot a sugestão no formato
+  `FILME: <título (ano)> — cena: <momento/personagem> — por quê: <o drama que ela carrega>`, com
+  1–3 opções, e `image.strategy: manual`.
+- Entregar a Diego um **roteiro de cenas** (o `editorial-report.md` ganha a seção `## Cenas`).
+  Diego tira os frames e manda; registrar cada um com
+  `asset add <projeto> <arquivo> --rights "still de <filme>, fornecido por Diego" --slide <id>`.
+- O sistema **não baixa** frames de filme por conta própria (§56): material protegido só entra quando
+  Diego fornece. Buscar/sugerir a cena, sim; coletar o arquivo, não.
+- **Geração por IA (Higgsfield) é o plano B**: quando não há cena que sirva, ou para objetos e
+  ambientes (armadura, poço, cadeira de juiz). A geração evoca o clima de cinema e nunca imita
+  atores ou pessoas reais.
+
+## Prioridade (spec §56, ajustada ao processo de Diego)
+
+1. stills de filme/série escolhidos pelo roteiro de cenas e fornecidos por Diego → 2. fotos e
+assets de Diego → 3. biblioteca própria (`library/images/`) → 4. frames do próprio vídeo →
+5. geradas por IA → 6. licenciadas/busca externa permitida.
+
+Registrar origem e direitos reais em `rights`, sem presumir licença.
 
 ## Regras de toda imagem gerada
 

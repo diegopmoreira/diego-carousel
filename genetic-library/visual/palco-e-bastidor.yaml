@@ -1,0 +1,8 @@
+name: palco-e-bastidor
+family: editorial_clean
+cover: {composition: full_bleed, headline_position: bottom, align: center, footer: false, profile: centered_above_headline, swipe_cue: "Arrasta para o lado > centralizado"}
+body: {composition: image_card, text_position: top, card: {width: 960, ratio: "2:1", radius: 32}, headline: "Inter ExtraBold, caixa de frase", body: "Inter, cinza"}
+measures: {headline_px: 60, headline_lh: 1.24, body_px: 38, body_lh: 52, margin_x: 60}
+images: "TODAS de O Show de Truman (1998): Truman de braços abertos na porta do cenário (capa), no balanço entre nuvens pintadas, sorrindo para o céu falso, no espelho do banheiro, no olho mágico, no carro com a enfermeira, em pânico na rodoviária, na bicicleta, no barco. Um filme só, que é a própria tese (viver num palco sem saber)."
+last_slide: "variação antiga: banner rosa 'Me siga…' no topo + foto sangrando + texto embaixo"
+performance: "top — indicado por Diego em 27/09"

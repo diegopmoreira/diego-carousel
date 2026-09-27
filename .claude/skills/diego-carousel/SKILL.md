@@ -103,6 +103,12 @@ alternativa; `cinematic_fade`/`image_card` sem imagem viram placeholder declarad
 o campo `composition` à mão.
 
 **Fase 8 — Assets.** `visual/image-policy.md` e a ficha do provider em `visual/providers/`.
+**Estratégia principal (processo de Diego):** para cada slot, propor cenas de filme/série que estão
+no imaginário (de preferência atuais), com personagem que vive o drama do painel e, quando serve ao
+tema, capital erótico; um filme-âncora dá unidade (ver os top `post10:03` e `post30:03` na
+biblioteca). Gravar em `image.concept` (`FILME: … — cena: … — por quê: …`), escrever `## Cenas` no
+relatório e pedir os frames a Diego; nunca baixar frames de filme por conta própria. Geração é o
+plano B (objetos, ambientes ou quando nenhuma cena serve), sem imitar atores.
 Prioridade: fornecido por Diego → biblioteca → frame do próprio vídeo (`asset frame <projeto>
 <video> --at mm:ss --slide <id>`) → licenciado → gerado. Registrar arquivo com
 `asset add <projeto> <arquivo> --rights <origem> --slide <id>`.
