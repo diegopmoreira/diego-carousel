@@ -43,7 +43,7 @@ window.__fitError = null;
     // The region's content box: padding (optical centering) is not room for text.
     const regionEl=document.querySelector('.copy-region');
     const region=()=>{const r=regionEl.getBoundingClientRect(),st=getComputedStyle(regionEl);return {height:r.height-parseFloat(st.paddingTop)-parseFloat(st.paddingBottom)};};
-    const fits=()=>copy.getBoundingClientRect().height<=region().height+.5&&blocks.every(el=>el.scrollWidth<=el.clientWidth+1&&el.children.length<=Number(el.dataset.maxLines));
+    const fits=()=>copy.getBoundingClientRect().height<=region().height+.5&&blocks.every(el=>el.style.display==='none'||el.scrollWidth<=el.clientWidth+1&&el.children.length<=Number(el.dataset.maxLines));
     const apply=(sizes,texts=original)=>blocks.forEach((el,i)=>setLines(el,linesFor(texts[i],el,sizes[i]),sizes[i]));
     // Stages record only what actually ran, in order.
     const stages=['line-break'];
@@ -65,10 +65,14 @@ window.__fitError = null;
     }
     const passed=fits(),overflow=Math.max(0,copy.getBoundingClientRect().height-region().height);
     // How much of each text fits at the final sizes: whole words, measured by the same layout.
+    // Each block is measured with the blocks before it complete and the ones after it hidden, so a headline that
+    // overflows on its own does not make the body look like it has no room.
     const charsThatFit=blocks.map((el,i)=>{
       if(passed)return plain(original[i]).length;
+      const later=blocks.slice(i+1);later.forEach(b=>{b.style.display='none';});
       const words=original[i].split(/(\s+)/);let low=0,high=words.length;
       while(low<high){const mid=Math.ceil((low+high)/2);const texts=[...original];texts[i]=words.slice(0,mid).join('');apply(sizes,texts);if(fits())low=mid;else high=mid-1;}
+      later.forEach(b=>{b.style.display='';});
       apply(sizes);return plain(words.slice(0,low).join('')).trimEnd().length;
     });
     const needs=passed?[]:['alternative-composition','editorial-compression'];

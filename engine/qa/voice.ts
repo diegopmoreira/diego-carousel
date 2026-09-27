@@ -29,15 +29,33 @@ export function toTu(text:string){
  return out;
 }
 type Change={panel:number;field:'headline'|'body';from:string;to:string;kind:'person'|'ambiguous'|'other'};
-const words=(t:string|null)=>(t??'').split(/(\s+)/);
+// Prepositions that merge with the pronoun ("com você" → "contigo", "para você" → "pra ti") belong to a person change.
+const LINKED=new Set(['com','pra','para','de','em','a','por','sobre','sem','contra','entre','até']);
+const clean=(w:string)=>w.replace(/[^\p{L}]/gu,'').toLocaleLowerCase('pt-BR');
+// Word-level diff (longest common subsequence); each replaced run is classified as a whole.
+function runs(x:string[],y:string[]){
+ const n=x.length,m=y.length,L=Array.from({length:n+1},()=>new Int32Array(m+1));
+ for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)L[i][j]=x[i]===y[j]?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+ const out:{from:string[];to:string[]}[]=[];let i=0,j=0,cur:{from:string[];to:string[]}|null=null;
+ const flush=()=>{if(cur&&(cur.from.length||cur.to.length))out.push(cur);cur=null;};
+ while(i<n||j<m){
+  if(i<n&&j<m&&x[i]===y[j]){flush();i++;j++;continue;}
+  cur??={from:[],to:[]};
+  if(j<m&&(i>=n||L[i][j+1]>=L[i+1][j]))cur.to.push(y[j++]);else cur.from.push(x[i++]);
+ }
+ flush();return out;
+}
 export function diffPanels(a:Panel[],b:Panel[]):Change[]{
  const changes:Change[]=[];
  if(a.length!==b.length)throw Error('A proposta mudou o número de painéis');
  a.forEach((p,i)=>{for(const field of ['headline','body'] as const){
-  const x=words(p[field]),y=words(b[i][field]);
-  if(x.length!==y.length){changes.push({panel:i+1,field,from:p[field]??'',to:b[i][field]??'',kind:'other'});continue;}
-  x.forEach((w,k)=>{if(w===y[k])return;const clean=(s:string)=>s.replace(/[^\p{L}]/gu,'').toLocaleLowerCase('pt-BR');const f=clean(w),t=clean(y[k]);
-   const kind=PERSON_WORDS.has(f)&&PERSON_WORDS.has(t)?(AMBIGUOUS.has(f)?'ambiguous':'person'):'other';changes.push({panel:i+1,field,from:w,to:y[k],kind});});
+  const words=(t:string|null)=>(t??'').split(/\s+/).filter(Boolean);
+  for(const r of runs(words(p[field]),words(b[i][field]))){
+   const all=[...r.from,...r.to].map(clean).filter(Boolean);
+   const person=all.length>0&&all.every(w=>PERSON_WORDS.has(w)||LINKED.has(w))&&[...r.from,...r.to].map(clean).some(w=>PERSON_WORDS.has(w));
+   const kind=!person?'other':r.from.map(clean).some(w=>AMBIGUOUS.has(w))?'ambiguous':'person';
+   changes.push({panel:i+1,field,from:r.from.join(' '),to:r.to.join(' '),kind});
+  }
  }});
  return changes;
 }

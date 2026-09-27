@@ -57,5 +57,13 @@ try{
  await page.setViewportSize({width:1440,height:1000});await page.locator('#new-project').click();await page.locator('#create-form [name="slug"]').fill(slug);await page.locator('#create-form [name="copy"]').fill(await readFile(path.join(ROOT,'fixtures/copy-pronta.md'),'utf8'));await page.locator('#create-form button[type="submit"]').click();await page.waitForURL('**/*project=*');await page.locator('#studio').waitFor({state:'visible'});assert.equal(await page.locator('#slides button').count(),10);
  await page.locator('#upload-file').setInputFiles(path.join(ROOT,'design/brand/avatar-source.png'));await page.locator('#upload-form textarea').fill('Imagem do template local, usada somente neste teste.');await page.locator('#upload-form button[type="submit"]').click();await page.waitForFunction(()=>document.querySelector('#notice')?.textContent==='Imagem adicionada ao slide.');
  assert.equal((await loadProject(created)).assets.assets.length,1);assert.equal((await loadProject(created)).carousel.slides.length,10);
+ // Empty studio: with no project yet, the first carousel can be created from the screen.
+ const emptyProjects=path.join(dir,'empty-projects');process.env.CAROUSEL_PROJECTS_DIR=emptyProjects;
+ const empty=await serve(null,0,true);try{
+  const p2=await browser!.newPage({viewport:{width:1440,height:1000}});await p2.goto(empty.url);await p2.locator('#create-dialog').waitFor({state:'visible'});
+  await p2.locator('#create-form [name="slug"]').fill('primeiro');await p2.locator('#create-form [name="copy"]').fill(await readFile(path.join(ROOT,'fixtures/copy-pronta.md'),'utf8'));
+  await p2.locator('#create-form button[type="submit"]').click();await p2.waitForURL('**/*project=*');await p2.locator('#studio').waitFor({state:'visible'});
+  assert.equal(await p2.locator('#slides button').count(),10);await p2.close();
+ }finally{await empty.close();process.env.CAROUSEL_PROJECTS_DIR=path.join(dir,'projects');}
  console.log('Estúdio E2E aprovado: UI, prévia ao vivo, Instagram, área segura, eventos do servidor, ajuste isolado, copy preservada, versão, proteção de escrita, revisão e ZIP íntegro.');
 }finally{await browser?.close();await server?.close();await rm(dir,{recursive:true,force:true});}

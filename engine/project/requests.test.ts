@@ -47,4 +47,11 @@ describe('pedidos de imagem',()=>{
   await expect(requestAsset(dir,fade.id,{variants:1})).rejects.toThrow(/Teto/);
   await cancelRequest(dir,r.id);await requestAsset(dir,fade.id,{variants:3});
  });
+ it('CLI: asset add --request <pedido> <arquivo> encontra o arquivo depois das flags',async()=>{
+  const {execFile}=await import('node:child_process');const {writeFile:w}=await import('node:fs/promises');
+  const dir=await full(),cover=(await loadProject(dir)).carousel.slides[0].id,r=await requestAsset(dir,cover,{variants:1});
+  const img=path.join(dir,'gerada.png');await w(img,await sharp({create:{width:64,height:80,channels:3,background:'#553'}}).png().toBuffer());
+  const out=await new Promise<string>((resolve,reject)=>execFile(process.execPath,['--import','tsx','engine/cli.ts','asset','add',dir,'--request',r.id,img],{cwd:ROOT,env:process.env},(e,so,se)=>e?reject(Error(se||so)):resolve(so)));
+  expect(JSON.parse(out).attached).toBe(true);
+ },30000);
 });

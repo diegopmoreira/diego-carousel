@@ -25,8 +25,9 @@ try{
  await assert.rejects(exportProject(dir),/Revisão visual/);
  // Export with sync_dir: approved PNGs and the ZIP are copied to the synced folder.
  const sync=path.join(dir,'sync'),config=await readJson(path.join(ROOT,'config.json'));config.export.sync_dir=sync;await writeJson(path.join(dir,'config.json'),config);process.env.CAROUSEL_CONFIG=path.join(dir,'config.json');
+ await mkdir(path.join(sync,path.basename(dir)),{recursive:true});await writeFile(path.join(sync,path.basename(dir),'11.png'),'antigo');
  await review(dir,{name:'Teste',kind:'human'},'Conferido no teste automático.',true);await exportProject(dir);
- assert.equal((await readdir(path.join(sync,path.basename(dir)))).filter(f=>f.endsWith('.png')).length,10);delete process.env.CAROUSEL_CONFIG;
+ assert.equal((await readdir(path.join(sync,path.basename(dir)))).filter(f=>f.endsWith('.png')).length,10,'sync folder mirrors the export');delete process.env.CAROUSEL_CONFIG;
  const target=c.slides[3].id;
  await writeJson(path.join(dir,'tweaks.json'),{schema_version:1,slides:{[target]:{params:{headline_size_delta:6}}}});
  assert.equal((await validate(dir)).passed,false,'stale render must be refused');

@@ -23,3 +23,14 @@ it('salvar um ajuste preserva a exigência de imagem e só grava o que mudou',as
  await adjust(dir,{revision:await revision(dir),id,asset_id:null});
  now=await loadProject(dir);expect(now.art.slides[id].image.need).toBe(true);expect(now.art.slides[id].image.placeholder).toBe(true);expect(now.art.slides[id].image.asset_id).toBeUndefined();
 });
+it('lock: segundo processo é recusado, lock morto é recuperado, aninhado passa',async()=>{
+ const {withLock,LockedError}=await import('../project/io.js');const {writeFile:w}=await import('node:fs/promises');
+ const dir=await fixture();
+ await withLock(dir,async()=>{await withLock(dir,async()=>{});});
+ await w(path.join(dir,'.lock'),JSON.stringify({pid:999999,token:'x'}));
+ expect(await withLock(dir,async()=>'ok')).toBe('ok');
+ await w(path.join(dir,'.lock'),JSON.stringify({pid:process.ppid,token:'y'}));
+ await expect(withLock(dir,async()=>'x')).rejects.toBeInstanceOf(LockedError);
+ await w(path.join(dir,'.lock'),'');
+ await expect(withLock(dir,async()=>'x')).rejects.toBeInstanceOf(LockedError);
+});

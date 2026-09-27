@@ -24,6 +24,9 @@ import { fitProbe, autofit } from './render/fitprobe.js';
 import { migrate, migrateAll } from './project/migrate.js';
 const args=process.argv.slice(2),command=args.shift();
 const flag=(name:string)=>{const i=args.indexOf('--'+name);return i<0?undefined:args[i+1];};
+// Positional arguments, skipping flags and their values (boolean flags listed so their neighbour stays positional).
+const BOOLEAN=new Set(['--json','--approved','--human','--blind','--reset-art','--render','--allow-other','--allow-conversation','--alternative','--all','--dry-run']);
+const positionals=()=>args.filter((a,i)=>!a.startsWith('--')&&!(i>0&&args[i-1].startsWith('--')&&!BOOLEAN.has(args[i-1])));
 const required=(v:string|undefined,usage:string)=>{if(!v||v.startsWith('--'))throw Error(usage);return v;};
 const project=()=>path.resolve(required(args[0],'Informe o caminho do projeto'));
 const print=(data:unknown)=>console.log(typeof data==='string'?data:JSON.stringify(data,null,2));
@@ -112,7 +115,7 @@ try{
   if(sub!=='add')throw Error('Disponíveis: asset add|request|cancel|choose|candidates|frame|list');
   const request=flag('request');
   if(request){
-   const file=args[1]&&!args[1].startsWith('--')?path.resolve(args[1]):undefined;
+   const rest=positionals().slice(1),file=rest[0]?path.resolve(rest[0]):undefined;
    print(await addFromRequest(dir,request,{url:flag('url'),bytes:file?await readFile(file):undefined},{seed:flag('seed'),model:flag('model'),params:flag('params')?JSON.parse(flag('params')!):undefined,score:num(flag('score')),rationale:flag('rationale')}));break;
   }
   const bytes=await readFile(path.resolve(required(args[1],'Informe o arquivo de imagem')));const result=await addAsset(dir,bytes,required(flag('rights'),'Informe --rights com origem e direitos'),flag('slide'),{alternative:args.includes('--alternative')});

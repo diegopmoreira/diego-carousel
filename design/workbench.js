@@ -46,7 +46,7 @@
  function scaleLive(){const frame=$('#live-frame'),box=$('#frame');frame.style.transform='scale('+(box.clientWidth/1080)+')';}
  function hideLive(){$('#live').hidden=true;}
  function applyLive(){
-  const doc=$('#live-frame').contentDocument;if(!doc||!doc.querySelector('.slide'))return;
+  const doc=$('#live-frame').contentDocument;if(!doc||!doc.querySelector('.slide')||!$('#live-frame').contentWindow.__slideReady)return;
   const s=data.carousel.slides[index],fit=data.fits[s.id],t=data.tweaks.slides[s.id]?.params??{};
   const h1=doc.querySelector('h1'),p=doc.querySelector('p[data-role="body"]'),num=n=>Number(field(n).value);
   if(h1&&fit)h1.style.fontSize=Math.max(Number(h1.dataset.floor),fit.blocks.headline.size+num('headline_size_delta')-(t.headline_size_delta??0))+'px';
@@ -58,7 +58,9 @@
  }
  function showLive(){
   const frame=$('#live-frame'),url=htmlUrl(index);$('#live').hidden=false;scaleLive();
-  if(frame.dataset.src!==url){frame.dataset.src=url;frame.onload=()=>{scaleLive();applyLive();};frame.src=url;}else applyLive();
+  // The slide runtime sets the frozen sizes after fonts and images load: apply only once it reports ready.
+  const whenReady=()=>{const w=frame.contentWindow;if(w&&w.__slideReady){scaleLive();applyLive();}else setTimeout(whenReady,50);};
+  if(frame.dataset.src!==url){frame.dataset.src=url;frame.onload=whenReady;frame.src=url;}else whenReady();
  }
  new ResizeObserver(()=>{if(!$('#live').hidden)scaleLive();}).observe($('#frame'));
  $('#safe-area').onchange=e=>{$('#safe-overlay').hidden=!e.target.checked;};

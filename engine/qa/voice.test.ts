@@ -25,6 +25,8 @@ describe('voz: você → tu',()=>{
  it('classifica mudanças: pessoa, ambígua e fora da regra',()=>{
   const a=[{headline:'Você e seu medo',body:null}];
   expect(diffPanels(a,[{headline:'Tu e teu medo',body:null}]).map(c=>c.kind)).toEqual(['person','ambiguous']);
+  expect(diffPanels([{headline:'Fica com você hoje',body:null}],[{headline:'Fica contigo hoje',body:null}]).map(c=>c.kind)).toEqual(['person']);
+  expect(diffPanels([{headline:'Isso é para você',body:null}],[{headline:'Isso é pra ti',body:null}]).map(c=>c.kind)).toEqual(['person']);
   expect(diffPanels(a,[{headline:'Tu e teu susto',body:null}]).some(c=>c.kind==='other')).toBe(true);
  });
  it('proposta não muda nada; aprovação aplica, registra e mantém o lint limpo',async()=>{

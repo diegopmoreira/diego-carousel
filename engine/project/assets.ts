@@ -32,7 +32,8 @@ export async function addAsset(dir:string,bytes:Buffer,rights:string,slide?:stri
   }else{d.image.alternatives=[...new Set([...d.image.alternatives,id])];warning=`Imagem guardada como alternativa: a composição ${comp} não tem imagem. Escolhe ${IMAGE_COMPOSITIONS.join(', ')} e seleciona a imagem.`;}
   await writeJson(path.join(dir,'art-direction.json'),p.art);
  }
- if(attached)p.assets.assets.at(-1)!.used_by.push(slide!);
+ // used_by lists only the current image of each slide.
+ if(attached){for(const other of p.assets.assets)other.used_by=other.used_by.filter(x=>x!==slide);p.assets.assets.at(-1)!.used_by.push(slide!);}
  await writeJson(path.join(base,'assets/manifest.json'),Assets.parse(p.assets));
  return {id,attached,warning};
 }

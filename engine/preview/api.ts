@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import path from 'node:path';
 import { readdir } from 'node:fs/promises';
-import { ArtDirection, Family, Composition, Tweaks, IMAGE_COMPOSITIONS } from '../schema/index.js';
+import { ArtDirection, Family, Composition, Tweaks, Assets, IMAGE_COMPOSITIONS } from '../schema/index.js';
 import { projectsDir, contentDir, loadProject, jsonHash, writeJson, optionalJson, log } from '../project/io.js';
 import { listVariants } from '../project/variants.js';
 import { loadConfig } from '../project/config.js';
@@ -31,6 +31,10 @@ export async function adjust(dir:string,input:unknown){
  if(patch.params)tweak().params={...p.tweaks.slides[patch.id]?.params,...patch.params};
  const current=p.tweaks.slides[patch.id];if(current&&!current.composition&&!Object.keys(current.params).length)delete p.tweaks.slides[patch.id];
  ArtDirection.parse(p.art);Tweaks.parse(p.tweaks);
+ // The manifest's used_by follows the slide's current image (shared with variants: only the main project writes it).
+ let manifestChanged=false;
+ if(patch.asset_id!==undefined&&!await optionalJson(path.join(dir,'variant.json'))){for(const a of p.assets.assets){const before=a.used_by.join();a.used_by=a.used_by.filter(x=>x!==patch.id);if(a.id===d.image.asset_id)a.used_by.push(patch.id);if(a.used_by.join()!==before)manifestChanged=true;}}
+ if(manifestChanged)await writeJson(path.join(await contentDir(dir),'assets/manifest.json'),Assets.parse(p.assets));
  const changed=[JSON.stringify(p.art)!==art&&'art-direction.json',JSON.stringify(p.tweaks)!==tweaks&&'tweaks.json'].filter(Boolean);
  if(changed.includes('art-direction.json'))await writeJson(path.join(dir,'art-direction.json'),p.art);
  if(changed.includes('tweaks.json'))await writeJson(path.join(dir,'tweaks.json'),p.tweaks);

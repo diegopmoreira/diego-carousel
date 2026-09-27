@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, rename, open, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename, link, rm } from 'node:fs/promises';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,17 +41,25 @@ const held=new AsyncLocalStorage<Set<string>>();
 export async function withLock<T>(dir:string,fn:()=>Promise<T>):Promise<T>{
  const file=path.resolve(dir,'.lock'),mine=held.getStore();
  if(mine?.has(file))return fn();
- for(let attempt=0;;attempt++){
-  try{const h=await open(file,'wx');await h.writeFile(JSON.stringify({pid:process.pid,at:new Date().toISOString()}));await h.close();break;}
-  catch(e){
-   if((e as NodeJS.ErrnoException).code!=='EEXIST')throw e;
-   const owner=await optionalJson(file).catch(()=>null);
-   let alive=false;if(owner?.pid){try{process.kill(owner.pid,0);alive=true;}catch(err){alive=(err as NodeJS.ErrnoException).code==='EPERM';}}
-   if(alive||attempt>0)throw new LockedError(owner?.pid);
-   await rm(file,{force:true});
+ // The lock appears with its content already in place (hard link of a finished temp file), so nobody ever reads
+ // a half-written lock and mistakes it for a stale one.
+ const token=randomBytes(8).toString('hex'),tmp=`${file}.${token}.tmp`;
+ await writeFile(tmp,JSON.stringify({pid:process.pid,token,at:new Date().toISOString()}));
+ try{
+  for(let attempt=0;;attempt++){
+   try{await link(tmp,file);break;}
+   catch(e){
+    if((e as NodeJS.ErrnoException).code!=='EEXIST')throw e;
+    const owner=await optionalJson(file).catch(()=>null);
+    let alive=!owner; // unreadable: treat as held
+    if(owner?.pid){try{process.kill(owner.pid,0);alive=true;}catch(err){alive=(err as NodeJS.ErrnoException).code==='EPERM';}}
+    if(alive||attempt>0)throw new LockedError(owner?.pid);
+    await rm(file,{force:true});
+   }
   }
- }
- try{return await held.run(new Set([...(mine??[]),file]),fn);}finally{await rm(file,{force:true});}
+ }finally{await rm(tmp,{force:true});}
+ try{return await held.run(new Set([...(mine??[]),file]),fn);}
+ finally{const owner=await optionalJson(file).catch(()=>null);if(owner?.token===token)await rm(file,{force:true});}
 }
-export class LockedError extends Error{constructor(pid?:number){super(`Projeto em uso por outro processo${pid?` (pid ${pid})`:''}. Aguarda terminar.`);}}
+export class LockedError extends Error{constructor(pid?:number){super(`Projeto em uso por outro processo${pid?` (pid ${pid})`:''}. Aguarda terminar${pid?'':'; se nenhum comando estiver rodando, apaga o arquivo .lock do projeto'}.`);}}
 export const escapeXml=(t:string)=>t.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]!));

@@ -25,7 +25,7 @@ async function body(req:http.IncomingMessage){const chunks:Buffer[]=[];let size=
 export async function serve(initialDir:string|null,port=0,editable=false){
  const initialBase=initialDir?await contentDir(initialDir):null,token=randomBytes(24).toString('hex');let busy=false;
  const server=http.createServer(async(req,res)=>{
-  const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':CSP,'X-Frame-Options':'SAMEORIGIN','Referrer-Policy':'no-referrer'};
+  const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':CSP,'X-Frame-Options':'SAMEORIGIN','Referrer-Policy':'same-origin'};
   const send=(status:number,value:unknown)=>{res.writeHead(status,{...headers,'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(value));};
   const notFound=()=>{res.writeHead(404,{...headers,'Content-Type':'text/plain; charset=utf-8'});res.end('Não encontrado');};
   try{
@@ -34,7 +34,11 @@ export async function serve(initialDir:string|null,port=0,editable=false){
    const origin=`http://${req.headers.host}`,url=new URL(req.url??'/',origin);
    // Encoded separators or dots never name a file here; refusing them keeps decoding from escaping a folder.
    if(/%(2e|2f|5c|00)/i.test(url.pathname)||url.pathname.includes('\\')){notFound();return;}
-   const pathname=decodeURIComponent(url.pathname),variant=url.searchParams.get('variant'),requestedProject=url.searchParams.get('project');
+   // Subresources of a slide shown in the studio iframe (its image) carry no query: take the project from the page
+   // that asked for them. Referrer-Policy same-origin sends the referer only to this server.
+   let context=url.searchParams;
+   if(!context.has('project')&&!context.has('variant')&&req.headers.referer&&url.pathname.startsWith('/project/')){try{const ref=new URL(req.headers.referer);if(ref.origin===origin)context=ref.searchParams;}catch{}}
+   const pathname=decodeURIComponent(url.pathname),variant=context.get('variant'),requestedProject=context.get('project');
    const base=requestedProject?safeChild(projectsDir(),variantName(requestedProject)):initialBase;
    if(requestedProject&&base&&await realpath(base)!==base)throw Error('Projeto inválido');
    const dir=base&&(variant?path.join(base,'variants',variantName(variant)):requestedProject?base:initialDir);
@@ -76,7 +80,7 @@ export async function serve(initialDir:string|null,port=0,editable=false){
      const input=await body(req);
      const {render,review,exportProject,buildPreview}=await import('../render/render.js');
      if(pathname==='/api/create'){
-      const creation=z.object({revision:z.string(),slug:z.string().max(60),copy:z.string().min(1).max(60000),family:z.enum(['editorial_clean','cinematic_condensed'])}).strict().parse(input);
+      const creation=z.object({revision:z.string().optional(),slug:z.string().max(60),copy:z.string().min(1).max(60000),family:z.enum(['editorial_clean','cinematic_condensed'])}).strict().parse(input);
       const {slides:range}=await loadConfig();
       const panels=parseCopy(creation.copy);if(panels.length<range.min||panels.length>range.max)throw Error(`A copy precisa de ${range.min} a ${range.max} painéis`);if(panels[0].body)throw Error('A capa deve conter só o título');
       const out=await createProject(creation.slug,'copy'),source=path.join(out,'source/input-copy.md');await writeFile(source,creation.copy);await importCopy(out,source);const art=await readJson(path.join(out,'art-direction.json'));art.family=creation.family;await writeJson(path.join(out,'art-direction.json'),art);await buildPreview(out,panels.length);

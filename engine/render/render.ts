@@ -1,22 +1,21 @@
-import type { Page } from 'playwright';
 import { loadConfig, type ConfigData } from '../project/config.js';
 import { launchChromium, chromiumPath } from './browser.js';
 import sharp from 'sharp';
-import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { ROOT, loadProject, jsonHash, hash, writeJson, readJson, optionalJson, safeChild, log, contentDir, withLock } from '../project/io.js';
 import { lint, visualLint } from '../qa/lint.js';
 import { serve } from '../preview/server.js';
-import { compose } from './compose.js';
-import { inkCheck, type InkReport } from './ink.js';
-import { slideMetrics, rhythmWarnings } from './metrics.js';
+import { rhythmWarnings } from './metrics.js';
+import { renderSlide } from './pipeline.js';
 import { VERSION } from '../schema/index.js';
 import { zipFiles } from '../export/zip.js';
 import { workbenchHtml } from '../preview/page.js';
 import { toCopy } from '../source/copy.js';
-// Only files that reach the pixels: the slide runtime, CSS, tokens, fonts, processed avatar and HTML composer.
+// Only files that reach the pixels or the verdict of a slide: runtime, CSS, tokens, fonts, processed avatar, HTML
+// composer and the per-slide pipeline (fit, ink map, metrics, checks).
 // Tests, the studio UI and unrelated engine code must not invalidate renders.
-export const PIXEL_FILES=['design/base.css','design/runtime/slide.js','design/runtime/linebreak.js','design/tokens.json','design/fonts/fonts.css','engine/render/compose.ts','engine/render/ink.ts','engine/render/metrics.ts','engine/source/copy.ts'];
+export const PIXEL_FILES=['design/base.css','design/runtime/slide.js','design/runtime/linebreak.js','design/tokens.json','design/fonts/fonts.css','engine/render/compose.ts','engine/render/pipeline.ts','engine/render/ink.ts','engine/render/metrics.ts','engine/source/copy.ts'];
 export async function environmentHash(config:ConfigData,root=ROOT){
  const fonts=(await readJson(path.join(root,'design/fonts/manifest.json'))).map((f:any)=>'design/fonts/'+f.file);
  const files=[...PIXEL_FILES,...fonts,...(config.branding.avatar?['design/'+config.branding.avatar]:[])];
@@ -31,26 +30,6 @@ export async function renderInputs(dir:string){
  for(const asset of p.assets.assets){const bytes=await readFile(safeChild(base,asset.file));const h=hash(bytes);if(h!==asset.sha256)throw Error(`Asset ${asset.id}: SHA-256 difere do manifesto`);assetHashes[asset.id]=h;}
  const slides=p.carousel.slides.map((s,i)=>({id:s.id,input_hash:jsonHash({s,d:p.art.slides[s.id],family:p.art.family,t:p.tweaks.slides[s.id],environment,index:i,total:p.carousel.slides.length,asset:p.art.slides[s.id]?.image.asset_id?assetHashes[p.art.slides[s.id].image.asset_id!]:null})}));
  return {...p,config,tokens,environment,slides,project_hash:jsonHash({p,environment,slides})};
-}
-async function browserChecks(page:Page){
- const geometry=await page.evaluate(()=>{
-  const errors:string[]=[];
-  const blocks=[...document.querySelectorAll<HTMLElement>('[data-role]')];
-  const rects=blocks.map(el=>{const r=el.getBoundingClientRect();const style=getComputedStyle(el);const floor=Number(el.dataset.floor);if(parseFloat(style.fontSize)<floor)errors.push(`${el.dataset.role}: fonte abaixo do piso`);const safeBottom=Number(document.body.dataset.safeBottom||1230);if(r.x<49||r.right>1031||r.y<50||r.bottom>safeBottom)errors.push(`${el.dataset.role}: fora da margem segura`);if(el.scrollWidth>el.clientWidth+1)errors.push(`${el.dataset.role}: overflow horizontal`);return r;});
-  if(rects.length===2&&rects[0].bottom>rects[1].top+.5)errors.push('Headline e body se sobrepõem');
-  if(document.documentElement.scrollWidth>1080||document.documentElement.scrollHeight>1350)errors.push('Canvas excedido');
-  return errors;
- });
- const cdp=await page.context().newCDPSession(page);await cdp.send('DOM.enable');await cdp.send('CSS.enable');
- // Every element that draws text, not only headline/body lines: badge, handle, cue and page number too.
- const {root}=await cdp.send('DOM.getDocument');const {nodeIds}=await cdp.send('DOM.querySelectorAll',{nodeId:root.nodeId,selector:'.slide *'});
- const fonts=[];
- const fallback:string[]=[];
- for(const nodeId of nodeIds){const r=await cdp.send('CSS.getPlatformFontsForNode',{nodeId});fonts.push(...r.fonts);for(const f of r.fonts)if(f.glyphCount>0&&!f.isCustomFont){const {outerHTML}=await cdp.send('DOM.getOuterHTML',{nodeId});fallback.push(`${f.familyName} em ${outerHTML.slice(0,60)}`);}}
- await cdp.detach();
- if(!fonts.length)geometry.push('Nenhuma fonte registrada pelo Chromium');
- for(const f of fallback)geometry.push(`Fonte fallback detectada: ${f}`);
- return {errors:geometry,fonts:[...new Set(fonts.map(f=>f.familyName))]};
 }
 export function render(dir:string,only?:string[]){return withLock(dir,()=>renderUnlocked(dir,only));}
 async function renderUnlocked(dir:string,only?:string[]){
@@ -73,46 +52,9 @@ async function renderUnlocked(dir:string,only?:string[]){
    if(only&&!only.includes(s.id)){if(old)records.push(old);continue;}
    const asset=input.assets.assets.find(x=>x.id===a.slides[s.id].image.asset_id);const assetUrl=asset?'/project/'+asset.file.split('/').map(encodeURIComponent).join('/'):undefined;
    const file=path.join(dir,`html/slide-${num}.html`);
-   const page=await browser.newPage({viewport:{width:1080,height:1350},deviceScaleFactor:1,colorScheme:'dark'});
-   let errors:string[]=[];
-   // tsx keeps function names with a __name helper that does not exist inside the page; evaluate callbacks need it.
-   await page.addInitScript('globalThis.__name=globalThis.__name||(f=>f)');
-   await page.route('**/*',route=>route.request().url().startsWith(server.url+'/')?route.continue():route.abort());
-   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('requestfailed',r=>errors.push(`Request falhou: ${r.url()}`));page.on('response',r=>{if(r.status()>=400)errors.push(`HTTP ${r.status()}: ${r.url()}`);});
-   // Fit, then the ink map. When accents or cedillas of neighbouring headline lines touch, the headline gets more
-   // leading and the fit runs again (the ladder of editorial/visual decisions is unchanged).
-   const family=tokens.families[a.family],maxExtra=(tokens.ink?.max_extra_em??.25),step=tokens.ink?.step??.03;
-   const lineSpace:Record<number,number>={};let state:any,ink:InkReport|undefined,attempts=0;
-   for(;;attempts++){
-    errors=[];
-    await writeFile(file,compose(c,a,t,i,config,tokens,assetUrl,undefined,{lineSpace}));
-    await page.goto(`${server.url}/project/html/slide-${num}.html`);
-    await page.waitForFunction(()=> (window as any).__slideReady===true,{},{timeout:30000});
-    state=await page.evaluate(()=>({fit:(window as any).__fit,error:(window as any).__fitError}));
-    if(state.error)throw Error(state.error);
-    ink=await inkCheck(page,{minGapEm:tokens.ink?.min_gap_em,headlineBodyGap:tokens.ink?.headline_body_gap,safeX:tokens.ink?.safe_x});
-    if(ink.headline_ok)break;
-    const size=state.fit.blocks.headline.size,limit=Math.round(maxExtra*size),add=Math.ceil(step*size);
-    const open=ink.collisions.filter(k=>(lineSpace[k]??0)<limit);
-    if(!open.length)break;
-    for(const k of open)lineSpace[k]=Math.min(limit,(lineSpace[k]??0)+add);
-   }
-   // The last ink map stays in qa/ink for inspection; it never goes to export.
-   const {png:inkPng,...inkReport}=ink!;if(inkPng){await mkdir(path.join(dir,'qa/ink'),{recursive:true});await writeFile(path.join(dir,`qa/ink/${num}.png`),inkPng);}
-   state.fit.ink={line_height:family.headlineLineHeight,line_space:lineSpace,attempts,...inkReport};
-   // Large openings keep the text legible but break the rhythm: flagged for the visual review, not a failure.
-   const warnings:string[]=[];const warnAt=Math.round((tokens.ink?.warn_extra_em??.4)*state.fit.blocks.headline.size);
-   for(const [k,v] of Object.entries(lineSpace))if(v>warnAt)warnings.push(`Mapa de tinta: ${v}px extras acima da linha ${Number(k)+1} do título (acentos colidindo); considerar outra quebra ou tamanho`);
-   if(Object.keys(lineSpace).length)state.fit.stages.push(`ink-space:${Object.entries(lineSpace).map(([k,v])=>`L${Number(k)+1}+${v}px`).join(',')}`);
-   const metrics=await slideMetrics(page,inkPng,(t.slides[s.id]?.composition??a.slides[s.id].composition));warnings.push(...metrics.warnings);state.fit.metrics={contrast:metrics.contrast,empty_band_pct:metrics.empty_band_pct};
-   const checks=await browserChecks(page);errors.push(...checks.errors,...ink!.errors.map(e=>`Mapa de tinta: ${e}`));
-   if(!state.fit.passed)errors.push('Texto não cabe: ajustar composição ou solicitar compressão editorial');
-   await writeJson(path.join(dir,`fit/${s.id}.json`),state.fit);
-   await writeFile(file,compose(c,a,t,i,config,tokens,assetUrl,state.fit,{lineSpace}));
-   const png=await page.screenshot({type:'png'});await writeFile(path.join(dir,`qa/render/${num}.png`),png);
-   records.push({position:i+1,...fingerprint,warnings,png_hash:hash(png),fit_hash:hash(await readFile(path.join(dir,`fit/${s.id}.json`))),html_hash:hash(await readFile(file)),passed:!errors.length,errors,fonts:checks.fonts});
+   const {record,fit}=await renderSlide({browser,serverUrl:server.url,dir,num,index:i,carousel:c,art:a,tweaks:t,config,tokens,assetUrl,file});
+   records.push({position:i+1,...fingerprint,...record});const state={fit};const errors=record.errors;
    await log(dir,'FIT',`${s.id}: ${state.fit.stages.join(' → ')}; overflow=${Math.round(state.fit.overflow_px)}px${state.fit.needs.length?`; requer ${state.fit.needs.join(' ou ')}`:''}; ${errors.length?'FALHA':'OK'}`);
-   await page.close();
   }
   const rhythm=rhythmWarnings(c.slides.map(x=>t.slides[x.id]?.composition??a.slides[x.id].composition),c.slides.map(x=>a.slides[x.id].density));
   const manifest={schema_version:1,rhythm_warnings:rhythm,engine_version:VERSION,browser:browserVersion,environment:input.environment,project_hash:input.project_hash,created_at:new Date().toISOString(),slides:records,render_hash:jsonHash(records)};
@@ -182,7 +124,9 @@ async function exportUnlocked(dir:string){
  // export.sync_dir (e.g. an iCloud Drive folder) receives a copy, so the PNGs reach the phone.
  const sync=(await loadConfig()).export.sync_dir;
  if(sync){const target=path.join(path.resolve(sync.replace(/^~(?=\/|$)/,process.env.HOME??'~')),path.basename(await contentDir(dir))+(path.basename(path.dirname(dir))==='variants'?`-${path.basename(dir)}`:''));
-  await mkdir(target,{recursive:true});for(const f of files)await writeFile(path.join(target,f.name),f.data);await writeFile(path.join(target,'carrossel.zip'),archive);
+  // The synced folder mirrors the export: PNGs of an earlier, longer version are removed.
+  await mkdir(target,{recursive:true});for(const old of await readdir(target))if(/^\d{2}\.png$/.test(old))await rm(path.join(target,old));
+  for(const f of files)await writeFile(path.join(target,f.name),f.data);await writeFile(path.join(target,'carrossel.zip'),archive);
   await log(dir,'EXPORT',`Cópia em ${target}`);}
  return out;
 }
