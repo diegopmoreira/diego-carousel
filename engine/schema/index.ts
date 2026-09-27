@@ -5,6 +5,11 @@ const text = z.string().transform(v => v.normalize('NFC'));
 const id = z.string().regex(/^[a-z][a-z0-9_-]{3,63}$/);
 export const Family = z.enum(['cinematic_condensed', 'editorial_clean']);
 export const Composition = z.enum(['full_bleed', 'cinematic_fade', 'image_card', 'text_only', 'giant_statement', 'minimal_pause', 'quote', 'contrast']);
+// Editorial vocabularies (editorial/narrative-architectures.md, internal-headlines.md, continuity.md). Free text in the
+// schema so ready copy stays importable; the lint warns in full mode when a value is outside them.
+export const NARRATIVE_ROLES:readonly string[]=['interruption','conflict','revelation','mechanism','contrast','example','escalation','second_turn','reorganization','hammer'];
+export const HEADLINE_TYPES:readonly string[]=['cause','consequence','contrast','reframe','metaphor','command','question','statement'];
+export const ADDS:readonly string[]=['cause','consequence','mechanism','example','metaphor','objection','contrast','application','turn','principle'];
 export const IMAGE_COMPOSITIONS:readonly string[] = ['full_bleed', 'cinematic_fade', 'image_card'];
 export const Slide = z.object({
   id, narrative_role: text, headline: text.pipe(z.string().min(1)), body: text.nullable(),

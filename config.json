@@ -8,6 +8,9 @@
     "max": 12
   },
   "family": "auto",
+  "editorial": {
+    "checkpoint_after_thesis": true
+  },
   "qa": {
     "max_auto_revision_cycles": 3
   },

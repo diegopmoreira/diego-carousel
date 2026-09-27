@@ -1,0 +1,33 @@
+{
+ "video_id": "exemplo-publico",
+ "titulo": "Exemplo sintético de vídeo público",
+ "tipo": "video_publico",
+ "texto": "Texto sintético para teste. A sede é legítima. O erro é beber água salgada.",
+ "segmentos": [
+  {
+   "inicio": 0,
+   "fim": 4.2,
+   "texto": "Texto sintético para teste.",
+   "falante": "Diego"
+  },
+  {
+   "inicio": 4.2,
+   "fim": 9,
+   "texto": "A sede é legítima.",
+   "falante": "Diego"
+  },
+  {
+   "inicio": 65,
+   "fim": 70,
+   "texto": "O erro é beber água salgada.",
+   "falante": "Diego"
+  }
+ ],
+ "palavras": [
+  {
+   "palavra": "Texto",
+   "inicio": 0,
+   "fim": 0.4
+  }
+ ]
+}

@@ -3,7 +3,8 @@ import {mkdtemp,readFile,writeFile,rm,mkdir} from 'node:fs/promises';
 import os from 'node:os';import path from 'node:path';
 import {ROOT,readJson,writeJson,hash} from '../engine/project/io.js';
 import {render,validate,exportProject,review} from '../engine/render/render.js';
-import {importCopy} from '../engine/project/create.js';
+import {importCopy,createProject} from '../engine/project/create.js';
+import {draft} from '../engine/project/draft.js';
 const dir=await mkdtemp(path.join(os.tmpdir(),'diego-carousel-e2e-'));
 try{
  for(const name of ['source','qa','assets'])await mkdir(path.join(dir,name),{recursive:true});
@@ -46,5 +47,12 @@ try{
  c.slides=[];await writeJson(path.join(dir,'carousel.json'),c);await writeJson(path.join(dir,'tweaks.json'),{schema_version:1,slides:{}});
  const glyph=path.join(dir,'glyph-copy.md');await writeFile(glyph,source.replace('Tu não precisa vencer toda discussão','Tu não precisa vencer toda discussão ★'));await importCopy(dir,glyph);
  const fallback=await render(dir);assert.ok(fallback.slides[0].errors.some((e:string)=>/fallback/.test(e)),JSON.stringify(fallback.slides[0].errors));
- console.log('E2E aprovado: duas famílias, oito composições, gate de revisão, hashes, rerender isolado, overflow sem reescrita e fonte fallback detectada.');
+ // Full mode: Corpus source → draft with editorial metadata → lint → render; export waits for the images.
+ process.env.CAROUSEL_PROJECTS_DIR=path.join(dir,'projects');process.env.CAROUSEL_CORPUS_DIR=path.join(ROOT,'fixtures/corpus');
+ const fullDir=await createProject('fluxo-full','corpus:exemplo-publico');
+ await writeFile(path.join(fullDir,'editorial-report.md'),await readFile(path.join(ROOT,'fixtures/full/editorial-report.md'),'utf8'));
+ await draft(fullDir,path.join(ROOT,'fixtures/full/copy.md'),path.join(ROOT,'fixtures/full/editorial.json'));
+ const fullRender=await render(fullDir);assert.ok(fullRender.slides.every((s:any)=>s.passed),JSON.stringify(fullRender.slides.filter((s:any)=>!s.passed)));
+ const fullValidation=await validate(fullDir);assert.ok(!fullValidation.passed&&fullValidation.errors.every((e:string)=>/placeholder/.test(e)),JSON.stringify(fullValidation.errors));
+ console.log('E2E aprovado: duas famílias, oito composições, gate de revisão, hashes, rerender isolado, overflow sem reescrita, fonte fallback detectada e fluxo full (Corpus → draft → render).');
 }finally{await rm(dir,{recursive:true,force:true});}

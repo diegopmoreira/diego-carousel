@@ -1,0 +1,154 @@
+{
+ "editorial": {
+  "objective": "Fazer o leitor perceber que o problema não é ter necessidades afetivas, mas tentar satisfazê-las em fontes inadequadas.",
+  "audience": "Pessoas que checam mensagens, curtidas e sinais de aprovação compulsivamente e confundem atenção com vínculo.",
+  "angle": "A sede é legítima; o erro é beber água salgada.",
+  "promise": "Distinguir o que alivia a falta do que a aprofunda.",
+  "central_thesis": "A sede é legítima; o problema é beber água salgada.",
+  "belief": "Maturidade é não precisar de ninguém.",
+  "contradiction": "Esconder a falta a faz crescer.",
+  "mechanism": "Fontes rápidas de atenção aliviam e aumentam a dependência.",
+  "architecture": "deconstruction",
+  "central_metaphor": "sede → água salgada → poça → poço",
+  "hook": {
+   "text": "A sede é legítima. O erro é beber água salgada",
+   "family": "hidden_mechanism",
+   "viral_score": {
+    "impact": 8,
+    "clarity": 8,
+    "originality": 8,
+    "tension": 8,
+    "utility": 8,
+    "shareability": 8
+   },
+   "defensibility": "sintético",
+   "progression": "sintético"
+  },
+  "hook_candidates": [
+   {
+    "text": "A sede é legítima. O erro é beber água salgada",
+    "family": "hidden_mechanism"
+   },
+   {
+    "text": "Por que atenção não mata tua sede",
+    "family": "diagnosis"
+   },
+   {
+    "text": "Talvez o problema seja onde tu bebe",
+    "family": "controlled_accusation"
+   },
+   {
+    "text": "Atenção chama. Presença fica.",
+    "family": "contrast"
+   },
+   {
+    "text": "O manual para quem confunde curtida com carinho",
+    "family": "manual"
+   }
+  ],
+  "cta": {
+   "type": "comment_keyword",
+   "text": "Comenta POÇO.",
+   "keyword": "POÇO"
+  },
+  "caption": "Precisar dos outros não é defeito. O problema é onde tu bebe."
+ },
+ "art": {
+  "family": "cinematic_condensed",
+  "rationale": "Sintético: tema emocional com metáfora forte."
+ },
+ "slides": [
+  {
+   "narrative_role": "interruption",
+   "headline_type": "statement",
+   "adds": [
+    "turn"
+   ],
+   "next_question": "Então qual é o erro?",
+   "visual_intent": ""
+  },
+  {
+   "narrative_role": "conflict",
+   "headline_type": "reframe",
+   "adds": [
+    "objection"
+   ],
+   "next_question": "Se precisar não é defeito, onde está o problema?",
+   "visual_intent": ""
+  },
+  {
+   "narrative_role": "revelation",
+   "headline_type": "consequence",
+   "adds": [
+    "cause"
+   ],
+   "next_question": "Como isso aparece no dia a dia?",
+   "visual_intent": ""
+  },
+  {
+   "narrative_role": "mechanism",
+   "headline_type": "reframe",
+   "adds": [
+    "contrast",
+    "mechanism"
+   ],
+   "next_question": "Por que continuo buscando atenção?",
+   "visual_intent": ""
+  },
+  {
+   "narrative_role": "mechanism",
+   "headline_type": "consequence",
+   "adds": [
+    "consequence"
+   ],
+   "next_question": "Como distinguir o que alimenta do que só prende?",
+   "visual_intent": ""
+  },
+  {
+   "narrative_role": "contrast",
+   "headline_type": "contrast",
+   "adds": [
+    "contrast"
+   ],
+   "next_question": "O que acontece se eu continuar assim?",
+   "visual_intent": ""
+  },
+  {
+   "narrative_role": "escalation",
+   "headline_type": "consequence",
+   "adds": [
+    "mechanism"
+   ],
+   "next_question": "Então o problema é precisar?",
+   "visual_intent": ""
+  },
+  {
+   "narrative_role": "second_turn",
+   "headline_type": "reframe",
+   "adds": [
+    "turn",
+    "principle"
+   ],
+   "next_question": "Onde, então?",
+   "visual_intent": ""
+  },
+  {
+   "narrative_role": "reorganization",
+   "headline_type": "command",
+   "adds": [
+    "application"
+   ],
+   "next_question": "O que isso muda?",
+   "visual_intent": ""
+  },
+  {
+   "narrative_role": "hammer",
+   "headline_type": "statement",
+   "adds": [
+    "principle"
+   ],
+   "next_question": "",
+   "visual_intent": ""
+  }
+ ]
+}

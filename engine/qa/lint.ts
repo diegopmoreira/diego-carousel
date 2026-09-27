@@ -3,6 +3,8 @@ import path from 'node:path';
 import { loadProject, jsonHash, writeJson, hash, contentDir } from '../project/io.js';
 import { parseCopy, plainText } from '../source/copy.js';
 import { loadConfig } from '../project/config.js';
+import { approvedPanels } from './voice.js';
+import { NARRATIVE_ROLES, HEADLINE_TYPES, ADDS } from '../schema/index.js';
 export type Issue={severity:'error'|'warning';path:string;message:string};
 export async function lint(dir:string){
  const base=await contentDir(dir),p=await loadProject(dir),c=p.carousel,issues:Issue[]=[];
@@ -29,12 +31,24 @@ export async function lint(dir:string){
  if(/(?<!\p{L})voc[eê]s?(?!\p{L})/iu.test(extra))add(voiceSeverity,'editorial','Legenda e CTA também usam tu');
  for(const phrase of forbidden)if(extra.includes(phrase))add('error','editorial',`Expressão proibida: ${phrase}`);
  if(c.project.copy_locked){
-  try{const raw=await readFile(path.join(base,'source/copy-input.md'),'utf8');if(hash(raw)!==c.source.hash)add('error','source.hash','Fonte original alterada');const panels=parseCopy(raw);if(JSON.stringify(panels)!==JSON.stringify(c.slides.map(({headline,body})=>({headline,body}))))add('error','slides','Copy travada difere da fonte original (NFC)');}catch(e){add('error','source',`Não foi possível conferir copy original: ${String(e)}`);}
+  try{const raw=await readFile(path.join(base,'source/copy-input.md'),'utf8');if(hash(raw)!==c.source.hash)add('error','source.hash','Fonte original alterada');const approved=await approvedPanels(base,parseCopy(raw));for(const e of approved.errors)add('error','approvals.json',e);if(JSON.stringify(approved.panels)!==JSON.stringify(c.slides.map(({headline,body})=>({headline,body}))))add('error','slides','Copy travada difere da fonte original (NFC) e das mudanças aprovadas');}catch(e){add('error','source',`Não foi possível conferir copy original: ${String(e)}`);}
  }
  if(c.project.mode==='full'){
   if(!c.editorial.central_thesis.trim())add('error','editorial.central_thesis','Tese ausente');
   const report=await readFile(path.join(base,'editorial-report.md'),'utf8').catch(()=> '');
-  for(const title of ['Mapa da fonte','Diagnóstico','Teses','Hooks','Spine'])if(!report.includes(`## ${title}`))add('error','editorial-report.md',`Seção ausente: ${title}`);
+  for(const title of ['Mapa da fonte','Diagnóstico','Teses','Hooks','Spine','Teste cego'])if(!report.includes(`## ${title}`))add('error','editorial-report.md',`Seção ausente: ${title}`);
+  for(const field of ['objective','audience','angle','promise','belief','contradiction','mechanism','architecture'] as const)if(!c.editorial[field].trim())add('warning',`editorial.${field}`,'Campo do briefing/tese vazio');
+  const hook=c.editorial.hook;
+  if(!hook)add('error','editorial.hook','Hook escolhido ausente');
+  else if(hook.viral_score){const low=(['impact','clarity','tension'] as const).filter(k=>hook.viral_score![k]<7);if(low.length)add('warning','editorial.hook.viral_score',`Hook abaixo do piso 7 em: ${low.join(', ')}`);}
+  if(c.editorial.hook_candidates.length<5)add('warning','editorial.hook_candidates','Gerar 5–10 hooks de famílias diferentes');
+  if(c.slides[0]&&hook&&plainText(c.slides[0].headline)!==plainText(hook.text))add('warning','slides.0.headline','A capa difere do hook escolhido');
+  c.slides.forEach((s,i)=>{
+   if(!NARRATIVE_ROLES.includes(s.narrative_role))add('warning',`slides.${i}.narrative_role`,`Papel fora do vocabulário: ${s.narrative_role}`);
+   if(!HEADLINE_TYPES.includes(s.headline_type))add('warning',`slides.${i}.headline_type`,`Família de headline fora do vocabulário: ${s.headline_type}`);
+   if(!s.adds.length)add('warning',`slides.${i}.adds`,'Registrar o que o painel acrescenta');
+   for(const a of s.adds)if(!ADDS.includes(a))add('warning',`slides.${i}.adds`,`adds fora do vocabulário: ${a}`);
+  });
  }
  const result={schema_version:1,content_hash:jsonHash(c),passed:!issues.some(i=>i.severity==='error'),issues};
  await writeJson(path.join(dir,'qa/editorial-lint.json'),result);return result;

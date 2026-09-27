@@ -1,0 +1,20 @@
+{
+ "video_id": "exemplo-conversa",
+ "titulo": "Exemplo sintético",
+ "tipo": "video_publico",
+ "texto": "x",
+ "segmentos": [
+  {
+   "inicio": 0,
+   "fim": 3,
+   "texto": "Pergunta do entrevistador.",
+   "falante": "Entrevistador"
+  },
+  {
+   "inicio": 3,
+   "fim": 8,
+   "texto": "Resposta de Diego.",
+   "falante": "Diego"
+  }
+ ]
+}

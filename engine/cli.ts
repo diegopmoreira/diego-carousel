@@ -12,6 +12,9 @@ import { serve } from './preview/server.js';
 import { listProjects } from './preview/api.js';
 import { createVariant, promoteVariant } from './project/variants.js';
 import { addAsset } from './project/assets.js';
+import { draft, slideAdd, slideMove, slideRemove } from './project/draft.js';
+import { proposeVoice, approveVoice } from './qa/voice.js';
+import { addIdea, listIdeas } from './project/backlog.js';
 const args=process.argv.slice(2),command=args.shift();
 const flag=(name:string)=>{const i=args.indexOf('--'+name);return i<0?undefined:args[i+1];};
 const required=(v:string|undefined,usage:string)=>{if(!v||v.startsWith('--'))throw Error(usage);return v;};
@@ -20,12 +23,18 @@ const print=(data:unknown)=>console.log(typeof data==='string'?data:JSON.stringi
 const help=`Sistema de Carrosséis Diego Moreira · 0.1.0
 
 npm run carousel -- <comando>
-  new <slug> --source <arquivo.txt|copy>
+  new <slug> --source <arquivo.txt|corpus:ID|v1.json|copy> [--allow-conversation]
   import-copy <projeto> <copy.md>
+  draft <projeto> <copy.md> [--meta editorial.json] [--reset-art]      (modo full)
+  slide add <projeto> --headline <t> [--body <t>] [--role r] [--after id|0|--at n]
+  slide move <projeto> <id> --to <n> | slide rm <projeto> <id>
+  voice <projeto> [--render]            proposta "você" → "tu" em qa/voice-proposal.md
+  approve <projeto> voice --by <nome> [--note <t>]   só com o aval explícito de Diego
   from-copy <slug> <copy.md> [--family editorial_clean|cinematic_condensed]
   variant <projeto> <nome> [--family cinematic_condensed]
   promote <projeto> <nome>
-  lint <projeto> [--json] | spine <projeto> | status <projeto>
+  lint <projeto> [--json] | spine <projeto> [--blind] | status <projeto>
+  idea add --thesis <t> --source <ref> --why <t> [--project <slug>] | idea list
   render <projeto> [--slides id,id]
   validate <projeto> [--json]
   review <projeto> --reviewer <nome> --note <nota> [--approved] [--human]
@@ -41,13 +50,26 @@ Sem --human conta como ciclo automático (limite em config.json qa.max_auto_revi
 Comandos das próximas fases estão listados em docs/STATUS.md.`;
 try{
  switch(command){
- case 'new':print(await createProject(required(args[0],'new <slug> --source <arquivo|copy>'),required(flag('source'),'Informe --source')));break;
+ case 'new':print(await createProject(required(args[0],'new <slug> --source <arquivo|corpus:ID|copy>'),required(flag('source'),'Informe --source'),{allowConversation:args.includes('--allow-conversation')}));break;
  case 'from-copy':{const dir=await createProject(required(args[0],'Informe o nome'), 'copy');await importCopy(dir,path.resolve(required(args[1],'Informe copy.md')));if(flag('family')){const {Family}=await import('./schema/index.js');const a=await readJson(path.join(dir,'art-direction.json'));a.family=Family.parse(flag('family'));await writeJson(path.join(dir,'art-direction.json'),a);}const result=await render(dir);print({project:dir,passed:result.slides.every(s=>s.passed)});if(result.slides.some(s=>!s.passed))process.exitCode=1;break;}
+ case 'draft':print(await draft(project(),path.resolve(required(args[1],'draft <projeto> <copy.md> [--meta editorial.json] [--reset-art]')),flag('meta')?path.resolve(flag('meta')!):undefined,{resetArt:args.includes('--reset-art')}));break;
+ case 'slide':{
+  const sub=args.shift(),dir=project();
+  if(sub==='add'){const at=flag('at');print(await slideAdd(dir,{headline:required(flag('headline'),'Informe --headline'),body:flag('body')??null,role:flag('role'),after:flag('after'),at:at?Number(at):undefined}));}
+  else if(sub==='move')print(await slideMove(dir,required(args[1],'slide move <projeto> <id> --to <posição>'),Number(required(flag('to'),'Informe --to'))));
+  else if(sub==='rm')print(await slideRemove(dir,required(args[1],'slide rm <projeto> <id>')));
+  else throw Error('Disponíveis: slide add|move|rm');
+  break;
+ }
+ case 'voice':print(await proposeVoice(project(),{render:args.includes('--render')}));break;
+ case 'approve':{const dir=project(),what=required(args[1],'approve <projeto> voice --by <nome>');if(what!=='voice')throw Error('Aprovações disponíveis: voice');print(await approveVoice(dir,required(flag('by'),'Informe --by com o nome de quem aprovou'),flag('note')??'',{allowOther:args.includes('--allow-other')}));break;}
  case 'variant':{const dir=await createVariant(project(),required(args[1],'Informe o nome da versão'),flag('family'));print(dir);break;}
  case 'promote':print(await promoteVariant(project(),required(args[1],'Informe o nome da versão')));break;
  case 'import-copy':await importCopy(project(),path.resolve(required(args[1],'Informe o arquivo de copy')));print('Copy importada e travada.');break;
  case 'lint':{const r=await lint(project());print(r);if(!r.passed)process.exitCode=1;break;}
- case 'spine':{const {carousel}=await loadProject(project());print(carousel.slides.map((s,i)=>`P${i+1} [${s.id}] ${s.headline}`).join('\n'));break;}
+ // --blind prints only the headlines: the input of the blind spine test (editorial/internal-headlines.md).
+ case 'spine':{const {carousel}=await loadProject(project()),blind=args.includes('--blind');print(carousel.slides.map((s,i)=>blind?`P${i+1} ${s.headline}`:`P${i+1} [${s.id}] ${s.headline}${s.next_question?`\n     → ${s.next_question}`:''}`).join('\n'));break;}
+ case 'idea':{const sub=args.shift();if(sub==='add')print(await addIdea({thesis:flag('thesis'),source:flag('source'),why:flag('why'),project:flag('project')}));else if(sub==='list')print(await listIdeas());else throw Error('Disponíveis: idea add|list');break;}
  case 'render':{const r=await render(project(),flag('slides')?.split(','));print({render_hash:r.render_hash,slides:r.slides.map(s=>({id:s.id,passed:s.passed,errors:s.errors}))});if(r.slides.some(s=>!s.passed))process.exitCode=1;break;}
  case 'validate':{const r=await validate(project());print(r);if(!r.passed)process.exitCode=1;break;}
  case 'export':print(await exportProject(project()));break;
