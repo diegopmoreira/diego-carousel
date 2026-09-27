@@ -70,3 +70,52 @@ e `validate` verdes (exceto imagens pendentes) e Diego reconhece o DNA lendo `sp
 > O lint precisa confirmar texto idêntico."
 
 A copy publicada é pública, mas fica em `references/` (fora do Git) até Diego dizer que pode versionar.
+
+## 5. Calibrar a fidelidade visual (Rodada 2)
+
+Recriar 3 slides publicados com a mesma copy e imagem e comparar:
+
+> Prompt: "Calibra a Família A e a B contra os publicados. Para `post31:07` (capa e um interno com
+> foto) e `post7:7` (um interno com card): cria projetos com a mesma copy (from-copy) e as mesmas
+> imagens (asset add com --rights 'recorte do post publicado, só para calibração'), escolhe as
+> composições equivalentes, renderiza e roda `npm run carousel -- calibrate <projeto> --slide n --ref
+> references/diego/carousels/<post>/Slide n.png`. Abre as folhas em `qa/calibrate/` e ajusta SÓ
+> `design/tokens.json` (tamanhos, entrelinhas, margens, posições) até a diferença ficar pequena nas
+> faixas de título e body. Me mostra antes/depois e os números. Não mexe na copy."
+
+Pronto quando: diferença pequena nos 3 slides e um carrossel real de Diego (copy + fotos dele)
+exportado sem ajuste fora do estúdio.
+
+Conferir também: `npm run carousel -- gallery --image <uma foto real>` e olhar `gallery/gallery.png`.
+
+## 6. Imagens pelo Higgsfield (Rodada 3)
+
+1. No Claude Code local: `/mcp` → higgsfield → autenticar (OAuth). Ler `visual/providers/higgsfield.md`.
+2. > Prompt: "No projeto <x>, gera a capa: `asset request` para a capa, gera as 3 variantes pelo
+   > MCP Higgsfield com o prompt e o negativo do pedido, confere cada uma (sem texto, sem pessoa
+   > real), registra com `asset add --request … --url …`, roda `asset candidates` e escolhe com nota
+   > e justificativa. Depois faz o mesmo para os painéis com imagem."
+3. Testar `asset frame <projeto> <video.mp4> --at mm:ss --slide <id>` com um vídeo de Diego (precisa
+   de ffmpeg: `brew install ffmpeg`).
+
+Pronto quando: um carrossel `full` sai com capa e imagens internas geradas, sem texto nas imagens,
+e o manifesto tem pedido completo e sha256 de cada uma.
+
+## 7. Avaliação final (Rodada 4)
+
+1. Escolher os vídeos das fixtures 2 (diagnóstico denso) e 3 (metáfora da carência) no Corpus e
+   trocar `ESCOLHER` em `fixtures/eval.json`.
+2. `npm run eval -- --dry-run` (tudo "pronto"), depois `npm run eval` (roda cada fixture pelo
+   `claude -p` com a Skill; relatório em `eval/`).
+3. Opcional: `export.sync_dir` em `config.json` apontando para uma pasta do iCloud Drive, para os
+   PNGs aparecerem no celular.
+
+## Critérios de pronto da V1 (§93)
+
+- Editorial: três transcrições inéditas viram carrosséis reconhecíveis como de Diego (item 3).
+- Estrutura: as spines contam a história sozinhas (teste cego registrado).
+- Visual: parentes dos publicados sem cópia mecânica (item 5).
+- Técnica: 1080×1350 sem overflow (gates do render).
+- Automação: transcrição → PNGs sem editar código (item 7).
+- Editabilidade: mudar texto, imagem ou tamanho sem refazer tudo (estúdio).
+- Qualidade: pelo menos um ciclo de inspeção visual antes do export (review).

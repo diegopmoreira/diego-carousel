@@ -33,6 +33,12 @@ existe. Todo comando abaixo é `npm run carousel -- <comando>`.
 - Nunca mexer em `copy_locked`, `source/` ou `approvals.json` para contornar o lint.
 - Fontes e assets locais. Nunca copiar `.env` ou credenciais.
 
+## Autonomia e checkpoints
+
+Padrão `autonomy: full`: seguir as fases sem pedir aprovação, exceto o checkpoint da tese enquanto
+`editorial.checkpoint_after_thesis` for `true`. Com `approval_mode: true` (ou "com aprovação" no
+pedido), parar em três pontos: (1) tese + hooks, (2) copy completa, (3) preview aberto.
+
 ## Modo full — Fases 1 a 6 (editorial)
 
 **Fase 1 — Fonte e mapa.** Ler `editorial/core-dna.md` e `editorial/source-compression.md`.

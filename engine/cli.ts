@@ -3,6 +3,7 @@ import path from 'node:path';
 import { readFile, access } from 'node:fs/promises';
 import { chromiumPath } from './render/browser.js';
 import { loadConfig } from './project/config.js';
+import { VERSION } from './schema/index.js';
 import { z } from 'zod';
 import { createProject, importCopy } from './project/create.js';
 import { ROOT, projectsDir, readJson, writeJson, loadProject, log, optionalJson, jsonHash } from './project/io.js';
@@ -30,7 +31,7 @@ const positionals=()=>args.filter((a,i)=>!a.startsWith('--')&&!(i>0&&args[i-1].s
 const required=(v:string|undefined,usage:string)=>{if(!v||v.startsWith('--'))throw Error(usage);return v;};
 const project=()=>path.resolve(required(args[0],'Informe o caminho do projeto'));
 const print=(data:unknown)=>console.log(typeof data==='string'?data:JSON.stringify(data,null,2));
-const help=`Sistema de Carrosséis Diego Moreira · 0.1.0
+const help=`Sistema de Carrosséis Diego Moreira · ${VERSION}
 
 npm run carousel -- <comando>
   new <slug> --source <arquivo.txt|corpus:ID|v1.json|copy> [--allow-conversation]
@@ -68,7 +69,7 @@ npm run carousel -- <comando>
 
 review registra uma inspeção visual real; não a executa automaticamente.
 Sem --human conta como ciclo automático (limite em config.json qa.max_auto_revision_cycles).
-Comandos das próximas fases estão listados em docs/STATUS.md.`;
+Estado e pendências: docs/STATUS.md · o que roda só no Mac: docs/sessao-local.md`;
 try{
  switch(command){
  case 'new':print(await createProject(required(args[0],'new <slug> --source <arquivo|corpus:ID|copy>'),required(flag('source'),'Informe --source'),{allowConversation:args.includes('--allow-conversation')}));break;

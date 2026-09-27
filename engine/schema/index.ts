@@ -1,5 +1,5 @@
 import { z } from 'zod';
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.0';
 const header = { schema_version: z.literal(1), $schema: z.string().optional() };
 const text = z.string().transform(v => v.normalize('NFC'));
 const id = z.string().regex(/^[a-z][a-z0-9_-]{3,63}$/);
