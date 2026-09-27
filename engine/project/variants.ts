@@ -1,4 +1,5 @@
-import { mkdir, readdir } from 'node:fs/promises';
+import { mkdir, readdir, rm } from 'node:fs/promises';
+import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { contentDir, loadProject, writeJson, log } from './io.js';
 import { Family } from '../schema/index.js';
@@ -19,4 +20,9 @@ export async function promoteVariant(dir:string,name:string){
  const backup=await createVariant(base,'antes-'+Date.now());
  await writeJson(path.join(base,'art-direction.json'),p.art);await writeJson(path.join(base,'tweaks.json'),p.tweaks);
  await log(base,'VARIANT',`Versão ${name} promovida; anterior em ${backup}`);return base;
+}
+// A throwaway visual variant for experiments (fit-probe, candidates); always removed afterwards.
+export async function withTempVariant<T>(dir:string,prefix:string,fn:(variant:string)=>Promise<T>):Promise<T>{
+ const base=await contentDir(dir),variant=await createVariant(base,`${prefix}-${randomBytes(3).toString('hex')}`);
+ try{return await fn(variant);}finally{await rm(variant,{recursive:true,force:true});}
 }

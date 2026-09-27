@@ -46,7 +46,7 @@ export function compose(c:CarouselData,a:ArtData,t:TweaksData,index:number,confi
  +`<body class="${classes}" data-safe-bottom="${cover&&coverFooter==='none'?1285:1230}"><main class="slide">${image}<div class="shade"></div>`
  +`${!cover&&config.branding.profile_on==='all'?`<div class="top-profile">${badge}</div>`:''}`
  +`<div class="copy-region"><div class="copy">${cover?`<div class="cover-profile">${badge}</div>`:''}${comp==='quote'?'<div class="quote-mark" aria-hidden="true">“</div>':''}`
- +`<h1 data-role="headline" data-floor="${headlineFloor}" data-ceiling="${ceiling}" data-max-lines="${maxLines}" data-fill="${d.fit.headline==='fill'}">${escapeHtml(headline)}</h1>`
+ +`<h1 data-role="headline" data-floor="${headlineFloor}" data-ceiling="${ceiling}" data-max-lines="${maxLines}" data-fill="${d.fit.headline==='fill'&&(cover||comp==='giant_statement'||comp==='full_bleed')}">${escapeHtml(headline)}</h1>`
  +`${s.body?`<p data-role="body" data-floor="${floors.body}" data-max-lines="${bodyLines}">${escapeHtml(emphasis(s.body))}</p>`:''}${coverCue}</div></div>`
  +`${footer}</main><script>window.__frozenFit=${scriptJson(frozen??null)};window.__lineSpace=${scriptJson(options.lineSpace??{})}</script><script src="/design/runtime/linebreak.js"></script><script src="/design/runtime/slide.js"></script></body></html>`;
 }

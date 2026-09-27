@@ -52,3 +52,17 @@ describe('voz: você → tu',()=>{
   await expect(approveVoice(dir,'Diego')).rejects.toThrow(/não são de pessoa/);
  });
 });
+describe('edição de copy pronta com aval',()=>{
+ it('proposta acumula por slide, não muda nada até approve e entra na cadeia do lint',async()=>{
+  const {proposeEdit,approveEdit}=await import('./voice.js');
+  const dir=await project(await readFile(path.join(ROOT,'fixtures/copy-pronta.md'),'utf8')),p=await loadProject(dir),id=p.carousel.slides[2].id,before=await readFile(path.join(dir,'carousel.json'),'utf8');
+  await expect(proposeEdit(dir,id,{body:'Curto.',reason:''})).rejects.toThrow(/reason/);
+  await proposeEdit(dir,id,{body:'Tu prepara a próxima frase enquanto o outro fala.',reason:'não cabe'});
+  expect(await readFile(path.join(dir,'carousel.json'),'utf8')).toBe(before);
+  expect(await readFile(path.join(dir,'qa/edit-proposal.md'),'utf8')).toContain('não cabe');
+  await approveEdit(dir,'Diego');
+  expect((await loadProject(dir)).carousel.slides[2].body).toBe('Tu prepara a próxima frase enquanto o outro fala.');
+  const l=await lint(dir);expect(l.issues.filter(i=>i.severity==='error')).toEqual([]);
+  expect((await readJson(path.join(dir,'approvals.json'))).approvals[0]).toMatchObject({type:'edit',by:'Diego'});
+ });
+});

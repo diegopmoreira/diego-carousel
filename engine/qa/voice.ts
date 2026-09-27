@@ -41,7 +41,7 @@ export function diffPanels(a:Panel[],b:Panel[]):Change[]{
  }});
  return changes;
 }
-export const Approvals=z.object({schema_version:z.literal(1),$schema:z.string().optional(),approvals:z.array(z.object({id:z.string(),type:z.literal('voice'),by:z.string().min(2),note:z.string(),created_at:z.iso.datetime(),base_hash:z.string(),result_hash:z.string(),proposal_hash:z.string(),other_changes:z.number().int().min(0),result:z.array(z.object({headline:z.string(),body:z.string().nullable()}))}).strict())}).strict();
+export const Approvals=z.object({schema_version:z.literal(1),$schema:z.string().optional(),approvals:z.array(z.object({id:z.string(),type:z.enum(['voice','edit']),by:z.string().min(2),note:z.string(),created_at:z.iso.datetime(),base_hash:z.string(),result_hash:z.string(),proposal_hash:z.string(),other_changes:z.number().int().min(0),result:z.array(z.object({headline:z.string(),body:z.string().nullable()}))}).strict())}).strict();
 export async function loadApprovals(base:string){return Approvals.parse(await optionalJson(path.join(base,'approvals.json'))??{schema_version:1,approvals:[]});}
 // The approved text chain: source panels, then each approval applied in order. Lint compares locked copy to its end.
 export async function approvedPanels(base:string,source:Panel[]){
@@ -87,4 +87,39 @@ export function approveVoice(dir:string,by:string,note='',{allowOther=false}={})
  await writeJson(path.join(base,'carousel.json'),p.carousel);await writeFile(path.join(base,'copy.md'),toCopy(result));
  await log(base,'APPROVAL',`Voz aprovada por ${by.trim()}: ${changes.length} mudanças`);
  return {applied:changes.length};
+});}
+
+// Editorial change to ready copy (e.g. compressing a body that does not fit): Claude proposes, Diego approves.
+// Proposals accumulate per slide in qa/edit-proposal.json until approved.
+export function proposeEdit(dir:string,slide:string,change:{headline?:string;body?:string|null;reason:string}){return withLock(dir,async()=>{
+ const base=await contentDir(dir),p=await loadProject(dir);
+ if(!p.carousel.project.copy_locked)throw Error('edit é para copy pronta; no modo full editar pelo draft');
+ const index=p.carousel.slides.findIndex(s=>s.id===slide);if(index<0)throw Error('Slide desconhecido');
+ if(change.headline===undefined&&change.body===undefined)throw Error('Informe --headline e/ou --body');
+ if(!change.reason?.trim())throw Error('Informe --reason (por que mudar: não cabe, repetição…)');
+ const current=panelsOf(p.carousel.slides),file=path.join(base,'qa/edit-proposal.json'),saved=await optionalJson(file);
+ const state=saved&&saved.base_hash===jsonHash(current)?saved:{schema_version:1,base_hash:jsonHash(current),panels:structuredClone(current),reasons:{}};
+ const panel=state.panels[index];
+ if(change.headline!==undefined)panel.headline=change.headline.normalize('NFC').trim();
+ if(change.body!==undefined)panel.body=change.body===null||!change.body.trim()?null:change.body.normalize('NFC').trim();
+ state.reasons[index+1]=change.reason.trim();
+ await writeJson(file,state);
+ const rows=current.map((c,i)=>{const n=state.panels[i];if(c.headline===n.headline&&c.body===n.body)return '';
+  const len=(t:string|null)=>t?t.replace(/\*\*/g,'').length:0;
+  return `### P${i+1} — ${state.reasons[i+1]??''}\n\n**Original** (${len(c.body)} caracteres no body)\n\n${c.headline}${c.body?'\n\n'+c.body:''}\n\n**Proposta** (${len(n.body)} caracteres no body)\n\n${n.headline}${n.body?'\n\n'+n.body:''}\n`;}).filter(Boolean);
+ await writeFile(path.join(base,'qa/edit-proposal.md'),`# Proposta de edição da copy pronta\n\nNada muda até Diego aprovar:\n\n\`\`\`sh\nnpm run carousel -- approve <projeto> edit --by Diego\n\`\`\`\n\n${rows.join('\n')}`);
+ return {slides:rows.length,file:path.join(base,'qa/edit-proposal.md')};
+});}
+export function approveEdit(dir:string,by:string,note=''){return withLock(dir,async()=>{
+ const base=await contentDir(dir),p=await loadProject(dir);
+ if(!by.trim()||by.trim().length<2)throw Error('Informe --by com o nome de quem aprovou');
+ const file=path.join(base,'qa/edit-proposal.json'),proposal=await optionalJson(file);if(!proposal)throw Error('Sem proposta: rode edit primeiro');
+ const current=panelsOf(p.carousel.slides);if(proposal.base_hash!==jsonHash(current))throw Error('A copy mudou desde a proposta; refazer');
+ const result:Panel[]=proposal.panels,approvals=await loadApprovals(base);
+ approvals.approvals.push({id:opaqueId(),type:'edit',by:by.trim(),note:note||Object.entries(proposal.reasons).map(([k,v])=>`P${k}: ${v}`).join('; '),created_at:new Date().toISOString(),base_hash:jsonHash(current),result_hash:jsonHash(result),proposal_hash:hash(await readFile(file)),other_changes:0,result});
+ await writeJson(path.join(base,'approvals.json'),Approvals.parse(approvals));
+ p.carousel.slides=p.carousel.slides.map((s,i)=>({...s,headline:result[i].headline,body:result[i].body}));
+ await writeJson(path.join(base,'carousel.json'),p.carousel);await writeFile(path.join(base,'copy.md'),toCopy(result));
+ await log(base,'APPROVAL',`Edição aprovada por ${by.trim()}`);
+ return {applied:true};
 });}

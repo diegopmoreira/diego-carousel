@@ -15,11 +15,12 @@ import { addAsset, chooseAsset, addVideoFrame } from './project/assets.js';
 import { requestAsset, cancelRequest, addFromRequest } from './project/requests.js';
 import { candidates } from './render/candidates.js';
 import { draft, slideAdd, slideMove, slideRemove } from './project/draft.js';
-import { proposeVoice, approveVoice } from './qa/voice.js';
+import { proposeVoice, approveVoice, proposeEdit, approveEdit } from './qa/voice.js';
 import { addIdea, listIdeas } from './project/backlog.js';
 import { loadEditorialLibrary, libraryStats } from './library/genetic.js';
 import { gallery } from './render/gallery.js';
 import { calibrate } from './render/calibrate.js';
+import { fitProbe, autofit } from './render/fitprobe.js';
 const args=process.argv.slice(2),command=args.shift();
 const flag=(name:string)=>{const i=args.indexOf('--'+name);return i<0?undefined:args[i+1];};
 const required=(v:string|undefined,usage:string)=>{if(!v||v.startsWith('--'))throw Error(usage);return v;};
@@ -34,7 +35,8 @@ npm run carousel -- <comando>
   slide add <projeto> --headline <t> [--body <t>] [--role r] [--after id|0|--at n]
   slide move <projeto> <id> --to <n> | slide rm <projeto> <id>
   voice <projeto> [--render]            proposta "você" → "tu" em qa/voice-proposal.md
-  approve <projeto> voice --by <nome> [--note <t>]   só com o aval explícito de Diego
+  edit <projeto> <slide-id> [--headline t] [--body t] --reason t   proposta de edição de copy pronta
+  approve <projeto> voice|edit --by <nome> [--note <t>]   só com o aval explícito de Diego
   from-copy <slug> <copy.md> [--family editorial_clean|cinematic_condensed]
   variant <projeto> <nome> [--family cinematic_condensed]
   promote <projeto> <nome>
@@ -44,6 +46,8 @@ npm run carousel -- <comando>
   library validate | library stats       biblioteca genética (genetic-library/)
   idea add --thesis <t> --source <ref> --why <t> [--project <slug>] | idea list
   render <projeto> [--slides id,id]
+  fit-probe <projeto> <slide-id>          composições que cabem, tamanhos e quanto cortar
+  autofit <projeto>                       troca a composição dos slides que não cabem (tweaks) e renderiza
   validate <projeto> [--json]
   review <projeto> --reviewer <nome> --note <nota> [--approved] [--human]
   export <projeto>
@@ -74,13 +78,16 @@ try{
   break;
  }
  case 'voice':print(await proposeVoice(project(),{render:args.includes('--render')}));break;
- case 'approve':{const dir=project(),what=required(args[1],'approve <projeto> voice --by <nome>');if(what!=='voice')throw Error('Aprovações disponíveis: voice');print(await approveVoice(dir,required(flag('by'),'Informe --by com o nome de quem aprovou'),flag('note')??'',{allowOther:args.includes('--allow-other')}));break;}
+ case 'edit':print(await proposeEdit(project(),required(args[1],'edit <projeto> <slide-id> [--headline t] [--body t] --reason t'),{headline:flag('headline'),body:flag('body'),reason:required(flag('reason'),'Informe --reason')}));break;
+ case 'approve':{const dir=project(),what=required(args[1],'approve <projeto> voice|edit --by <nome>'),by=required(flag('by'),'Informe --by com o nome de quem aprovou');if(what==='voice')print(await approveVoice(dir,by,flag('note')??'',{allowOther:args.includes('--allow-other')}));else if(what==='edit')print(await approveEdit(dir,by,flag('note')??''));else throw Error('Aprovações disponíveis: voice, edit');break;}
  case 'variant':{const dir=await createVariant(project(),required(args[1],'Informe o nome da versão'),flag('family'));print(dir);break;}
  case 'promote':print(await promoteVariant(project(),required(args[1],'Informe o nome da versão')));break;
  case 'import-copy':await importCopy(project(),path.resolve(required(args[1],'Informe o arquivo de copy')));print('Copy importada e travada.');break;
  case 'lint':{const r=await lint(project());print(r);if(!r.passed)process.exitCode=1;break;}
  // --blind prints only the headlines: the input of the blind spine test (editorial/internal-headlines.md).
  case 'spine':{const {carousel}=await loadProject(project()),blind=args.includes('--blind');print(carousel.slides.map((s,i)=>blind?`P${i+1} ${s.headline}`:`P${i+1} [${s.id}] ${s.headline}${s.next_question?`\n     → ${s.next_question}`:''}`).join('\n'));break;}
+ case 'fit-probe':print(await fitProbe(project(),required(args[1],'fit-probe <projeto> <slide-id>')));break;
+ case 'autofit':{const dir=project(),r=await autofit(dir);if(r.changes.some(c=>c.changed))await render(dir);print(r);break;}
  case 'calibrate':print(await calibrate(project(),Number(required(flag('slide'),'Informe --slide <n>')),path.resolve(required(flag('ref'),'Informe --ref <png publicado>')),{threshold:flag('threshold')?Number(flag('threshold')):undefined}));break;
  case 'gallery':print(await gallery({out:flag('out')?path.resolve(flag('out')!):undefined,image:flag('image')?path.resolve(flag('image')!):undefined}));break;
  case 'library':{const sub=args.shift();const {examples,errors}=await loadEditorialLibrary();if(sub==='validate'){print({examples:examples.length,errors});if(errors.length)process.exitCode=1;}else if(sub==='stats')print({...libraryStats(examples),errors});else throw Error('Disponíveis: library validate|stats');break;}

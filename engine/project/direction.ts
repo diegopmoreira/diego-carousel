@@ -17,6 +17,8 @@ export function initialDirection(family:Family,slides:{narrative_role:string;bod
   if(i===0)return 'full_bleed';
   let c=PLAN[family][s.narrative_role]??(s.body?'text_only':'giant_statement');
   if(!s.body&&(c==='text_only'||c==='contrast'||c==='quote'))c='giant_statement';
+  // A statement is short: with a real body the slide is an argument, not a pause.
+  if(c==='giant_statement'&&s.body&&s.body.replace(/\*\*/g,'').length>160)c='text_only';
   if(family==='editorial_clean'&&s.narrative_role==='mechanism'&&i%3===2)c='image_card'; // an image every few mechanisms keeps rhythm
   if(!images&&WITH_IMAGE.has(c))c=s.body?'text_only':'giant_statement';
   return c;
