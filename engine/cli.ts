@@ -6,7 +6,7 @@ import { loadConfig } from './project/config.js';
 import { VERSION } from './schema/index.js';
 import { z } from 'zod';
 import { createProject, importCopy } from './project/create.js';
-import { ROOT, projectsDir, readJson, writeJson, loadProject, log, optionalJson, jsonHash } from './project/io.js';
+import { ROOT, projectsDir, readJson, writeJson, loadProject, log, optionalJson, jsonHash, withLock } from './project/io.js';
 import { lint } from './qa/lint.js';
 import { render, validate, exportProject, review, renderInputs } from './render/render.js';
 import { serve } from './preview/server.js';
@@ -18,7 +18,7 @@ import { candidates } from './render/candidates.js';
 import { draft, slideAdd, slideMove, slideRemove } from './project/draft.js';
 import { proposeVoice, approveVoice, proposeEdit, approveEdit } from './qa/voice.js';
 import { addIdea, listIdeas } from './project/backlog.js';
-import { loadEditorialLibrary, libraryStats } from './library/genetic.js';
+import { loadEditorialLibrary, libraryStats, libraryIndex } from './library/genetic.js';
 import { gallery } from './render/gallery.js';
 import { calibrate } from './render/calibrate.js';
 import { fitProbe, autofit } from './render/fitprobe.js';
@@ -26,7 +26,7 @@ import { migrate, migrateAll } from './project/migrate.js';
 const args=process.argv.slice(2),command=args.shift();
 const flag=(name:string)=>{const i=args.indexOf('--'+name);return i<0?undefined:args[i+1];};
 // Positional arguments, skipping flags and their values (boolean flags listed so their neighbour stays positional).
-const BOOLEAN=new Set(['--json','--approved','--human','--blind','--reset-art','--render','--allow-other','--allow-conversation','--alternative','--all','--dry-run']);
+const BOOLEAN=new Set(['--need','--none','--json','--approved','--human','--blind','--reset-art','--render','--allow-other','--allow-conversation','--alternative','--all','--dry-run']);
 const positionals=()=>args.filter((a,i)=>!a.startsWith('--')&&!(i>0&&args[i-1].startsWith('--')&&!BOOLEAN.has(args[i-1])));
 const required=(v:string|undefined,usage:string)=>{if(!v||v.startsWith('--'))throw Error(usage);return v;};
 const project=()=>path.resolve(required(args[0],'Informe o caminho do projeto'));
@@ -48,7 +48,7 @@ npm run carousel -- <comando>
   lint <projeto> [--json] | spine <projeto> [--blind] | status <projeto>
   calibrate <projeto> --slide <n> --ref <png publicado> [--threshold 32]   compara render × publicado
   gallery [--image foto.jpg] [--out pasta]   todas as composições × famílias (gallery/)
-  library validate | library stats       biblioteca genética (genetic-library/)
+  library list [--architecture a] [--family f] | library validate | library stats   biblioteca genética
   idea add --thesis <t> --source <ref> --why <t> [--project <slug>] | idea list
   render <projeto> [--slides id,id]
   fit-probe <projeto> <slide-id>          composições que cabem, tamanhos e quanto cortar
@@ -61,6 +61,7 @@ npm run carousel -- <comando>
   asset request <projeto> <slide-id> [--variants n] [--concept t]   ticket de geração (prompt, teto)
   asset add <projeto> --request <pedido> (--url <u> | <arquivo>) [--seed s] [--model m] [--score n --rationale t]
   asset candidates <projeto> <slide-id> | asset choose <projeto> <slide-id> <asset-id> [--score n --rationale t]
+  image <projeto> <slide-id> --need|--none   o slide exige imagem ou não usa imagem
   asset frame <projeto> <video> --at mm:ss [--slide id]   frame do próprio vídeo (ffmpeg)
   asset cancel <projeto> <pedido> | asset list <projeto>
   migrate <projeto> | migrate --all       atualiza projetos antigos aos contratos atuais
@@ -83,6 +84,13 @@ try{
   else throw Error('Disponíveis: slide add|move|rm');
   break;
  }
+ case 'image':{
+  // Explicit decision per slide: --need (export waits for an image) or --none (the slide does not use one).
+  const dir=project(),slide=required(args[1],'image <projeto> <slide-id> --need|--none'),need=args.includes('--need')?true:args.includes('--none')?false:undefined;
+  if(need===undefined)throw Error('Informe --need ou --none');
+  const {adjust,revision}=await import('./preview/api.js');await withLock(dir,async()=>adjust(dir,{revision:await revision(dir),id:slide,image_need:need}));
+  print({slide,image_need:need});break;
+ }
  case 'voice':print(await proposeVoice(project(),{render:args.includes('--render')}));break;
  case 'edit':print(await proposeEdit(project(),required(args[1],'edit <projeto> <slide-id> [--headline t] [--body t] --reason t'),{headline:flag('headline'),body:flag('body'),reason:required(flag('reason'),'Informe --reason')}));break;
  case 'approve':{const dir=project(),what=required(args[1],'approve <projeto> voice|edit --by <nome>'),by=required(flag('by'),'Informe --by com o nome de quem aprovou');if(what==='voice')print(await approveVoice(dir,by,flag('note')??'',{allowOther:args.includes('--allow-other')}));else if(what==='edit')print(await approveEdit(dir,by,flag('note')??''));else throw Error('Aprovações disponíveis: voice, edit');break;}
@@ -97,13 +105,22 @@ try{
  case 'migrate':print(args[0]==='--all'?await migrateAll():await migrate(project()));break;
  case 'calibrate':print(await calibrate(project(),Number(required(flag('slide'),'Informe --slide <n>')),path.resolve(required(flag('ref'),'Informe --ref <png publicado>')),{threshold:flag('threshold')?Number(flag('threshold')):undefined}));break;
  case 'gallery':print(await gallery({out:flag('out')?path.resolve(flag('out')!):undefined,image:flag('image')?path.resolve(flag('image')!):undefined}));break;
- case 'library':{const sub=args.shift();const {examples,errors}=await loadEditorialLibrary();if(sub==='validate'){print({examples:examples.length,errors});if(errors.length)process.exitCode=1;}else if(sub==='stats')print({...libraryStats(examples),errors});else throw Error('Disponíveis: library validate|stats');break;}
+ case 'library':{const sub=args.shift();const {examples,errors}=await loadEditorialLibrary();if(sub==='validate'){print({examples:examples.length,errors});if(errors.length)process.exitCode=1;}else if(sub==='list')print(libraryIndex(examples,{architecture:flag('architecture'),family:flag('family')}));else if(sub==='stats')print({...libraryStats(examples),errors});else throw Error('Disponíveis: library list|validate|stats');break;}
  case 'idea':{const sub=args.shift();if(sub==='add')print(await addIdea({thesis:flag('thesis'),source:flag('source'),why:flag('why'),project:flag('project')}));else if(sub==='list')print(await listIdeas());else throw Error('Disponíveis: idea add|list');break;}
  case 'render':{const r=await render(project(),flag('slides')?.split(','));print({render_hash:r.render_hash,...(r.rhythm_warnings?.length?{rhythm_warnings:r.rhythm_warnings}:{}),slides:r.slides.map(s=>({id:s.id,passed:s.passed,errors:s.errors,...(s.warnings?.length?{warnings:s.warnings}:{})}))});if(r.slides.some(s=>!s.passed))process.exitCode=1;break;}
  case 'validate':{const r=await validate(project());print(r);if(!r.passed)process.exitCode=1;break;}
  case 'export':print(await exportProject(project()));break;
  case 'review':await review(project(),{name:required(flag('reviewer'),'Informe --reviewer'),kind:args.includes('--human')?'human':'agent'},required(flag('note'),'Informe --note com o resultado da inspeção visual'),args.includes('--approved'));print('Revisão registrada.');break;
- case 'status':{const dir=project(),p=await renderInputs(dir),l=await optionalJson(path.join(dir,'qa/editorial-lint.json')),r=await optionalJson(path.join(dir,'render-manifest.json')),v=await optionalJson(path.join(dir,'qa/visual-review.json'));print({project:dir,mode:p.carousel.project.mode,slides:p.carousel.slides.length,lint_current:!!l?.passed&&l.content_hash===jsonHash(p.carousel),render_current:r?.project_hash===p.project_hash,visual_review_current:!!v?.approved&&v.render_hash===r?.render_hash,source:p.carousel.source});break;}
+ case 'status':{
+  // The ledger of a project for resuming work: what is current for the present content, and the next step.
+  const dir=project(),p=await renderInputs(dir),l=await optionalJson(path.join(dir,'qa/editorial-lint.json')),r=await optionalJson(path.join(dir,'render-manifest.json')),v=await optionalJson(path.join(dir,'qa/visual-review.json'));
+  const lintCurrent=!!l?.passed&&l.content_hash===jsonHash(p.carousel),renderCurrent=r?.project_hash===p.project_hash,renderPassed=renderCurrent&&r.slides.every((x:any)=>x.passed);
+  const pendingImages=p.carousel.slides.filter(x=>{const d=p.art.slides[x.id];return (d?.image.need||d?.image.placeholder)&&!d?.image.asset_id;}).map(x=>x.id);
+  const reviewCurrent=!!v&&v.render_hash===r?.render_hash&&renderCurrent,approved=reviewCurrent&&!!v.approved;
+  const exported=await optionalJson(path.join(dir,'qa/export-receipt.json'));
+  const next=!p.carousel.slides.length?(p.carousel.project.mode==='full'?'escrever copy.md + editorial.json e rodar draft':'import-copy'):!lintCurrent?'lint (corrigir erros)':!renderPassed?'render (e fit-probe/autofit nos que falham)':!reviewCurrent?'abrir os PNGs e registrar review':pendingImages.length?`imagens pendentes em ${pendingImages.length} slide(s): asset request/add ou image --none`:!approved?'corrigir o que a revisão apontou e renderizar de novo':exported?.render_hash===r?.render_hash?'exportado':'validate e export';
+  print({project:dir,mode:p.carousel.project.mode,slides:p.carousel.slides.length,lint_current:lintCurrent,render_current:renderCurrent,render_passed:renderPassed,pending_images:pendingImages,visual_review_current:reviewCurrent,approved,exported:exported?.render_hash===r?.render_hash,next,source:p.carousel.source});break;
+ }
  case 'preview':{let dir:string|null=args[0]&&!args[0].startsWith('--')?path.resolve(args[0]):null;if(!dir){const projects=await listProjects();dir=projects.length?path.join(projectsDir(),projects[0]):null;}const config=await loadConfig();const server=await serve(dir,Number(flag('port')??config.preview.port),true);print(server.url);for(const sig of ['SIGINT','SIGTERM'] as const)process.on(sig,()=>void server.close().then(()=>process.exit(0)));break;}
  case 'asset':{
   const sub=args.shift(),dir=project(),num=(v?:string)=>v===undefined?undefined:Number(v);

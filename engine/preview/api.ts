@@ -6,7 +6,7 @@ import { projectsDir, contentDir, loadProject, jsonHash, writeJson, optionalJson
 import { listVariants } from '../project/variants.js';
 import { loadConfig } from '../project/config.js';
 export async function revision(dir:string){const p=await loadProject(dir);return jsonHash(p);}
-export const Adjustment=z.object({revision:z.string(),id:z.string(),family:Family.optional(),composition:Composition.optional(),align:z.enum(['left','center']).optional(),position:z.enum(['top','center','bottom']).optional(),fit:z.enum(['fill','preferred']).optional(),asset_id:z.string().nullable().optional(),focal_x:z.number().min(0).max(1).optional(),focal_y:z.number().min(0).max(1).optional(),params:Tweaks.shape.slides.valueType.shape.params.optional()}).strict();
+export const Adjustment=z.object({revision:z.string(),id:z.string(),family:Family.optional(),composition:Composition.optional(),align:z.enum(['left','center']).optional(),position:z.enum(['top','center','bottom']).optional(),fit:z.enum(['fill','preferred']).optional(),asset_id:z.string().nullable().optional(),image_need:z.boolean().optional(),focal_x:z.number().min(0).max(1).optional(),focal_y:z.number().min(0).max(1).optional(),params:Tweaks.shape.slides.valueType.shape.params.optional()}).strict();
 // Patch semantics: only fields present in the request change. The studio sends the fields the user touched.
 export async function adjust(dir:string,input:unknown){
  const patch=Adjustment.parse(input),p=await loadProject(dir);
@@ -25,9 +25,12 @@ export async function adjust(dir:string,input:unknown){
   const previous=d.image.asset_id;
   if(patch.asset_id){d.image.asset_id=patch.asset_id;d.image.placeholder=false;d.image.alternatives=[...new Set([...d.image.alternatives,...(previous?[previous]:[])])].filter(a=>a!==patch.asset_id);}else{delete d.image.asset_id;d.image.placeholder=d.image.need;if(previous)d.image.alternatives=[...new Set([...d.image.alternatives,previous])];}
  }
+ // Explicit decision about the slide: it requires an image (export waits) or it does not use one.
+ if(patch.image_need!==undefined){d.image.need=patch.image_need;if(!d.image.asset_id){d.image.placeholder=patch.image_need;if(!patch.image_need)d.image.strategy='none';}}
  if(patch.focal_x!==undefined)d.image.focal_point.x=patch.focal_x;if(patch.focal_y!==undefined)d.image.focal_point.y=patch.focal_y;
  const comp=p.tweaks.slides[patch.id]?.composition??d.composition;
  if(d.image.asset_id&&!IMAGE_COMPOSITIONS.includes(comp))throw Error('Essa composição não possui imagem. Escolhe uma composição com imagem ou remove a imagem do slide.');
+ if(!d.image.asset_id&&!d.image.placeholder&&(comp==='cinematic_fade'||comp==='image_card'))throw Error('Essa composição precisa de imagem: escolhe uma imagem, marca "Exige imagem" ou troca para uma composição de texto.');
  if(patch.params)tweak().params={...p.tweaks.slides[patch.id]?.params,...patch.params};
  const current=p.tweaks.slides[patch.id];if(current&&!current.composition&&!Object.keys(current.params).length)delete p.tweaks.slides[patch.id];
  ArtDirection.parse(p.art);Tweaks.parse(p.tweaks);

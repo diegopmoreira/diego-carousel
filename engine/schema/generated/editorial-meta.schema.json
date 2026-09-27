@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "editorial": {
+      "type": "object",
+      "properties": {
+        "objective": {
+          "type": "string"
+        },
+        "audience": {
+          "type": "string"
+        },
+        "angle": {
+          "type": "string"
+        },
+        "promise": {
+          "type": "string"
+        },
+        "central_thesis": {
+          "type": "string"
+        },
+        "belief": {
+          "type": "string"
+        },
+        "contradiction": {
+          "type": "string"
+        },
+        "mechanism": {
+          "type": "string"
+        },
+        "architecture": {
+          "type": "string"
+        },
+        "hybrid": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "hook": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "family": {
+              "type": "string"
+            },
+            "viral_score": {
+              "type": "object",
+              "properties": {
+                "impact": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "clarity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "originality": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "tension": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "utility": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "shareability": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10
+                }
+              },
+              "required": [
+                "impact",
+                "clarity",
+                "originality",
+                "tension",
+                "utility",
+                "shareability"
+              ]
+            },
+            "defensibility": {
+              "type": "string"
+            },
+            "progression": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "text",
+            "family",
+            "defensibility",
+            "progression"
+          ]
+        },
+        "hook_candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "family": {
+                "type": "string"
+              },
+              "viral_score": {
+                "type": "object",
+                "properties": {
+                  "impact": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "clarity": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "originality": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "tension": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "utility": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "shareability": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  }
+                },
+                "required": [
+                  "impact",
+                  "clarity",
+                  "originality",
+                  "tension",
+                  "utility",
+                  "shareability"
+                ]
+              }
+            },
+            "required": [
+              "text",
+              "family"
+            ]
+          }
+        },
+        "central_metaphor": {
+          "type": "string"
+        },
+        "cta": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "none",
+                "share_specific",
+                "comment_keyword"
+              ]
+            },
+            "text": {
+              "type": "string"
+            },
+            "keyword": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "text"
+          ]
+        },
+        "caption": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "art": {
+      "type": "object",
+      "properties": {
+        "family": {
+          "type": "string",
+          "enum": [
+            "cinematic_condensed",
+            "editorial_clean"
+          ]
+        },
+        "cover_strategy": {
+          "type": "string"
+        },
+        "rationale": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "slides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "narrative_role": {
+            "type": "string"
+          },
+          "headline_type": {
+            "type": "string"
+          },
+          "adds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "next_question": {
+            "type": "string"
+          },
+          "visual_intent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

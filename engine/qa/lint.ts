@@ -12,7 +12,11 @@ export async function lint(dir:string){
  const {slides:range,editorial:{body_range:[bodyMin,bodyMax]}}=await loadConfig();
  if(c.slides.length<range.min||c.slides.length>range.max)add('error','slides',`São necessários ${range.min}–${range.max} painéis`);
  const voiceSeverity:Issue['severity']=c.project.mode==='full'?'error':'warning';
- const forbidden=['antes de começar','neste carrossel','siga meu perfil','compartilhe com seus amigos','5 dicas','você merece','transforme sua vida','descubra o segredo','junto com você nessa jornada','vamos juntos','acredite em si mesmo'];
+ const forbidden=['antes de começar','neste carrossel','siga meu perfil','compartilhe com seus amigos','5 dicas','você merece','transforme sua vida','descubra o segredo','junto com você nessa jornada','vamos juntos','acredite em si mesmo',
+  // Generic CTAs (spec §35): the CTA is born from the thesis.
+  'se gostou do post','considere compartilhar','curta e compartilhe','siga para mais','deixe seu like','salve este post'];
+ // Ready copy is approved text: tone problems are reported, never blocking (as with "você").
+ const phraseSeverity:Issue['severity']=c.project.mode==='full'?'error':'warning';
  c.slides.forEach((s,i)=>{
   const t=plainText(s.headline+'\n'+(s.body??'')).toLocaleLowerCase('pt-BR');
   if(i===0&&s.body)add('error',`slides.${i}.body`,'A capa deve ser sem body');
@@ -20,7 +24,7 @@ export async function lint(dir:string){
   // Ready copy is Diego's approved text: "você" is flagged, never blocked. Copy written by the system must use tu.
   if(/(?<!\p{L})voc[eê]s?(?!\p{L})/iu.test(t))add(voiceSeverity,`slides.${i}`,c.project.mode==='full'?'A voz usa sempre tu':'Copy pronta usa "você": a proposta em tu só entra com aval de Diego');
   if(/\b(seu|sua|seus|suas)\b/u.test(t))add('warning',`slides.${i}`,'Verificar pronome possessivo: prefere teu/tua');
-  for(const phrase of forbidden)if(t.includes(phrase))add('error',`slides.${i}`,`Expressão proibida: ${phrase}`);
+  for(const phrase of forbidden)if(t.includes(phrase))add(phraseSeverity,`slides.${i}`,`Expressão proibida: ${phrase}`);
   if(s.body&&(plainText(s.body).length<bodyMin||plainText(s.body).length>bodyMax))add('warning',`slides.${i}.body`,`Body com ${plainText(s.body).length} caracteres, fora da faixa ${bodyMin}–${bodyMax} (config.json); o fit decide legibilidade`);
   if(i<c.slides.length-1&&!s.next_question)add(c.project.mode==='full'?'error':'warning',`slides.${i}.next_question`,'Registrar a pergunta que conduz ao próximo painel');
   if(i>0&&s.adds.some(a=>c.slides[i-1].adds.includes(a)))add('warning',`slides.${i}.adds`,'Adição repetida no painel vizinho');
@@ -29,7 +33,7 @@ export async function lint(dir:string){
  });
  const extra=[c.editorial.caption,c.editorial.cta.text].join('\n').toLowerCase();
  if(/(?<!\p{L})voc[eê]s?(?!\p{L})/iu.test(extra))add(voiceSeverity,'editorial','Legenda e CTA também usam tu');
- for(const phrase of forbidden)if(extra.includes(phrase))add('error','editorial',`Expressão proibida: ${phrase}`);
+ for(const phrase of forbidden)if(extra.includes(phrase))add(phraseSeverity,'editorial',`Expressão proibida: ${phrase}`);
  if(c.project.copy_locked){
   try{const raw=await readFile(path.join(base,'source/copy-input.md'),'utf8');if(hash(raw)!==c.source.hash)add('error','source.hash','Fonte original alterada');const approved=await approvedPanels(base,parseCopy(raw));for(const e of approved.errors)add('error','approvals.json',e);if(JSON.stringify(approved.panels)!==JSON.stringify(c.slides.map(({headline,body})=>({headline,body}))))add('error','slides','Copy travada difere da fonte original (NFC) e das mudanças aprovadas');}catch(e){add('error','source',`Não foi possível conferir copy original: ${String(e)}`);}
  }
@@ -57,6 +61,6 @@ export async function visualLint(dir:string){
  const {carousel:c,art:a,tweaks:t,assets:m}=await loadProject(dir);const errors:string[]=[];const ids=new Set(c.slides.map(s=>s.id));
  for(const [name,map] of Object.entries({art:a.slides,tweaks:t.slides}))for(const id of Object.keys(map))if(!ids.has(id))errors.push(`${name}.${id}: entrada órfã`);
  let last='',run=0;
- c.slides.forEach(s=>{const d=a.slides[s.id];if(!d){errors.push(`${s.id}: direção ausente`);return;}const comp=t.slides[s.id]?.composition??d.composition;run=comp===last?run+1:1;last=comp;if(run>2)errors.push(`${s.id}: mais de duas composições iguais seguidas`);if(d.image.need&&!d.image.asset_id&&!d.image.placeholder)errors.push(`${s.id}: falta asset ou placeholder declarado`);if(d.image.asset_id&&!m.assets.some(x=>x.id===d.image.asset_id))errors.push(`${s.id}: asset não registrado`);if(d.image.asset_id&&!['full_bleed','cinematic_fade','image_card'].includes(comp))errors.push(`${s.id}: composição ${comp} não possui slot de imagem`);});
+ c.slides.forEach(s=>{const d=a.slides[s.id];if(!d){errors.push(`${s.id}: direção ausente`);return;}const comp=t.slides[s.id]?.composition??d.composition;run=comp===last?run+1:1;last=comp;if(run>2)errors.push(`${s.id}: mais de duas composições iguais seguidas`);if(d.image.need&&!d.image.asset_id&&!d.image.placeholder)errors.push(`${s.id}: falta asset ou placeholder declarado`);if(d.image.asset_id&&!m.assets.some(x=>x.id===d.image.asset_id))errors.push(`${s.id}: asset não registrado`);if(d.image.asset_id&&!['full_bleed','cinematic_fade','image_card'].includes(comp))errors.push(`${s.id}: composição ${comp} não possui slot de imagem`);if(!d.image.asset_id&&!d.image.placeholder&&(comp==='cinematic_fade'||comp==='image_card'))errors.push(`${s.id}: ${comp} sem imagem deixa um vazio; escolher uma imagem, declarar placeholder ou trocar para uma composição de texto`);});
  if(c.slides.length&&c.slides.every(s=>a.slides[s.id]?.density==='HIGH'))errors.push('Todos os slides estão HIGH');return errors;
 }

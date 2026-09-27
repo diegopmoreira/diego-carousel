@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { Carousel, ArtDirection, Family, type ArtData, type CarouselData } from '../schema/index.js';
 import { loadProject, opaqueId, writeJson, log, withLock } from './io.js';
 import { loadConfig } from './config.js';
-import { parseCopy, toCopy } from '../source/copy.js';
+import { parseCopy, toCopy, plainText } from '../source/copy.js';
 import { initialDirection } from './direction.js';
 const SlideMeta=z.object({id:z.string().optional(),narrative_role:z.string().optional(),headline_type:z.string().optional(),adds:z.array(z.string()).optional(),next_question:z.string().optional(),visual_intent:z.string().optional()}).strict();
 export const DraftMeta=z.object({
@@ -23,6 +23,20 @@ async function save(dir:string,c:CarouselData,art:ArtData,tweaks:any){
 }
 // Creates or replaces the slides of a full-mode project from copy.md (+ editorial metadata). A redraft keeps the IDs
 // of slides that stay (explicit id in the metadata, else same position), so art direction and tweaks survive.
+// Which existing slide each new panel continues, so art direction and tweaks stay with their text: an explicit id in the
+// metadata, then the same headline, then a close one (most words shared), and only when the panel count is unchanged,
+// the same position (an in-place rewrite). A panel inserted in the middle never inherits its neighbour's image.
+export function matchSlides(panels:{headline:string}[],old:{id:string;headline:string}[],explicit:(string|undefined)[]=[]){
+ const words=(t:string)=>plainText(t).normalize('NFC').toLocaleLowerCase('pt-BR').replace(/[^\p{L}\p{N}\s]/gu,' ').split(/\s+/).filter(Boolean);
+ const result:(string|null)[]=panels.map((_,i)=>explicit[i]??null),used=new Set(result.filter((x):x is string=>!!x));
+ panels.forEach((p,i)=>{if(result[i])return;const key=words(p.headline).join(' '),o=old.find(s=>!used.has(s.id)&&words(s.headline).join(' ')===key);if(o){result[i]=o.id;used.add(o.id);}});
+ const pairs:{i:number;id:string;score:number}[]=[];
+ panels.forEach((p,i)=>{if(result[i])return;const a=new Set(words(p.headline));for(const s of old){if(used.has(s.id))continue;const b=new Set(words(s.headline)),shared=[...a].filter(w=>b.has(w)).length,score=shared/new Set([...a,...b]).size;if(score>=.5)pairs.push({i,id:s.id,score});}});
+ pairs.sort((x,y)=>y.score-x.score);
+ for(const {i,id} of pairs){if(result[i]||used.has(id))continue;result[i]=id;used.add(id);}
+ if(panels.length===old.length)panels.forEach((_,i)=>{if(!result[i]&&!used.has(old[i].id)){result[i]=old[i].id;used.add(old[i].id);}});
+ return result;
+}
 export function draft(dir:string,copyFile:string,metaFile?:string,options:{resetArt?:boolean}={}){return withLock(dir,async()=>{
  const p=await loadProject(dir),c=p.carousel;assertEditable(c);
  if(await readFile(path.join(dir,'variant.json')).then(()=>true,()=>false))throw Error('Draft só no projeto principal, não numa versão');
@@ -30,11 +44,13 @@ export function draft(dir:string,copyFile:string,metaFile?:string,options:{reset
  const {slides:range}=await loadConfig();
  if(panels.length<range.min||panels.length>range.max)throw Error(`A copy precisa de ${range.min} a ${range.max} painéis (tem ${panels.length})`);
  if(meta.slides&&meta.slides.length!==panels.length)throw Error(`Metadados com ${meta.slides.length} slides para ${panels.length} painéis`);
- const known=new Set(c.slides.map(s=>s.id)),used=new Set<string>();
+ const known=new Set(c.slides.map(s=>s.id));
+ for(const m of meta.slides??[])if(m.id&&!known.has(m.id))throw Error(`ID desconhecido nos metadados: ${m.id}`);
+ const ids=new Set<string>();for(const m of meta.slides??[])if(m.id){if(ids.has(m.id))throw Error(`ID repetido nos metadados: ${m.id}`);ids.add(m.id);}
+ const matches=matchSlides(panels,c.slides,(meta.slides??[]).map(m=>m.id));
  const slides=panels.map((panel,i)=>{
-  const m=meta.slides?.[i]??{},previous=m.id?c.slides.find(s=>s.id===m.id):c.slides[i];
-  if(m.id&&!known.has(m.id))throw Error(`ID desconhecido nos metadados: ${m.id}`);
-  let id=previous?.id??opaqueId();if(used.has(id))id=opaqueId();used.add(id);
+  const m=meta.slides?.[i]??{},previous=matches[i]?c.slides.find(s=>s.id===matches[i]):undefined;
+  const id=previous?.id??opaqueId();
   const {id:_,...fields}=m;
   return {id,narrative_role:fields.narrative_role??previous?.narrative_role??(i===0?'interruption':i===panels.length-1?'hammer':'mechanism'),headline:panel.headline,body:panel.body,
    headline_type:fields.headline_type??previous?.headline_type??'statement',adds:fields.adds??previous?.adds??[],next_question:fields.next_question??previous?.next_question??'',visual_intent:fields.visual_intent??previous?.visual_intent??''};
@@ -44,9 +60,9 @@ export function draft(dir:string,copyFile:string,metaFile?:string,options:{reset
  const fresh=initialDirection(art.family,slides);
  slides.forEach((s,i)=>{if(options.resetArt||!art.slides[s.id])art.slides[s.id]=fresh[i];});
  await save(dir,c,art,p.tweaks);
- const kept=slides.filter(s=>known.has(s.id)).length;
- await log(dir,'EDITORIAL',`Draft: ${slides.length} painéis (${kept} IDs preservados)${options.resetArt?'; direção de arte refeita':''}`);
- return {slides:slides.map((s,i)=>({position:i+1,id:s.id,headline:s.headline})),kept};
+ const kept=slides.filter(s=>known.has(s.id)).length,removed=c.slides.length&&known.size-kept;
+ await log(dir,'EDITORIAL',`Draft: ${slides.length} painéis (${kept} IDs preservados, ${slides.length-kept} novos, ${removed} removidos)${options.resetArt?'; direção de arte refeita':''}`);
+ return {slides:slides.map((s,i)=>({position:i+1,id:s.id,headline:s.headline,kept:known.has(s.id)})),kept,added:slides.length-kept,removed};
 });}
 export function slideAdd(dir:string,input:{headline:string;body?:string|null;role?:string;after?:string;at?:number}){return withLock(dir,async()=>{
  const p=await loadProject(dir),c=p.carousel;assertEditable(c);

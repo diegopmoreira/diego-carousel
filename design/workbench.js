@@ -32,7 +32,9 @@
   const alternatives=new Set(d.image.alternatives??[]),rank=a=>a.id===d.image.asset_id?0:alternatives.has(a.id)?1:2,label=a=>(rank(a)===0?'Atual':rank(a)===1?'Alternativa':'Biblioteca')+' · '+(a.origin==='generated'?'gerada':'enviada')+(a.score!==undefined?' · nota '+a.score:'')+' · '+a.id.slice(-4);
   field('asset_id').replaceChildren(new Option(d.image.need?'Sem imagem (pendente)':'Sem imagem',''),...[...data.assets.assets].sort((a,b)=>rank(a)-rank(b)).map(a=>new Option(label(a),a.id)));field('asset_id').value=d.image.asset_id??'';rangeLabels();
   // Snapshot of what the form shows; saving sends only the fields that differ from it.
+  field('image_need').checked=!!d.image.need;
   initial=Object.fromEntries([...Object.keys(values),'asset_id'].map(n=>[n,String(field(n).value)]));
+  initial.image_need=String(field('image_need').checked);
   $('#copy-headline').textContent=s.headline;$('#copy-body').textContent=s.body??'Sem corpo de texto.';
   const fitSummary=$('#fit-summary');fitSummary.classList.toggle('error',!render?.passed||!data.render_current);
   fitSummary.textContent=!data.render_current?'Há alterações ainda não renderizadas. Atualiza antes de exportar.':!render?.passed?(render?.errors.join(' · ')??'Render pendente'):fit?'✓ Cabe no slide · título '+fit.blocks.headline.size+' px'+(fit.blocks.body?' · corpo '+fit.blocks.body.size+' px':'')+(render.warnings?.length?' · ⚠ '+render.warnings.join(' · '):''):'Aguardando render';
@@ -89,6 +91,7 @@
   const changed=n=>String(field(n).value)!==initial[n],payload={id:data.carousel.slides[index].id},params={};
   for(const n of ['family','composition','align','position','fit'])if(changed(n))payload[n]=field(n).value;
   if(changed('asset_id'))payload.asset_id=field('asset_id').value||null;
+  if(String(field('image_need').checked)!==initial.image_need)payload.image_need=field('image_need').checked;
   for(const n of ['focal_x','focal_y'])if(changed(n))payload[n]=Number(field(n).value)/100;
   for(const n of PARAMS)if(changed(n))params[n]=Number(field(n).value);
   if(Object.keys(params).length)payload.params=params;

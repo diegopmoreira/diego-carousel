@@ -1,7 +1,7 @@
 import { loadConfig, type ConfigData } from '../project/config.js';
 import { launchChromium, chromiumPath } from './browser.js';
 import sharp from 'sharp';
-import { readFile, writeFile, mkdir, rename, readdir, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename, readdir, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { ROOT, loadProject, jsonHash, hash, writeJson, readJson, optionalJson, safeChild, log, contentDir, withLock } from '../project/io.js';
 import { lint, visualLint } from '../qa/lint.js';
@@ -23,11 +23,19 @@ export async function environmentHash(config:ConfigData,root=ROOT){
  const playwright=(await readJson(path.join(ROOT,'node_modules/playwright/package.json'))).version;
  return jsonHash({files:hashes,branding:config.branding,version:VERSION,playwright,chromium:chromiumPath()});
 }
+// Images are hashed again only when their size or modification time changes: the studio asks for the project state
+// on every change event, and re-reading every picture each time made it slow on image-heavy projects.
+const hashCache=new Map<string,{size:number;mtime:number;hash:string}>();
+async function fileHash(file:string){
+ const info=await stat(file),cached=hashCache.get(file);
+ if(cached&&cached.size===info.size&&cached.mtime===info.mtimeMs)return cached.hash;
+ const h=hash(await readFile(file));hashCache.set(file,{size:info.size,mtime:info.mtimeMs,hash:h});return h;
+}
 export async function renderInputs(dir:string){
  const base=await contentDir(dir),p=await loadProject(dir),config=await loadConfig(),tokens=await readJson(path.join(ROOT,'design/tokens.json'));
  const environment=await environmentHash(config);
  const assetHashes:Record<string,string>={};
- for(const asset of p.assets.assets){const bytes=await readFile(safeChild(base,asset.file));const h=hash(bytes);if(h!==asset.sha256)throw Error(`Asset ${asset.id}: SHA-256 difere do manifesto`);assetHashes[asset.id]=h;}
+ for(const asset of p.assets.assets){const h=await fileHash(safeChild(base,asset.file));if(h!==asset.sha256)throw Error(`Asset ${asset.id}: SHA-256 difere do manifesto`);assetHashes[asset.id]=h;}
  const slides=p.carousel.slides.map((s,i)=>({id:s.id,input_hash:jsonHash({s,d:p.art.slides[s.id],family:p.art.family,t:p.tweaks.slides[s.id],environment,index:i,total:p.carousel.slides.length,asset:p.art.slides[s.id]?.image.asset_id?assetHashes[p.art.slides[s.id].image.asset_id!]:null})}));
  return {...p,config,tokens,environment,slides,project_hash:jsonHash({p,environment,slides})};
 }
@@ -87,14 +95,18 @@ export async function validate(dir:string){
    try{const png=await readFile(path.join(dir,`qa/render/${num}.png`));const m=await sharp(png).metadata();if(m.width!==1080||m.height!==1350||hash(png)!==r.png_hash)errors.push(`${s.id}: PNG inválido`);if(hash(await readFile(path.join(dir,`fit/${s.id}.json`)))!==r.fit_hash||hash(await readFile(path.join(dir,`html/slide-${num}.html`)))!==r.html_hash)errors.push(`${s.id}: fit ou HTML alterado`);}catch{errors.push(`${s.id}: artefato ausente`);}
   }
  }
- for(const [id,d] of Object.entries(input.art.slides))if(d.image.need&&!d.image.asset_id)errors.push(`${id}: imagem necessária ainda é placeholder`);
+ // A slide that needs an image, or still shows the placeholder, is not publishable.
+ for(const [id,d] of Object.entries(input.art.slides))if((d.image.need||d.image.placeholder)&&!d.image.asset_id)errors.push(`${id}: imagem necessária ainda é placeholder`);
  const result={schema_version:1,passed:!errors.length,project_hash:input.project_hash,render_hash:manifest?.render_hash??null,errors};await writeJson(path.join(dir,'qa/validation.json'),result);return result;
 }
 export type Reviewer={name:string;kind:'agent'|'human'};
 // Automatic cycles are counted per distinct render reviewed by the agent since the last human review.
 // Re-reviewing the same render does not spend a cycle; a person can always review.
 export async function review(dir:string,reviewer:Reviewer,notes:string,approved:boolean){
- const validation=await validate(dir);if(!validation.passed)throw Error('Corrigir validação antes de registrar revisão visual');
+ // Pending images do not stop the QA cycle (the review is recorded for this render); anything else does.
+ // Export still needs a passing validation, so the images and a new review come before publishing.
+ const validation=await validate(dir),blocking=validation.errors.filter(e=>!/placeholder/.test(e));
+ if(blocking.length)throw Error('Corrigir validação antes de registrar revisão visual: '+blocking.join('; '));
  if(!reviewer.name.trim())throw Error('Informe quem revisou');
  const previous=await optionalJson(path.join(dir,'qa/visual-review.json'));
  const history:any[]=previous?.history??(previous?[{render_hash:previous.render_hash,approved:previous.approved,reviewer:previous.reviewer,kind:'human',notes:previous.notes,created_at:previous.created_at}]:[]);
@@ -103,7 +115,8 @@ export async function review(dir:string,reviewer:Reviewer,notes:string,approved:
  const max=(await loadConfig()).qa.max_auto_revision_cycles;
  if(reviewer.kind==='agent'&&!agentRenders.has(validation.render_hash)&&agentRenders.size>=max)throw Error(`Limite de ${max} ciclos automáticos atingido; revisão humana necessária (review --human).`);
  const cycles=reviewer.kind==='agent'?new Set([...agentRenders,validation.render_hash]).size:0;
- const entry={render_hash:validation.render_hash,approved,reviewer:reviewer.name,kind:reviewer.kind,notes,created_at:new Date().toISOString()};
+ const pendingImages=validation.errors.length-blocking.length;
+ const entry={render_hash:validation.render_hash,approved,reviewer:reviewer.name,kind:reviewer.kind,notes,...(pendingImages?{pending_images:pendingImages}:{}),created_at:new Date().toISOString()};
  await writeJson(path.join(dir,'qa/visual-review.json'),{schema_version:2,...entry,cycles,history:[...history,entry]});
 }
 export function exportProject(dir:string){return withLock(dir,()=>exportUnlocked(dir));}

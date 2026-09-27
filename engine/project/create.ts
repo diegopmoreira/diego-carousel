@@ -19,7 +19,8 @@ export async function createProject(slug:string,source:string,options:CreateOpti
  }else if(source!=='copy'){raw=await readFile(path.resolve(source),'utf8');transcript=cleanTranscript(raw);type='transcript_file';ref=path.basename(source);}
  const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const dir=path.join(projectsDir(),`${date}-${slug}`);
- await mkdir(path.dirname(dir),{recursive:true});await mkdir(dir);
+ await mkdir(path.dirname(dir),{recursive:true});
+ await mkdir(dir).catch(e=>{if(e.code==='EEXIST')throw Error(`Já existe um projeto ${path.basename(dir)} hoje: usa outro slug ou continua nele (${dir})`);throw e;});
  for(const d of ['source','assets/source','assets/generated/alternatives','assets/processed','html','fit','export','qa','preview'])await mkdir(path.join(dir,d),{recursive:true});
  const c=Carousel.parse({schema_version:1,project:{id:opaqueId(),created_at:new Date().toISOString(),engine_version:VERSION,skill_version:VERSION,language:'pt-BR',canvas:{width:1080,height:1350},mode:source==='copy'?'design-only':'full',copy_locked:source==='copy'},source:{type,ref,title,hash:hash(raw)},editorial:{cta:{type:'none',text:''}},slides:[]});
  await writeJson(path.join(dir,'carousel.json'),c);

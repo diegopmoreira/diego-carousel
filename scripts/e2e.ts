@@ -5,6 +5,7 @@ import {ROOT,readJson,writeJson,hash,loadProject} from '../engine/project/io.js'
 import {render,validate,exportProject,review} from '../engine/render/render.js';
 import {importCopy,createProject} from '../engine/project/create.js';
 import {draft} from '../engine/project/draft.js';
+import {addAsset} from '../engine/project/assets.js';
 import {requestAsset,addFromRequest} from '../engine/project/requests.js';
 import {candidates} from '../engine/render/candidates.js';
 import {listVariants} from '../engine/project/variants.js';
@@ -20,6 +21,9 @@ try{
  const compositions=['full_bleed','cinematic_fade','image_card','text_only','giant_statement','minimal_pause','quote','contrast','text_only','giant_statement'];
  for(let i=0;i<c.slides.length;i++){a.slides[c.slides[i].id].composition=compositions[i];a.slides[c.slides[i].id].image.need=false;}
  await writeJson(path.join(dir,'art-direction.json'),a);
+ // Image compositions get a real (generated) picture: an empty image slot is refused by the visual lint.
+ for(let i=0;i<3;i++)await addAsset(dir,await sharp({create:{width:1200,height:1500,channels:3,background:['#3a3530','#2f3a40','#403a2f'][i]}}).png().toBuffer(),'Imagem sintética do teste',c.slides[i].id);
+ Object.assign(a,await readJson(path.join(dir,'art-direction.json')));
  const b=await render(dir);assert.equal(b.slides.length,10);assert.ok(b.slides.every(s=>s.passed),JSON.stringify(b.slides.filter(s=>!s.passed)));
  assert.equal((await validate(dir)).passed,true);
  await assert.rejects(exportProject(dir),/Revisão visual/);
@@ -70,6 +74,10 @@ try{
  const sheet=await candidates(fullDir,cover);assert.equal(sheet.images.length,2);assert.equal((await sharp(sheet.sheet).metadata()).width,2*(432+16)+16);
  assert.deepEqual(await listVariants(fullDir),[],'temporary candidate variants are removed');
  const withCover=await render(fullDir);assert.ok(withCover.slides.every((s:any)=>s.passed));
+ // With images still pending, the QA cycle can be recorded, but export stays blocked.
+ await review(fullDir,{name:'Claude',kind:'agent'},'Leitura e ritmo conferidos; faltam as imagens.',false);
+ assert.equal((await readJson(path.join(fullDir,'qa/visual-review.json'))).pending_images>0,true);
+ await assert.rejects(exportProject(fullDir),/placeholder/);
  const fullValidation=await validate(fullDir);assert.ok(!fullValidation.passed&&fullValidation.errors.every((e:string)=>/placeholder/.test(e)),JSON.stringify(fullValidation.errors));
  console.log('E2E aprovado: duas famílias, oito composições, gate de revisão, hashes, rerender isolado, overflow sem reescrita, fonte fallback detectada e fluxo full (Corpus → draft → render).');
 }finally{await rm(dir,{recursive:true,force:true});}

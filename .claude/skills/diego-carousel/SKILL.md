@@ -45,7 +45,9 @@ pedido), parar em três pontos: (1) tese + hooks, (2) copy completa, (3) preview
 - `new <slug> --source corpus:<video_id>` (lê `transcricoes/<id>/v1.json` do disco; defina
   `CAROUSEL_CORPUS_DIR` se o Corpus não estiver no caminho padrão) ou `--source <arquivo.txt>`.
   Sem acesso ao disco mas com o MCP `corpus-diego`: obter a transcrição pelo MCP, salvar o JSON
-  como `v1.json` e usar `--source <v1.json>`. Supervisão/conversa é recusada pelo engine.
+  como `v1.json` e usar `--source <v1.json>`. O engine recusa supervisão, conversa, live, vídeo
+  privado ou não listado (`--allow-unlisted` só com aval de Diego); fonte sem registro no Corpus
+  exige conferir pelo MCP que é vídeo público de Diego e repetir com `--confirm-public`.
 - Ler `source/transcript.txt` uma vez (tem `[m:ss] (falante)`); escrever `## Mapa da fonte` em
   `editorial-report.md` com citação literal e localização por ideia. Daqui em diante trabalhar
   sobre o mapa.
@@ -62,8 +64,11 @@ diferentes, notas nas seis dimensões, piso 7 em impacto/clareza/tensão, escolh
 defensabilidade + progressão. Registrar em `## Hooks`.
 
 **Fase 4 — Arquitetura e spine.** `narrative-architectures.md`, `internal-headlines.md`,
-`continuity.md` e, quando existir, 2–3 exemplos de `genetic-library/editorial/`. Escrever só as
-headlines + `next_question` + `adds`. Registrar em `## Spine`.
+`continuity.md` e 2–3 exemplos publicados: `library list --architecture <arquitetura>` (ou
+`--family`) mostra tese e spine de cada um; ler o YAML completo em `genetic-library/editorial/` e as
+`notes`, que dizem o que o exemplo ensina e o que evitar. Os publicados misturam "você" e "teu":
+a regra atual é sempre "tu". Escrever só as headlines + `next_question` + `adds`. Registrar em
+`## Spine`.
 **Teste cego:** depois do draft (Fase 5), rodar `spine <projeto> --blind` e passar SÓ essa saída a
 um subagente com a pergunta: "Qual é a tese em uma frase? O argumento avança a cada painel? Qual
 painel sobra?". Registrar a resposta literal, a comparação com a tese e o veredito em
@@ -72,12 +77,14 @@ painel sobra?". Registrar a resposta literal, a comparação com a tese e o vere
 **Fase 5 — Bodies e estrutura.** `language-style.md`. Escrever `copy.md` (formato P1…Pn) e um
 `editorial.json` com `editorial` (briefing, tese, hook, candidatos, CTA, legenda), `art` (família,
 racional) e `slides[]` (`narrative_role`, `headline_type`, `adds`, `next_question`,
-`visual_intent`) na mesma ordem. Modelo: `fixtures/full/editorial.json`. Então:
+`visual_intent`) na mesma ordem. Modelo: `fixtures/full/editorial.json`; contrato:
+`engine/schema/generated/editorial-meta.schema.json`. Então:
 ```
 draft <projeto> copy.md --meta editorial.json      # cria slides, IDs e direção inicial por função
 ```
-Redraft preserva IDs e direção de arte; `--reset-art` refaz a direção. Ajustes estruturais:
-`slide add|move|rm`.
+Redraft casa cada painel com o slide anterior pelo texto (título igual ou parecido; mesma posição só
+quando o número de painéis não mudou), então direção de arte e imagem seguem o texto; painel novo
+ganha ID novo. `--reset-art` refaz a direção. Ajustes estruturais: `slide add|move|rm`.
 
 **Fase 6 — QA editorial.** `editorial-qa.md` + `lint <projeto>`. Corrigir todos os erros; ler os
 avisos. Passar no lint não prova qualidade: fazer a leitura do checklist.
@@ -99,7 +106,9 @@ pedido → conferir cada imagem (sem texto, sem pessoa real) → registrar na ho
 `asset add <projeto> --request <pedido> --url <url> [--model …] [--seed …]`. Escolher entre as
 variantes com `asset candidates <projeto> <slide-id>` (abrir `qa/candidates/<slide>.png`) e
 `asset choose <projeto> <slide-id> <asset-id> --score n --rationale "…"`. Sem imagem, fica
-placeholder e o export espera.
+placeholder e o export espera. Se Diego decidir que um slide não usa imagem: trocar a composição
+para uma de texto e rodar `image <projeto> <slide-id> --none` (`--need` volta a exigir). Uma capa
+`full_bleed` sem imagem vira capa tipográfica.
 
 **Fase 9 — Render e QA visual.** `render <projeto>` (exige lint limpo). Abrir
 `qa/contact-sheet.png`, TODOS os PNGs de `qa/render/` e os mapas de tinta de `qa/ink/`; ler os
@@ -110,7 +119,9 @@ renderiza. Se ainda assim não couber: em `full`, comprimir a copy (redraft); em
 `edit <projeto> <slide-id> --body "…" --reason "…"` gera `qa/edit-proposal.md` e só entra com
 `approve <projeto> edit --by Diego` depois do aval dele. Nunca descer abaixo dos pisos. Registrar
 cada inspeção real: `review <projeto> --reviewer Claude --note "<o que vi>" [--approved]` (ciclo
-automático; no limite de `config.json` a revisão passa a ser humana). Nunca usar `--human`.
+automático; no limite de `config.json` a revisão passa a ser humana). Nunca usar `--human`. Com
+imagens ainda pendentes a revisão pode ser registrada (fica marcada); o export continua esperando
+as imagens e uma nova revisão do render final.
 
 **Fase 10 — Export e preview.** `validate` → `export` (copia também para `export.sync_dir`, se
 configurado). `preview <projeto>` abre o estúdio em 127.0.0.1:4321: ajuste com prévia ao vivo,
@@ -142,5 +153,6 @@ pendente.
 
 ## Retomada
 
-`status <projeto>`, `run.log`, `qa/*.json`. Manter a fonte original. Não reconstruir arquivos
-aprovados para uma mudança pequena.
+`status <projeto>` diz o que está atual para o conteúdo de agora e o próximo passo (`next`);
+depois `run.log` e `qa/*.json`. Manter a fonte original. Não reconstruir arquivos aprovados para uma
+mudança pequena.

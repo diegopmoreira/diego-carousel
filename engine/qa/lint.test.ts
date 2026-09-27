@@ -18,3 +18,10 @@ it('copy pronta com você passa com aviso; no modo full é erro',async()=>{
  const full=await readJson(path.join(dir,'carousel.json'));full.project.mode='full';full.project.copy_locked=false;full.source.type='transcript_file';await writeJson(path.join(dir,'carousel.json'),full);
  expect((await lint(dir)).issues.some(i=>i.severity==='error'&&i.message.includes('tu'))).toBe(true);
 });
+it('copy pronta com expressão proibida ou CTA genérico recebe aviso, não bloqueio',async()=>{
+ const dir=await mkdtemp(path.join(os.tmpdir(),'carousel-test-'));dirs.push(dir);await mkdir(path.join(dir,'source'));
+ const c=await readJson(path.join(ROOT,'engine/schema/examples/carousel.json'));c.slides=[];await writeJson(path.join(dir,'carousel.json'),c);await writeJson(path.join(dir,'tweaks.json'),{schema_version:1,slides:{}});await writeJson(path.join(dir,'assets/manifest.json'),{schema_version:1,assets:[]});
+ const source=(await readFile(path.join(ROOT,'fixtures/copy-pronta.md'),'utf8')).replace('sem precisar se defender.','sem precisar se defender. Se gostou do post, considere compartilhar.');
+ await writeFile(path.join(dir,'cta.md'),source);await importCopy(dir,path.join(dir,'cta.md'));
+ const r=await lint(dir);expect(r.passed).toBe(true);expect(r.issues.filter(i=>i.message.startsWith('Expressão proibida')).every(i=>i.severity==='warning')).toBe(true);expect(r.issues.some(i=>i.message.includes('considere compartilhar'))).toBe(true);
+});

@@ -34,3 +34,8 @@ export function libraryStats(examples:Example[]){
   architectures:Object.fromEntries([...new Set(examples.map(e=>e.architecture))].map(a=>[a,examples.filter(e=>e.architecture===a).length])),
   suggestion:bodies.length>=10?{body_range:[quantile(bodies,.1),quantile(bodies,.9)]}:'Poucos exemplos: manter a faixa inicial 120–350'};
 }
+// Short index for choosing examples in Fase 4 (same architecture or family as the carousel being written).
+export function libraryIndex(examples:Example[],{architecture,family}:{architecture?:string;family?:string}={}){
+ return examples.filter(e=>(!architecture||e.architecture.split(/[+,\s]+/).includes(architecture))&&(!family||e.family===family))
+  .map(e=>({name:e.name,published:e.published,family:e.family,architecture:e.architecture,hook_family:e.hook_family,thesis:e.thesis,spine:e.slides.map(s=>`P${s.n} ${s.headline}`)}));
+}

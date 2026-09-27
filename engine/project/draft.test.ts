@@ -49,3 +49,23 @@ describe('backlog de teses',()=>{
   expect((await listIdeas())).toHaveLength(1);
  });
 });
+describe('redraft: IDs seguem o texto',()=>{
+ it('painel inserido no meio não herda a imagem do vizinho; reescrita no lugar mantém o ID',async()=>{
+  const {matchSlides}=await import('./draft.js');
+  const old=[{id:'ka',headline:'Capa forte'},{id:'kb',headline:'Atenção barata não é amor'},{id:'kc',headline:'A poça alivia agora'}];
+  expect(matchSlides([{headline:'Capa forte'},{headline:'Um painel novo no meio'},{headline:'Atenção barata não é amor'},{headline:'A poça alivia agora'}],old)).toEqual(['ka',null,'kb','kc']);
+  expect(matchSlides([{headline:'Capa forte'},{headline:'Atenção barata ainda não é amor'},{headline:'Texto totalmente outro'}],old)).toEqual(['ka','kb','kc']);
+  expect(matchSlides([{headline:'Capa forte'},{headline:'Texto totalmente outro'}],old)).toEqual(['ka',null]);
+  expect(matchSlides([{headline:'X'},{headline:'Y'}],old,['kc',undefined])).toEqual(['kc',null]);
+ });
+ it('draft com painel inserido preserva a direção de arte de cada texto',async()=>{
+  const dir=await full(),before=await loadProject(dir),ids=before.carousel.slides.map(s=>s.id);
+  const a=await readJson(path.join(dir,'art-direction.json'));a.slides[ids[3]].image.concept='conceito do P4';await writeFile(path.join(dir,'art-direction.json'),JSON.stringify(a));
+  const copy=(await readFile(F('copy.md'),'utf8')).split('\n\nP4\n');
+  const inserted=copy[0]+'\n\nP4\nUm painel inserido antes da atenção barata\nCorpo novo do painel inserido para o teste.\n\nP4\n'+copy[1];
+  const renumbered=inserted.replace(/^P(\d+)$/gm,(()=>{let n=0;return ()=>`P${++n}`;})());
+  await writeFile(path.join(dir,'v3.md'),renumbered);
+  const r=await draft(dir,path.join(dir,'v3.md'));expect(r.added).toBe(1);expect(r.kept).toBe(10);
+  const after=await loadProject(dir);expect(after.carousel.slides[4].id).toBe(ids[3]);expect(after.art.slides[ids[3]].image.concept).toBe('conceito do P4');
+ });
+});
