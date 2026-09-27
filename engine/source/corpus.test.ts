@@ -38,7 +38,7 @@ describe('fonte do Corpus',()=>{
   expect(checkCorpusSource({...base,metadata:{tipo:'aula',visibilidade:'nao_listado'}},{allowUnlisted:true}).conversation).toBe(false);
   expect(()=>checkCorpusSource(base)).toThrow(/sem registro/);
   expect(checkCorpusSource(base,{confirmPublic:true}).conversation).toBe(false);
-  expect(()=>checkCorpusSource({...base,metadata:{tipo:'outro',visibilidade:'publico',titulo:'Tema X - feat. Dra. Fulana'}})).toThrow(/conversa/);
+  expect(()=>checkCorpusSource({...base,metadata:{tipo:'outro',visibilidade:'publico',titulo:'Tema X - feat. Dra. Fulana'}})).toThrow(/sugere conversa \("feat"/);
   expect(()=>checkCorpusSource({...base,metadata:{tipo:'outro',visibilidade:'publico',live_status:'concluida'}})).toThrow(/live/);
  });
  it('lê campos em inglês e timestamps em texto',()=>{

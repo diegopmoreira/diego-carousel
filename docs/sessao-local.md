@@ -5,6 +5,9 @@ Tudo que depende do Corpus (MCP `corpus-diego` e disco), das referências privad
 feito e testado na nuvem. Cada bloco tem um prompt para colar no Claude Code local, aberto na raiz
 do projeto.
 
+**Feito em 27/09:** itens 1 (formato real do Corpus), 2 (biblioteca genética) e a calibração do
+item 5. **Falta:** itens 3, 4, 6 e 7, e o critério de pronto do item 5.
+
 ## 0. Preparar (uma vez)
 
 ```sh
@@ -14,14 +17,18 @@ npm ci
 npx playwright install chromium
 npm run carousel -- doctor
 npm run check && npm run test:e2e && npm run test:studio
+npm run carousel -- migrate --all
 ```
 
 Tudo verde antes de seguir. Se `doctor` reclamar do Chromium, rode de novo o `playwright install`.
+Depois de cada pull com mudanças no render, os projetos existentes precisam de `render` de novo (o
+hash de ambiente muda); `migrate --all` aponta layouts antigos e slides que exigem imagem numa
+composição de texto.
 
-## 1. Conferir o formato real do Corpus (Rodada 1)
+## 1. Conferir o formato real do Corpus (Rodada 1) — feito em 27/09
 
-O leitor `corpus:<id>` foi escrito a partir da descrição do plano (`texto`, `segmentos`,
-`palavras`) e testado só com fixtures sintéticas (`fixtures/corpus/`).
+Leitor ajustado ao `v1.json` real e ao `corpus.db`; supervisão e live recusadas; `lE--NmXpw5o`
+aceito. Prompt mantido para referência.
 
 > Prompt: "Abre `~/Library/Application Support/CorpusDiego/data/transcricoes/lE--NmXpw5o/v1.json`
 > e compara as chaves com o que `engine/source/corpus.ts` espera (texto, segmentos com
@@ -33,7 +40,10 @@ O leitor `corpus:<id>` foi escrito a partir da descrição do plano (`texto`, `s
 
 Se o Corpus não estiver no caminho padrão: `export CAROUSEL_CORPUS_DIR=<pasta que contém transcricoes/>`.
 
-## 2. Semear a biblioteca genética (Rodada 1)
+## 2. Semear a biblioteca genética (Rodada 1) — feito em 27/09
+
+Cinco carrosséis transcritos (editorial e visual); faixa do body 150–280. Prompt mantido para
+referência.
 
 > Prompt: "Lê `genetic-library/README.md`. Para cada carrossel em `references/diego/carousels`
 > (post31:07, post7:7, post03:06, post18:05, post22:07), abre os 10 PNGs e transcreve para
@@ -48,7 +58,13 @@ preferidos na Fase 4 da Skill.
 
 ## 3. Três carrosséis `full` de verdade (critério da Rodada 1)
 
-Rodar um de cada vez, com o checkpoint após a tese ligado (`config.json`).
+Rodar um de cada vez, com o checkpoint após a tese ligado (`config.json`). Antes das imagens,
+autorizar o MCP do Higgsfield (item 6, passo 1); sem ele, os slides ficam com placeholder e o export
+espera.
+
+Durante a execução, `npm run carousel -- status <projeto>` diz a próxima fase (`next`). Para trocar
+composição, `composition <projeto> <slide> <composição>`; para pedir imagem, `--concept` em inglês.
+Se os ciclos automáticos de revisão acabarem, a revisão seguinte é de Diego no estúdio.
 
 > Prompt 1: "/diego-carousel com `~/Downloads/Texto colado.txt` (O tipo de homem que sempre se
 > arrebenta). Modo full, checkpoint depois da tese."
@@ -71,7 +87,10 @@ e `validate` verdes (exceto imagens pendentes) e Diego reconhece o DNA lendo `sp
 
 A copy publicada é pública, mas fica em `references/` (fora do Git) até Diego dizer que pode versionar.
 
-## 5. Calibrar a fidelidade visual (Rodada 2)
+## 5. Calibrar a fidelidade visual (Rodada 2) — calibração feita em 27/09
+
+Tokens calibrados contra `post31:07` e `post7:7` (posições a ≤ 5 px). Falta o critério de pronto
+abaixo: um carrossel real exportado sem ajuste fora do estúdio e a galeria com uma foto real.
 
 Recriar 3 slides publicados com a mesma copy e imagem e comparar:
 
@@ -90,7 +109,9 @@ Conferir também: `npm run carousel -- gallery --image <uma foto real>` e olhar 
 
 ## 6. Imagens pelo Higgsfield (Rodada 3)
 
-1. No Claude Code local: `/mcp` → higgsfield → autenticar (OAuth). Ler `visual/providers/higgsfield.md`.
+1. No Claude Code local: `/mcp` → higgsfield → autenticar (OAuth); se o Higgsfield estiver como
+   conector do claude.ai, autorizar nas configurações de conectores. Nunca colar código ou token na
+   conversa. Ler `visual/providers/higgsfield.md`.
 2. > Prompt: "No projeto <x>, gera a capa: `asset request` para a capa, gera as 3 variantes pelo
    > MCP Higgsfield com o prompt e o negativo do pedido, confere cada uma (sem texto, sem pessoa
    > real), registra com `asset add --request … --url …`, roda `asset candidates` e escolhe com nota

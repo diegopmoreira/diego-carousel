@@ -1,19 +1,67 @@
 # Estado atual — 27/09/2026
 
-Plano em vigor: `docs/plano-v2.md`. **Rodadas 0 a 4 implementadas e testadas na nuvem.** O que
-depende do Corpus, das referências privadas, do `~/Downloads` e do login no Higgsfield está em
-`docs/sessao-local.md`, com os prompts para rodar. Engine 0.2.0.
+Plano em vigor: `docs/plano-v2.md`. **Rodadas 0 a 4 implementadas; Rodada 5 (revisão para a execução
+real) concluída na nuvem.** Engine 0.2.0. Da parte local já foram feitos o formato real do Corpus, a
+biblioteca genética, a calibração das duas famílias e a faixa do body (seção abaixo).
 
-**Não está concluído (depende da sessão local):** conferir o formato real do Corpus, semear a
-biblioteca genética, os três carrosséis `full` de verdade com teste cego e a leitura de Diego,
-calibrar os tokens contra os PNGs publicados, gerar imagens reais pelo Higgsfield e rodar
-`npm run eval` completo. Até lá, a V1 não pode ser declarada pronta pelos critérios do §93.
+**Não está concluído (sessão local, `docs/sessao-local.md`):** os três carrosséis `full` de verdade
+(teste cego registrado e leitura de Diego), a fixture 4 (carrossel publicado em formato Figma), as
+imagens reais pelo Higgsfield (o MCP precisa ser autorizado com `/mcp` numa sessão local), um
+carrossel real de Diego exportado sem ajuste fora do estúdio e o `npm run eval` completo com os
+vídeos escolhidos. Até lá, a V1 não pode ser declarada pronta pelos critérios do §93.
+
+## Sessão local (27/09) — feito no Mac de Diego
+
+- **Corpus:** formato real do `v1.json` (segmentos só com tempos; texto nas `palavras`) e catálogo
+  lido de `corpus.db` (somente leitura). Uma supervisão e uma live recusadas; `lE--NmXpw5o` aceito.
+- **Biblioteca genética:** cinco carrosséis publicados transcritos (post31:07, post7:7, post03:06,
+  post18:05, post22:07), com ficha editorial e visual.
+- **Calibração:** A = 78 px/1.10, B = 60 px/1.24, capa B 63 px/800; posições a ≤ 5 px dos
+  publicados. Título preenchido que vaza a área segura tem o teto reduzido e refaz o fit.
+- **Faixa do body:** 150–280 caracteres (publicados: 157–271, mediana 187).
+- **Estúdio:** pasta de projetos atrás de symlink (macOS) resolvida.
+
+## Rodada 5 — revisão para a execução real (nuvem)
+
+- **Redraft e imagens:** o redraft casa cada painel pelo texto (id, título igual, título parecido;
+  posição só com o mesmo número de painéis). Decisão explícita de imagem por slide
+  (`image --need|--none`, "Exige imagem" no estúdio); placeholder bloqueia o export; a revisão pode
+  ser registrada com imagens pendentes.
+- **Composição:** `composition <projeto> <slide> <composição>` e o `autofit` usam a mesma regra
+  (`switchComposition`), com posição do texto, ajuste do título, densidade e imagem coerentes. O
+  `fit-probe` mede exatamente o que o `autofit` aplica; o `autofit` grava na direção de arte, mantém
+  um slot de imagem quando algum cabe e avisa quando a imagem vira alternativa. Composição de texto
+  que ainda exige imagem é erro no lint, é recusada no estúdio e aparece no `migrate`; o
+  `composition` avisa na hora quando cria três composições iguais seguidas.
+- **Pedidos de imagem:** sem cena, o pedido é recusado; cena, mood ou sujeito em português geram
+  aviso (o prompt canônico é em inglês). A fixture modelo do modo full traz `visual_intent`.
+- **Status:** `next` segue as fases do modo full (seção do relatório que falta, depois o teste cego),
+  mostra `auto_review_cycles_left` e, esgotados os ciclos, aponta a revisão de Diego no estúdio.
+- **Locks:** lock abandonado só é recuperado sob uma guarda exclusiva (`.lock.reclaim`); antes, dois
+  processos disputando o mesmo lock morto podiam entrar juntos (teste com 40 rodadas). Propostas,
+  assets, pedidos e revisões gravam com o projeto travado.
+- **Estúdio:** aprovação de proposta presa ao hash do texto mostrado; eventos e atualização cobrem
+  revisões e propostas; espaçamento padrão da família no inspector; trocar a composição ajusta
+  posição, ajuste do título e "Exige imagem".
+- **Copy e fontes:** meta parcial não apaga a tese no redraft; copy travada pela 0.1.0 é conferida
+  com o parser que a travou; visibilidade desconhecida no Corpus exige `--confirm-public`; a recusa
+  por conversa diz o motivo (outro falante, live ou só uma palavra no título); siglas conhecidas
+  (TDAH, QI…) não viram ênfase.
+- **Render:** hash de ambiente com a versão do Chromium; texto de placeholder fora da checagem de
+  fonte fallback; título preenchido não deixa palavra sozinha na linha; texto do `image_card` logo
+  acima do card; falha do mapa de tinta medida duas vezes antes de reprovar; um navegador por
+  `fit-probe` e por folha de candidatas.
+- **Simulação pelo CLI:** um carrossel `full` com a fixture sintética passou por todo o fluxo
+  (`new` → relatório → `draft` → `spine --blind` → `lint` → `render` → `asset request`/`add` →
+  `candidates` → `composition` → `review` → `export`). O relatório e a copy vieram da fixture; o
+  teste cego não foi feito por subagente. Os atritos encontrados viraram as correções acima.
+- **Testes:** 74 unitários, E2E de render e E2E do estúdio verdes na nuvem.
 
 ## Rodada 4 — fluxo e QA completos
 
 - `fit-probe` (composições que cabem, tamanhos, palavras a cortar) e `autofit` (troca automática de
-  composição como tweak). Copy pronta: `edit` → proposta → `approve edit` (cadeia em
-  `approvals.json`); o estúdio mostra propostas pendentes e aprova na tela.
+  composição; desde a Rodada 5 grava na direção de arte). Copy pronta: `edit` → proposta →
+  `approve edit` (cadeia em `approvals.json`); o estúdio mostra propostas pendentes e aprova na tela.
 - Métricas de revisão: contraste medido sob título e body, maior faixa vazia, ritmo do carrossel.
 - `migrate` (projetos antigos), `export.sync_dir` (espelho do export para o celular).
 - Estúdio: prévia ao vivo no inspector, visão Instagram (com recorte 3:4 da grade), área segura,
@@ -48,7 +96,7 @@ calibrar os tokens contra os PNGs publicados, gerar imagens reais pelo Higgsfiel
   teste cego, continuidade (`next_question`, `adds`, anti-filler, segunda virada), tom, contraste,
   metáfora, CTA, anti-padrões. Frameworks de Diego são vocabulário quando a fonte sustenta.
 - `new --source corpus:<id>` (ou um `v1.json`): lê a transcrição do Corpus, mantém tempo e falante
-  na transcrição de trabalho, recusa supervisão e conversa. **Formato real ainda a conferir.**
+  na transcrição de trabalho, recusa supervisão e conversa. Formato real conferido na sessão local.
 - `draft <proj> copy.md --meta editorial.json`: slides com IDs opacos, metadados editoriais e
   direção de arte inicial por função narrativa; redraft preserva IDs. `slide add|move|rm`.
 - `voice` / `approve <proj> voice --by`: proposta "você → tu" só com mudanças de pessoa; aplicada
@@ -67,7 +115,7 @@ calibrar os tokens contra os PNGs publicados, gerar imagens reais pelo Higgsfiel
   imagem volta a ser placeholder (o gate de export continua valendo). Composição escolhida no
   estúdio vai para `tweaks.json`, não reescreve a direção de arte.
 - **Hash de ambiente:** só o que chega ao pixel (runtime, CSS, tokens, fontes, avatar processado,
-  compositor, branding, versão do Playwright e caminho do Chromium). Editar testes ou a UI não
+  compositor, branding, versão do Playwright e do Chromium). Editar testes ou a UI não
   invalida renders.
 - **Revisão:** ciclos automáticos contados por render distinto desde a última revisão humana
   (limite em `config.json`); nome do revisor não dá atalho. `review --human` e o estúdio (que
@@ -78,7 +126,8 @@ calibrar os tokens contra os PNGs publicados, gerar imagens reais pelo Higgsfiel
   reprovação registra `needs` e `chars_that_fit` de cada bloco.
 - **Fontes:** selo ✓ desenhado em SVG; detecção de fonte fallback em todo elemento com texto.
 - **Servidor:** rotas estáticas por lista exata (sem segmentos codificados), token em
-  `/api/download`, ZIP e uploads só pela API, CSP com `frame-ancestors 'none'`, `localhost`
+  `/api/download`, ZIP e uploads só pela API, CSP (hoje `frame-ancestors 'self'`, pela prévia ao
+  vivo), `localhost`
   aceito, lock de projeto compartilhado com o CLI, estúdio abre com `projects/` vazio.
 - **Voz:** "você" em copy pronta é aviso; continua erro no modo `full`.
 - **Perfil só na capa** (`branding.profile_on: "cover"`).
@@ -103,7 +152,10 @@ o render usa só `avatar.png`.
 
 ---
 
-# Relato do MVP de copy pronta — 27/09/2026
+# Relato do MVP de copy pronta — 27/09/2026 (histórico)
+
+Registro do primeiro recorte. O que está "adiado" abaixo foi feito nas Rodadas 1–5, exceto o que
+depende da sessão local (topo deste arquivo).
 
 ## Escopo fechado nesta rodada
 

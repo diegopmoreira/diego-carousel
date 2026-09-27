@@ -80,8 +80,11 @@ export function checkCorpusSource(t:CorpusTranscript,{allowConversation=false,al
  const others=speakers.filter(s=>!DIEGO.test(s)&&!UNKNOWN_LABEL.test(s));
  // Lives mix Diego with guests and read-aloud questions from the chat: treat them as conversations.
  const live=m.live_status==='concluida'||m.live_status==='ao_vivo';
- const conversation=CONVERSATION.test(labels)||live||others.length>0;
- if(conversation&&!allowConversation)throw Error(`Fonte recusada: ${live?'live (pode ter convidados e perguntas do chat)':'conversa com outros falantes'}${others.length?` (${others.join(', ')})`:''}. Só vídeos em que Diego fala sozinho; use --allow-conversation para uma conversa pública, e cite só as falas de Diego.`);
+ const byLabel=CONVERSATION.exec(labels)?.[0],conversation=!!byLabel||live||others.length>0;
+ // Say what triggered the refusal: other speakers and lives are facts; a word in the title or type may be a false
+ // alarm ("Como ter uma conversa difícil"), which Diego or the MCP can settle.
+ const reason=live?'live (pode ter convidados e perguntas do chat)':others.length?`conversa com outros falantes (${others.join(', ')})`:`tipo ou título sugere conversa ("${byLabel}" em ${labels})`;
+ if(conversation&&!allowConversation)throw Error(`Fonte recusada: ${reason}. Só vídeos em que Diego fala sozinho; use --allow-conversation para uma conversa pública${!live&&!others.length?' ou se o MCP confirmar que Diego fala sozinho':''}, e cite só as falas de Diego.`);
  return {speakers,conversation};
 }
 const clock=(s:number|null)=>s===null?'':`[${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}] `;

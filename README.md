@@ -49,9 +49,10 @@ npm run carousel -- help                                   # lista completa
 npm run carousel -- new <slug> --source corpus:<id>|<arquivo.txt>|copy
 npm run carousel -- draft <projeto> copy.md --meta editorial.json
 npm run carousel -- from-copy <slug> copy.md [--family cinematic_condensed]
-npm run carousel -- lint|spine [--blind]|status <projeto>
+npm run carousel -- lint|spine [--blind]|status <projeto>        # status: próximo passo (next)
 npm run carousel -- render|validate|export <projeto>
 npm run carousel -- fit-probe <projeto> <slide-id> | autofit <projeto>
+npm run carousel -- composition <projeto> <slide-id> <composição> | image <projeto> <slide-id> --need|--none
 npm run carousel -- asset request|add|candidates|choose|frame ...
 npm run carousel -- voice|edit ... ; approve <projeto> voice|edit --by Diego
 npm run carousel -- gallery | calibrate <projeto> --slide n --ref <png> | migrate <projeto>

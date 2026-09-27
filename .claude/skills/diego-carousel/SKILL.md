@@ -47,7 +47,9 @@ pedido), parar em três pontos: (1) tese + hooks, (2) copy completa, (3) preview
   Sem acesso ao disco mas com o MCP `corpus-diego`: obter a transcrição pelo MCP, salvar o JSON
   como `v1.json` e usar `--source <v1.json>`. O engine recusa supervisão, conversa, live, vídeo
   privado ou não listado (`--allow-unlisted` só com aval de Diego); fonte sem registro no Corpus
-  exige conferir pelo MCP que é vídeo público de Diego e repetir com `--confirm-public`.
+  exige conferir pelo MCP que é vídeo público de Diego e repetir com `--confirm-public`. Se a
+  recusa for só uma palavra no título ("sugere conversa"), conferir pelo MCP quem fala; com Diego
+  sozinho, repetir com `--allow-conversation`.
 - Ler `source/transcript.txt` uma vez (tem `[m:ss] (falante)`); escrever `## Mapa da fonte` em
   `editorial-report.md` com citação literal e localização por ideia. Daqui em diante trabalhar
   sobre o mapa.
