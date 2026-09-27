@@ -64,7 +64,11 @@ export function setComposition(dir:string,slide:string,value:string){return with
  const d=p.art.slides[slide],from=p.tweaks.slides[slide]?.composition??d.composition;
  const warning=switchComposition(d,composition,{cover:i===0,body:!!p.carousel.slides[i].body});
  const tweak=p.tweaks.slides[slide];if(tweak){delete tweak.composition;if(!Object.keys(tweak.params).length)delete p.tweaks.slides[slide];}
+ // Rhythm is checked now rather than at render time (a run of three blocks the visual lint).
+ const comps=p.carousel.slides.map(s=>p.tweaks.slides[s.id]?.composition??p.art.slides[s.id].composition);
+ const run=[i-2,i-1,i].some(k=>k>=0&&k+2<comps.length&&comps[k]===comps[k+1]&&comps[k]===comps[k+2]);
+ const warnings=[warning,run&&`ritmo: três ${composition} seguidas (o lint barra o render); trocar um vizinho`].filter((w):w is string=>!!w);
  ArtDirection.parse(p.art);await writeJson(path.join(dir,'art-direction.json'),p.art);await writeJson(path.join(dir,'tweaks.json'),p.tweaks);
- await log(dir,'ART',`${slide}: composição ${from} → ${composition}${warning?`; ${warning}`:''}`);
- return {slide,from,to:composition,layout:d.layout,image:{need:d.image.need,placeholder:d.image.placeholder,asset_id:d.image.asset_id??null},...(warning?{warning}:{})};
+ await log(dir,'ART',`${slide}: composição ${from} → ${composition}${warnings.length?`; ${warnings.join('; ')}`:''}`);
+ return {slide,from,to:composition,layout:d.layout,image:{need:d.image.need,placeholder:d.image.placeholder,asset_id:d.image.asset_id??null},...(warnings.length?{warnings}:{})};
 });}

@@ -77,7 +77,7 @@ painel sobra?". Registrar a resposta literal, a comparação com a tese e o vere
 **Fase 5 — Bodies e estrutura.** `language-style.md`. Escrever `copy.md` (formato P1…Pn) e um
 `editorial.json` com `editorial` (briefing, tese, hook, candidatos, CTA, legenda), `art` (família,
 racional) e `slides[]` (`narrative_role`, `headline_type`, `adds`, `next_question`,
-`visual_intent`) na mesma ordem. Modelo: `fixtures/full/editorial.json`; contrato:
+`visual_intent` — a cena concreta dos slides que terão imagem) na mesma ordem. Modelo: `fixtures/full/editorial.json`; contrato:
 `engine/schema/generated/editorial-meta.schema.json`. Então:
 ```
 draft <projeto> copy.md --meta editorial.json      # cria slides, IDs e direção inicial por função
@@ -104,8 +104,9 @@ o campo `composition` à mão.
 Prioridade: fornecido por Diego → biblioteca → frame do próprio vídeo (`asset frame <projeto>
 <video> --at mm:ss --slide <id>`) → licenciado → gerado. Registrar arquivo com
 `asset add <projeto> <arquivo> --rights <origem> --slide <id>`.
-Para gerar: `asset request <projeto> <slide-id> [--concept "…"]` (prompt canônico, negativo, tamanho,
-3 variantes na capa, teto de gerações) → gerar com o MCP do provider usando exatamente o prompt do
+Para gerar: `asset request <projeto> <slide-id> --concept "<cena concreta em inglês>"` (prompt canônico
+em inglês, negativo, tamanho, 3 variantes na capa, teto de gerações; recusa pedido sem cena e avisa
+se ela estiver em português) → gerar com o MCP do provider usando exatamente o prompt do
 pedido → conferir cada imagem (sem texto, sem pessoa real) → registrar na hora com
 `asset add <projeto> --request <pedido> --url <url> [--model …] [--seed …]`. Escolher entre as
 variantes com `asset candidates <projeto> <slide-id>` (abrir `qa/candidates/<slide>.png`) e

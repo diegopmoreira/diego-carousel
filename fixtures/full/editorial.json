@@ -65,7 +65,7 @@
     "turn"
    ],
    "next_question": "Então qual é o erro?",
-   "visual_intent": ""
+   "visual_intent": "um copo de água do mar sobre uma mesa escura, sal seco na borda, luz lateral fria"
   },
   {
    "narrative_role": "conflict",
@@ -83,7 +83,7 @@
     "cause"
    ],
    "next_question": "Como isso aparece no dia a dia?",
-   "visual_intent": ""
+   "visual_intent": "mão segurando o celular de madrugada, rosto fora de quadro, a tela iluminando os dedos"
   },
   {
    "narrative_role": "mechanism",
@@ -93,7 +93,7 @@
     "mechanism"
    ],
    "next_question": "Por que continuo buscando atenção?",
-   "visual_intent": ""
+   "visual_intent": "poça rasa no asfalto à noite refletindo uma luz desfocada"
   },
   {
    "narrative_role": "mechanism",

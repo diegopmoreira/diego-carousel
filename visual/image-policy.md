@@ -20,8 +20,12 @@ com `rights` preenchido). Registrar origem e direitos reais, sem presumir licen�
 ## Fluxo (ticket)
 
 ```sh
-npm run carousel -- asset request <projeto> <slide-id> [--concept "…"] [--variants n]
+npm run carousel -- asset request <projeto> <slide-id> --concept "<cena concreta em inglês>" [--variants n]
 ```
+
+A cena vai em inglês: estilo e enquadramento do prompt são em inglês e o gerador entende melhor
+assim (`image.concept`/`visual_intent` podem ficar em português para leitura de Diego; o pedido avisa
+quando a cena, o mood ou o sujeito estão em português). Sem cena, o pedido é recusado.
 
 Gera `assets/requests/<pedido>.json` com o **prompt canônico** (conceito + mood + estilo da família +
 enquadramento da composição + espaço negativo + "no text"), o **negativo** padrão, a proporção e o

@@ -33,7 +33,10 @@ it('composition (CLI) grava na direção de arte, substitui o override do estúd
   const id=(await loadProject(dir)).carousel.slides[3].id;await writeJson(path.join(dir,'tweaks.json'),{schema_version:1,slides:{[id]:{composition:'quote',params:{}}}});
   const r=await setComposition(dir,id,'image_card');expect(r).toMatchObject({from:'quote',to:'image_card',image:{need:true,placeholder:true}});
   const p=await loadProject(dir);expect(p.art.slides[id].layout.headline_position).toBe('bottom');expect(p.tweaks.slides[id]).toBeUndefined();expect(await visualLint(dir)).toEqual([]);
-  const back=await setComposition(dir,id,'text_only');expect(back.warning).toMatch(/não exige mais imagem/);expect(await visualLint(dir)).toEqual([]);
+  const back=await setComposition(dir,id,'text_only');expect(back.warnings?.[0]).toMatch(/não exige mais imagem/);
+  // copy-pronta: P3 giant_statement, P4 text_only, P5 text_only; a text_only at P3 makes three in a row.
+  expect((await setComposition(dir,(await loadProject(dir)).carousel.slides[2].id,'text_only')).warnings?.at(-1)).toMatch(/ritmo/);
+  expect((await visualLint(dir)).some(e=>e.includes('mais de duas composições iguais'))).toBe(true);
   await expect(setComposition(dir,id,'carrossel')).rejects.toThrow();
  }finally{await rm(dir,{recursive:true,force:true});}
 });

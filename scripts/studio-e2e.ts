@@ -60,15 +60,17 @@ try{
  assert.equal((await loadProject(created)).assets.assets.length,1);assert.equal((await loadProject(created)).carousel.slides.length,10);
  // A composition carries the image decision: a text layout takes the image out (kept as an alternative) and an image
  // slot without an image waits for one, so the slide never lands in a state the export cannot finish.
- {const p=await loadProject(created),uploaded=p.assets.assets[0].id,coverId=p.carousel.slides[0].id,fourth=p.carousel.slides[3].id,saved=()=>page.waitForFunction(()=>document.querySelector('#notice')?.textContent==='Ajustes salvos. Preview atualizado.');
+ {const p=await loadProject(created),uploaded=p.assets.assets[0].id,coverId=p.carousel.slides[0].id,fourth=p.carousel.slides[3].id;
+  // The notice keeps the text of the previous save: clear it, so the wait sees this save finish.
+  const save=async()=>{await page.evaluate(()=>{document.querySelector('#notice')!.textContent='';});await page.locator('#save').click();await page.waitForFunction(()=>document.querySelector('#notice')?.textContent==='Ajustes salvos. Preview atualizado.');};
   assert.equal(p.art.slides[coverId].image.asset_id,uploaded);
   await page.locator('#adjust-form [name="composition"]').selectOption('giant_statement');
   assert.equal(await page.locator('#adjust-form [name="asset_id"]').inputValue(),'');assert.equal(await page.locator('#adjust-form [name="image_need"]').isChecked(),false);
-  await page.locator('#save').click();await saved();
+  await save();
   const q=await loadProject(created),cover=q.art.slides[coverId];assert.equal(cover.image.asset_id,undefined);assert.ok(cover.image.alternatives.includes(uploaded));assert.equal(cover.image.need,false);assert.equal(q.tweaks.slides[coverId]?.composition,'giant_statement');
   await page.locator('#slides button').nth(3).click();await page.locator('#adjust-form [name="composition"]').selectOption('cinematic_fade');
   assert.equal(await page.locator('#adjust-form [name="image_need"]').isChecked(),true);assert.equal(await page.locator('#adjust-form [name="position"]').inputValue(),'top');
-  await page.locator('#save').click();await saved();
+  await save();
   const r=(await loadProject(created)).art.slides[fourth];assert.equal(r.image.need,true);assert.equal(r.image.placeholder,true);assert.equal(r.layout.headline_position,'top');}
  // Empty studio: with no project yet, the first carousel can be created from the screen.
  const emptyProjects=path.join(dir,'empty-projects');process.env.CAROUSEL_PROJECTS_DIR=emptyProjects;

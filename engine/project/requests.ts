@@ -19,6 +19,7 @@ const STYLE:Record<ArtData['family'],string>={
 };
 export const NEGATIVE='text, letters, words, numbers, captions, subtitles, logo, watermark, signage, typography, UI, frame, border, collage, recognizable real person, celebrity likeness, public figure, deformed hands, extra fingers';
 export const RULES=['Sem texto, letras ou logotipos na imagem (o texto é sempre HTML).','Sem semelhança com pessoas reais ou famosas.','Não imitar frames de filmes protegidos; evocar o clima, não copiar a cena.','Conferir visualmente cada imagem antes de registrar.'];
+const PORTUGUESE=/[ãõçâêôáéíóúà]|(?<!\p{L})(?:um|uma|num|numa|de|da|das|dos|com|sobre|para|que|não)(?!\p{L})/iu;
 export function canonicalPrompt(family:ArtData['family'],composition:Composition,image:{concept:string;mood:string;subject_priority:string;negative_space:string;crop:string}){
  const slot=SLOTS[composition];if(!slot)throw Error(`A composição ${composition} não tem imagem`);
  const parts=[image.concept.trim()||'(descrever a cena: conceito visual do painel)',image.subject_priority&&`focus on ${image.subject_priority}`,image.mood&&`mood: ${image.mood}`,image.crop&&image.crop!=='cover'&&`${image.crop}`,STYLE[family],slot.framing,image.negative_space&&`keep ${image.negative_space} empty`,'no text anywhere in the image'];
@@ -36,12 +37,16 @@ export function requestAsset(dir:string,slide:string,{variants,concept,provider,
  // Budget: every requested variant counts, generated or not, until the ticket is cancelled.
  const used=(await requestsOf(base)).filter(r=>r.status!=='cancelled').reduce((n,r)=>n+r.variants,0),limit=config.assets.max_generations_per_carousel;
  if(used+count>limit)throw Error(`Teto de gerações do carrossel: ${used} de ${limit} já pedidas; este pedido soma ${count}. Cancelar pedidos antigos (asset cancel) ou subir o teto em config.json com aval de Diego.`);
- const image={...d.image,concept:concept??d.image.concept};
+ if(!SLOTS[composition])throw Error(`A composição ${composition} não tem imagem`);
+ const image={...d.image,concept:(concept??d.image.concept).trim()};
+ if(!image.concept)throw Error('Descrever a cena antes de pedir: --concept "…" (em inglês) ou image.concept na direção de arte');
  const request=AssetRequest.parse({schema_version:1,id:opaqueId(),slide,status:'open',created_at:new Date().toISOString(),provider:provider??String(config.providers.default??'higgsfield'),model,
   family:p.art.family,composition,aspect:SLOTS[composition]?.aspect,size:SLOTS[composition]?.size,variants:count,prompt:canonicalPrompt(p.art.family,composition,image),negative:NEGATIVE,concept:image.concept,rules:RULES,results:[]});
  await writeJson(path.join(base,`assets/requests/${request.id}.json`),request);
  await log(base,'ASSET',`Pedido ${request.id} para ${slide}: ${count} variante(s), ${used+count}/${limit} do teto`);
- return {...request,budget:{used:used+count,limit}};
+ // The style and framing of the prompt are English and the generator reads English best: flag a scene in Portuguese.
+ const warnings=(['concept','mood','subject_priority'] as const).filter(k=>PORTUGUESE.test(image[k]??'')).map(k=>`${k} parece em português: o gerador entende melhor em inglês (cancelar com asset cancel e pedir de novo com --concept em inglês)`);
+ return {...request,budget:{used:used+count,limit},...(warnings.length?{warnings}:{})};
 });}
 export function cancelRequest(dir:string,id:string){return withProjectLock(dir,async()=>{
  const base=await contentDir(dir),file=path.join(base,`assets/requests/${id}.json`),r=await optionalJson(file);

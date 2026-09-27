@@ -6,7 +6,7 @@ import { loadConfig } from './project/config.js';
 import { VERSION } from './schema/index.js';
 import { z } from 'zod';
 import { createProject, importCopy } from './project/create.js';
-import { ROOT, projectsDir, readJson, writeJson, loadProject, log, optionalJson, jsonHash, withLock } from './project/io.js';
+import { ROOT, projectsDir, readJson, writeJson, loadProject, log, optionalJson, jsonHash, withLock, contentDir } from './project/io.js';
 import { lint } from './qa/lint.js';
 import { render, validate, exportProject, review, renderInputs, reviewCycles } from './render/render.js';
 import { serve } from './preview/server.js';
@@ -122,7 +122,10 @@ try{
   const reviewCurrent=!!v&&v.render_hash===r?.render_hash&&renderCurrent,approved=reviewCurrent&&!!v.approved;
   const receipt=await optionalJson(path.join(dir,'qa/export-receipt.json')),exported=!!receipt&&!!r&&renderCurrent&&receipt.render_hash===r.render_hash;
   const {agentRenders,max}=await reviewCycles(dir),cyclesLeft=Math.max(0,max-agentRenders.size),humanNext=!reviewCurrent&&cyclesLeft===0&&!agentRenders.has(r?.render_hash);
-  const next=!p.carousel.slides.length?(p.carousel.project.mode==='full'?'escrever copy.md + editorial.json e rodar draft':'import-copy'):!lintCurrent?'lint (corrigir erros)':!renderPassed?'render (e fit-probe/autofit nos que falham)':humanNext?'ciclos automáticos esgotados: Diego revisa no estúdio (preview) e exporta':!reviewCurrent?'abrir os PNGs e registrar review':pendingImages.length?`imagens pendentes em ${pendingImages.length} slide(s): asset request/add ou image --none`:!approved?'corrigir o que a revisão apontou e renderizar de novo':exported?'exportado':'validate e export';
+  // Full mode: the editorial report says which phase comes next (the order of SKILL.md).
+  const full=p.carousel.project.mode==='full',report=full?await readFile(path.join(await contentDir(dir),'editorial-report.md'),'utf8').catch(()=>''):'';
+  const phase=([['Mapa da fonte','Fase 1'],['Diagnóstico','Fase 2'],['Teses','Fase 2'],['Hooks','Fase 3'],['Spine','Fase 4']] as const).find(([t])=>!report.includes(`## ${t}`));
+  const next=!p.carousel.slides.length?(full?(phase?`editorial-report.md: escrever ## ${phase[0]} (${phase[1]})`:'escrever copy.md + editorial.json e rodar draft (Fase 5)'):'import-copy'):full&&!report.includes('## Teste cego')?'spine --blind → subagente → registrar ## Teste cego':!lintCurrent?'lint (corrigir erros)':!renderPassed?'render (e fit-probe/autofit nos que falham)':humanNext?'ciclos automáticos esgotados: Diego revisa no estúdio (preview) e exporta':!reviewCurrent?'abrir os PNGs e registrar review':pendingImages.length?`imagens pendentes em ${pendingImages.length} slide(s): asset request/add ou image --none`:!approved?'corrigir o que a revisão apontou e renderizar de novo':exported?'exportado':'validate e export';
   print({project:dir,mode:p.carousel.project.mode,slides:p.carousel.slides.length,lint_current:lintCurrent,render_current:renderCurrent,render_passed:renderPassed,pending_images:pendingImages,visual_review_current:reviewCurrent,approved,auto_review_cycles_left:cyclesLeft,exported,next,source:p.carousel.source});break;
  }
  case 'preview':{let dir:string|null=args[0]&&!args[0].startsWith('--')?path.resolve(args[0]):null;if(!dir){const projects=await listProjects();dir=projects.length?path.join(projectsDir(),projects[0]):null;}const config=await loadConfig();const server=await serve(dir,Number(flag('port')??config.preview.port),true);print(server.url);for(const sig of ['SIGINT','SIGTERM'] as const)process.on(sig,()=>void server.close().then(()=>process.exit(0)));break;}

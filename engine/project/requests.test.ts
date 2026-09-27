@@ -38,7 +38,7 @@ describe('pedidos de imagem',()=>{
  });
  it('recusa download que não é imagem e respeita o teto de gerações',async()=>{
   const dir=await full(),project=await loadProject(dir),slides=project.carousel.slides;
-  const r=await requestAsset(dir,slides[0].id);
+  const r=await requestAsset(dir,slides[0].id,{concept:'an empty dark room'});
   await expect(addFromRequest(dir,r.id,{url:`${url}/page`})).rejects.toThrow(/Tipo inesperado/);
   await expect(addFromRequest(dir,r.id,{url:'ftp://example.com/x.png'})).rejects.toThrow(/https/);
   const fade=slides.find((s,i)=>i>0&&project.art.slides[s.id].composition==='cinematic_fade')!;
@@ -47,9 +47,15 @@ describe('pedidos de imagem',()=>{
   await expect(requestAsset(dir,fade.id,{variants:1})).rejects.toThrow(/Teto/);
   await cancelRequest(dir,r.id);await requestAsset(dir,fade.id,{variants:3});
  });
+ it('pedido sem cena é recusado; cena em português recebe aviso',async()=>{
+  const dir=await full(),p=await loadProject(dir),fade=p.carousel.slides.find((s,i)=>i>0&&p.art.slides[s.id].composition==='cinematic_fade')!;
+  await expect(requestAsset(dir,fade.id,{concept:'  '})).rejects.toThrow(/Descrever a cena/);
+  expect((await requestAsset(dir,fade.id,{concept:'um copo de água do mar sobre uma mesa'})).warnings?.[0]).toMatch(/concept parece em português/);
+  expect((await requestAsset(dir,fade.id,{concept:'a glass of sea water on a dark table, no people'})).warnings).toBeUndefined();
+ });
  it('CLI: asset add --request <pedido> <arquivo> encontra o arquivo depois das flags',async()=>{
   const {execFile}=await import('node:child_process');const {writeFile:w}=await import('node:fs/promises');
-  const dir=await full(),cover=(await loadProject(dir)).carousel.slides[0].id,r=await requestAsset(dir,cover,{variants:1});
+  const dir=await full(),cover=(await loadProject(dir)).carousel.slides[0].id,r=await requestAsset(dir,cover,{variants:1,concept:'an empty dark room'});
   const img=path.join(dir,'gerada.png');await w(img,await sharp({create:{width:64,height:80,channels:3,background:'#553'}}).png().toBuffer());
   const out=await new Promise<string>((resolve,reject)=>execFile(process.execPath,['--import','tsx','engine/cli.ts','asset','add',dir,'--request',r.id,img],{cwd:ROOT,env:process.env},(e,so,se)=>e?reject(Error(se||so)):resolve(so)));
   expect(JSON.parse(out).attached).toBe(true);
