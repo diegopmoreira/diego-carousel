@@ -81,3 +81,5 @@ footer{position:absolute;left:49px;right:49px;bottom:41px;height:53px;display:fl
 .ink-map h1 em,.ink-map p em{color:inherit}
 .ink-map p{color:#00FF00}
 .ink-map .contrast p::before,.ink-map.contrast p::before{visibility:hidden}
+/* Contrast measurement (engine/render/metrics.ts): the slide without its text. */
+.no-text h1,.no-text p{visibility:hidden}

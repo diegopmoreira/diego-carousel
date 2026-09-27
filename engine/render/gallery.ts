@@ -26,7 +26,7 @@ export async function gallery({out=path.join(ROOT,'gallery'),image}:{out?:string
    const manifest=await render(dir);
    const file=path.join(out,`${family}.png`);await copyFile(path.join(dir,'qa/contact-sheet.png'),file);
    sheets.push({family,file});
-   for(const r of manifest.slides)if(!r.passed)console.error(`${family} P${r.position}: ${r.errors.join('; ')}`);
+   for(const r of manifest.slides){if(!r.passed)console.error(`${family} P${r.position}: ${r.errors.join("; ")}`);for(const w of r.warnings??[])console.error(`${family} P${r.position} (aviso): ${w}`);}
   }
   const images=await Promise.all(sheets.map(s=>sharp(s.file).toBuffer({resolveWithObject:true})));
   const width=Math.max(...images.map(i=>i.info.width)),height=images.reduce((h,i)=>h+i.info.height,0);

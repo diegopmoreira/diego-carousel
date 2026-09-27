@@ -18,4 +18,5 @@ export const Config=z.object({
  export:z.object({sync_dir:z.string().nullable()}),
 });
 export type ConfigData=z.infer<typeof Config>;
-export async function loadConfig():Promise<ConfigData>{return Config.parse(await readJson(path.join(ROOT,'config.json')));}
+// CAROUSEL_CONFIG points tests at another config file.
+export async function loadConfig():Promise<ConfigData>{return Config.parse(await readJson(process.env.CAROUSEL_CONFIG?path.resolve(process.env.CAROUSEL_CONFIG):path.join(ROOT,'config.json')));}

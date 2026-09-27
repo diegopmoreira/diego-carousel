@@ -1,0 +1,21 @@
+import { it, expect, afterEach } from 'vitest';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path'; import os from 'node:os';
+import { ROOT, readJson, writeJson } from './io.js';
+import { importCopy } from './create.js';
+import { createVariant } from './variants.js';
+import { migrate } from './migrate.js';
+const dirs:string[]=[];afterEach(async()=>{await Promise.all(dirs.splice(0).map(d=>rm(d,{recursive:true,force:true})));});
+it('migrate completa padrões, corrige $schema e aponta layouts antigos sem mexer na copy',async()=>{
+ const dir=await mkdtemp(path.join(os.tmpdir(),'migrate-'));dirs.push(dir);await mkdir(path.join(dir,'source'));
+ const c=await readJson(path.join(ROOT,'engine/schema/examples/carousel.json'));c.slides=[];await writeJson(path.join(dir,'carousel.json'),c);
+ await writeJson(path.join(dir,'tweaks.json'),{schema_version:1,slides:{}});await writeJson(path.join(dir,'assets/manifest.json'),{schema_version:1,assets:[]});
+ await importCopy(dir,path.join(ROOT,'fixtures/copy-pronta.md'));await createVariant(dir,'antiga');
+ const art=await readJson(path.join(dir,'art-direction.json')),id=Object.keys(art.slides)[1];art.slides[id].layout.headline_position='top';art.slides[id].composition='text_only';delete art.slides[id].image.alternatives;art.$schema='../../errado.json';
+ await writeFile(path.join(dir,'art-direction.json'),JSON.stringify(art));
+ const copy=JSON.stringify((await readJson(path.join(dir,'carousel.json'))).slides);
+ const [main,variant]=await migrate(dir);
+ expect(main.changed).toContain('art-direction.json');expect(main.notes.some(n=>n.includes(id))).toBe(true);expect(variant.dir).toMatch(/variants\/antiga$/);
+ const after=await readJson(path.join(dir,'art-direction.json'));expect(after.slides[id].image.alternatives).toEqual([]);expect(after.$schema).toMatch(/engine\/schema\/generated\/art-direction\.schema\.json$/);
+ expect(JSON.stringify((await readJson(path.join(dir,'carousel.json'))).slides)).toBe(copy);
+});

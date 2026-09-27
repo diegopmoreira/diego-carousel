@@ -21,6 +21,7 @@ import { loadEditorialLibrary, libraryStats } from './library/genetic.js';
 import { gallery } from './render/gallery.js';
 import { calibrate } from './render/calibrate.js';
 import { fitProbe, autofit } from './render/fitprobe.js';
+import { migrate, migrateAll } from './project/migrate.js';
 const args=process.argv.slice(2),command=args.shift();
 const flag=(name:string)=>{const i=args.indexOf('--'+name);return i<0?undefined:args[i+1];};
 const required=(v:string|undefined,usage:string)=>{if(!v||v.startsWith('--'))throw Error(usage);return v;};
@@ -58,6 +59,7 @@ npm run carousel -- <comando>
   asset candidates <projeto> <slide-id> | asset choose <projeto> <slide-id> <asset-id> [--score n --rationale t]
   asset frame <projeto> <video> --at mm:ss [--slide id]   frame do próprio vídeo (ffmpeg)
   asset cancel <projeto> <pedido> | asset list <projeto>
+  migrate <projeto> | migrate --all       atualiza projetos antigos aos contratos atuais
   log <projeto> <TAG> <mensagem>
   doctor
 
@@ -88,11 +90,12 @@ try{
  case 'spine':{const {carousel}=await loadProject(project()),blind=args.includes('--blind');print(carousel.slides.map((s,i)=>blind?`P${i+1} ${s.headline}`:`P${i+1} [${s.id}] ${s.headline}${s.next_question?`\n     → ${s.next_question}`:''}`).join('\n'));break;}
  case 'fit-probe':print(await fitProbe(project(),required(args[1],'fit-probe <projeto> <slide-id>')));break;
  case 'autofit':{const dir=project(),r=await autofit(dir);if(r.changes.some(c=>c.changed))await render(dir);print(r);break;}
+ case 'migrate':print(args[0]==='--all'?await migrateAll():await migrate(project()));break;
  case 'calibrate':print(await calibrate(project(),Number(required(flag('slide'),'Informe --slide <n>')),path.resolve(required(flag('ref'),'Informe --ref <png publicado>')),{threshold:flag('threshold')?Number(flag('threshold')):undefined}));break;
  case 'gallery':print(await gallery({out:flag('out')?path.resolve(flag('out')!):undefined,image:flag('image')?path.resolve(flag('image')!):undefined}));break;
  case 'library':{const sub=args.shift();const {examples,errors}=await loadEditorialLibrary();if(sub==='validate'){print({examples:examples.length,errors});if(errors.length)process.exitCode=1;}else if(sub==='stats')print({...libraryStats(examples),errors});else throw Error('Disponíveis: library validate|stats');break;}
  case 'idea':{const sub=args.shift();if(sub==='add')print(await addIdea({thesis:flag('thesis'),source:flag('source'),why:flag('why'),project:flag('project')}));else if(sub==='list')print(await listIdeas());else throw Error('Disponíveis: idea add|list');break;}
- case 'render':{const r=await render(project(),flag('slides')?.split(','));print({render_hash:r.render_hash,slides:r.slides.map(s=>({id:s.id,passed:s.passed,errors:s.errors,...(s.warnings?.length?{warnings:s.warnings}:{})}))});if(r.slides.some(s=>!s.passed))process.exitCode=1;break;}
+ case 'render':{const r=await render(project(),flag('slides')?.split(','));print({render_hash:r.render_hash,...(r.rhythm_warnings?.length?{rhythm_warnings:r.rhythm_warnings}:{}),slides:r.slides.map(s=>({id:s.id,passed:s.passed,errors:s.errors,...(s.warnings?.length?{warnings:s.warnings}:{})}))});if(r.slides.some(s=>!s.passed))process.exitCode=1;break;}
  case 'validate':{const r=await validate(project());print(r);if(!r.passed)process.exitCode=1;break;}
  case 'export':print(await exportProject(project()));break;
  case 'review':await review(project(),{name:required(flag('reviewer'),'Informe --reviewer'),kind:args.includes('--human')?'human':'agent'},required(flag('note'),'Informe --note com o resultado da inspeção visual'),args.includes('--approved'));print('Revisão registrada.');break;

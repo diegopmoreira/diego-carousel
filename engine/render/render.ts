@@ -9,13 +9,14 @@ import { lint, visualLint } from '../qa/lint.js';
 import { serve } from '../preview/server.js';
 import { compose } from './compose.js';
 import { inkCheck, type InkReport } from './ink.js';
+import { slideMetrics, rhythmWarnings } from './metrics.js';
 import { VERSION } from '../schema/index.js';
 import { zipFiles } from '../export/zip.js';
 import { workbenchHtml } from '../preview/page.js';
 import { toCopy } from '../source/copy.js';
 // Only files that reach the pixels: the slide runtime, CSS, tokens, fonts, processed avatar and HTML composer.
 // Tests, the studio UI and unrelated engine code must not invalidate renders.
-export const PIXEL_FILES=['design/base.css','design/runtime/slide.js','design/runtime/linebreak.js','design/tokens.json','design/fonts/fonts.css','engine/render/compose.ts','engine/render/ink.ts','engine/source/copy.ts'];
+export const PIXEL_FILES=['design/base.css','design/runtime/slide.js','design/runtime/linebreak.js','design/tokens.json','design/fonts/fonts.css','engine/render/compose.ts','engine/render/ink.ts','engine/render/metrics.ts','engine/source/copy.ts'];
 export async function environmentHash(config:ConfigData,root=ROOT){
  const fonts=(await readJson(path.join(root,'design/fonts/manifest.json'))).map((f:any)=>'design/fonts/'+f.file);
  const files=[...PIXEL_FILES,...fonts,...(config.branding.avatar?['design/'+config.branding.avatar]:[])];
@@ -103,6 +104,7 @@ async function renderUnlocked(dir:string,only?:string[]){
    const warnings:string[]=[];const warnAt=Math.round((tokens.ink?.warn_extra_em??.4)*state.fit.blocks.headline.size);
    for(const [k,v] of Object.entries(lineSpace))if(v>warnAt)warnings.push(`Mapa de tinta: ${v}px extras acima da linha ${Number(k)+1} do título (acentos colidindo); considerar outra quebra ou tamanho`);
    if(Object.keys(lineSpace).length)state.fit.stages.push(`ink-space:${Object.entries(lineSpace).map(([k,v])=>`L${Number(k)+1}+${v}px`).join(',')}`);
+   const metrics=await slideMetrics(page,inkPng,(t.slides[s.id]?.composition??a.slides[s.id].composition));warnings.push(...metrics.warnings);state.fit.metrics={contrast:metrics.contrast,empty_band_pct:metrics.empty_band_pct};
    const checks=await browserChecks(page);errors.push(...checks.errors,...ink!.errors.map(e=>`Mapa de tinta: ${e}`));
    if(!state.fit.passed)errors.push('Texto não cabe: ajustar composição ou solicitar compressão editorial');
    await writeJson(path.join(dir,`fit/${s.id}.json`),state.fit);
@@ -112,7 +114,8 @@ async function renderUnlocked(dir:string,only?:string[]){
    await log(dir,'FIT',`${s.id}: ${state.fit.stages.join(' → ')}; overflow=${Math.round(state.fit.overflow_px)}px${state.fit.needs.length?`; requer ${state.fit.needs.join(' ou ')}`:''}; ${errors.length?'FALHA':'OK'}`);
    await page.close();
   }
-  const manifest={schema_version:1,engine_version:VERSION,browser:browserVersion,environment:input.environment,project_hash:input.project_hash,created_at:new Date().toISOString(),slides:records,render_hash:jsonHash(records)};
+  const rhythm=rhythmWarnings(c.slides.map(x=>t.slides[x.id]?.composition??a.slides[x.id].composition),c.slides.map(x=>a.slides[x.id].density));
+  const manifest={schema_version:1,rhythm_warnings:rhythm,engine_version:VERSION,browser:browserVersion,environment:input.environment,project_hash:input.project_hash,created_at:new Date().toISOString(),slides:records,render_hash:jsonHash(records)};
   await writeJson(path.join(dir,'render-manifest.json'),manifest);
   await writeFile(path.join(dir,'copy.md'),toCopy(c.slides));
   await buildPreview(dir,c.slides.length);
@@ -175,5 +178,11 @@ async function exportUnlocked(dir:string){
  try{await rename(out,path.join(dir,'qa',`previous-export-${stamp}`));}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
  await rename(stage,out);
  await writeJson(path.join(dir,'qa/export-receipt.json'),{render_hash:v.render_hash,project_hash:v.project_hash,zip_hash:hash(archive),created_at:new Date().toISOString(),files:files.map(f=>({name:f.name,sha256:hash(f.data)}))});
- await log(dir,'EXPORT',`${carousel.slides.length} PNG aprovados e ZIP`);return out;
+ await log(dir,'EXPORT',`${carousel.slides.length} PNG aprovados e ZIP`);
+ // export.sync_dir (e.g. an iCloud Drive folder) receives a copy, so the PNGs reach the phone.
+ const sync=(await loadConfig()).export.sync_dir;
+ if(sync){const target=path.join(path.resolve(sync.replace(/^~(?=\/|$)/,process.env.HOME??'~')),path.basename(await contentDir(dir))+(path.basename(path.dirname(dir))==='variants'?`-${path.basename(dir)}`:''));
+  await mkdir(target,{recursive:true});for(const f of files)await writeFile(path.join(target,f.name),f.data);await writeFile(path.join(target,'carrossel.zip'),archive);
+  await log(dir,'EXPORT',`Cópia em ${target}`);}
+ return out;
 }

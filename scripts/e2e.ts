@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {mkdtemp,readFile,writeFile,rm,mkdir} from 'node:fs/promises';
+import {mkdtemp,readFile,writeFile,rm,mkdir,readdir} from 'node:fs/promises';
 import os from 'node:os';import path from 'node:path';
 import {ROOT,readJson,writeJson,hash,loadProject} from '../engine/project/io.js';
 import {render,validate,exportProject,review} from '../engine/render/render.js';
@@ -23,6 +23,10 @@ try{
  const b=await render(dir);assert.equal(b.slides.length,10);assert.ok(b.slides.every(s=>s.passed),JSON.stringify(b.slides.filter(s=>!s.passed)));
  assert.equal((await validate(dir)).passed,true);
  await assert.rejects(exportProject(dir),/Revisão visual/);
+ // Export with sync_dir: approved PNGs and the ZIP are copied to the synced folder.
+ const sync=path.join(dir,'sync'),config=await readJson(path.join(ROOT,'config.json'));config.export.sync_dir=sync;await writeJson(path.join(dir,'config.json'),config);process.env.CAROUSEL_CONFIG=path.join(dir,'config.json');
+ await review(dir,{name:'Teste',kind:'human'},'Conferido no teste automático.',true);await exportProject(dir);
+ assert.equal((await readdir(path.join(sync,path.basename(dir)))).filter(f=>f.endsWith('.png')).length,10);delete process.env.CAROUSEL_CONFIG;
  const target=c.slides[3].id;
  await writeJson(path.join(dir,'tweaks.json'),{schema_version:1,slides:{[target]:{params:{headline_size_delta:6}}}});
  assert.equal((await validate(dir)).passed,false,'stale render must be refused');
