@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {mkdtemp,readFile,writeFile,rm,mkdir} from 'node:fs/promises';
 import os from 'node:os';import path from 'node:path';
 import {ROOT,readJson,writeJson,loadProject,hash} from '../engine/project/io.js';
-import {render,validate,exportProject} from '../engine/render/render.js';
+import {render,validate,exportProject,review} from '../engine/render/render.js';
 import {importCopy} from '../engine/project/create.js';
 const dir=await mkdtemp(path.join(os.tmpdir(),'diego-carousel-e2e-'));
 try{
@@ -25,6 +25,15 @@ try{
  for(const old of b.slides){const now=edited.slides.find(s=>s.id===old.id);assert.equal(now.png_hash===old.png_hash,old.id!==target,'only the adjusted slide changes');}
  a.family='cinematic_condensed';await writeJson(path.join(dir,'art-direction.json'),a);
  const familyA=await render(dir);assert.ok(familyA.slides.every(s=>s.passed),JSON.stringify(familyA.slides.filter(s=>!s.passed)));
+ // Review cycles: counted per distinct render reviewed by the agent; the name never bypasses the limit.
+ const agent={name:'Diego',kind:'agent' as const};
+ await review(dir,agent,'ciclo 1',false);await review(dir,agent,'mesmo render, mesmo ciclo',false);
+ for(const delta of [2,3]){await writeJson(path.join(dir,'tweaks.json'),{schema_version:1,slides:{[target]:{params:{headline_size_delta:delta}}}});await render(dir);await review(dir,agent,`delta ${delta}`,false);}
+ assert.equal((await readJson(path.join(dir,'qa/visual-review.json'))).cycles,3);
+ await writeJson(path.join(dir,'tweaks.json'),{schema_version:1,slides:{[target]:{params:{headline_size_delta:4}}}});await render(dir);
+ await assert.rejects(review(dir,agent,'quarto ciclo',true),/revisão humana/);
+ await review(dir,{name:'Diego',kind:'human'},'Conferido por uma pessoa.',true);
+ await review(dir,agent,'após revisão humana o contador recomeça',true);assert.equal((await readJson(path.join(dir,'qa/visual-review.json'))).cycles,1);
  // Tampered output must never pass validation.
  await writeFile(path.join(dir,'qa/render/01.png'),'corrupt');assert.equal((await validate(dir)).passed,false);
  // A design-only overflow must remain byte-for-byte unchanged.

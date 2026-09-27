@@ -4,7 +4,7 @@ import { launchChromium, chromiumPath } from './browser.js';
 import sharp from 'sharp';
 import { readFile, writeFile, mkdir, readdir, unlink, copyFile, rename } from 'node:fs/promises';
 import path from 'node:path';
-import { ROOT, loadProject, jsonHash, hash, writeJson, readJson, optionalJson, safeChild, log, contentDir } from '../project/io.js';
+import { ROOT, loadProject, jsonHash, hash, writeJson, readJson, optionalJson, safeChild, log, contentDir, withLock } from '../project/io.js';
 import { lint, visualLint } from '../qa/lint.js';
 import { serve } from '../preview/server.js';
 import { compose, escapeHtml } from './compose.js';
@@ -47,7 +47,8 @@ async function browserChecks(page:Page){
  if(!fonts.length||fonts.some(f=>f.glyphCount>0&&!f.isCustomFont))geometry.push('Fonte fallback detectada pelo Chromium');
  return {errors:geometry,fonts:[...new Set(fonts.map(f=>f.familyName))]};
 }
-export async function render(dir:string,only?:string[]){
+export function render(dir:string,only?:string[]){return withLock(dir,()=>renderUnlocked(dir,only));}
+async function renderUnlocked(dir:string,only?:string[]){
  const editorial=await lint(dir);if(!editorial.passed)throw Error('Lint editorial falhou; consulta qa/editorial-lint.json');
  const visual=await visualLint(dir);if(visual.length)throw Error(visual.join('\n'));
  const input=await renderInputs(dir);const {carousel:c,art:a,tweaks:t,config,tokens}=input;
@@ -118,13 +119,24 @@ export async function validate(dir:string){
  for(const [id,d] of Object.entries(input.art.slides))if(d.image.need&&!d.image.asset_id)errors.push(`${id}: imagem necessária ainda é placeholder`);
  const result={schema_version:1,passed:!errors.length,project_hash:input.project_hash,render_hash:manifest?.render_hash??null,errors};await writeJson(path.join(dir,'qa/validation.json'),result);return result;
 }
-export async function review(dir:string,reviewer:string,notes:string,approved:boolean){
+export type Reviewer={name:string;kind:'agent'|'human'};
+// Automatic cycles are counted per distinct render reviewed by the agent since the last human review.
+// Re-reviewing the same render does not spend a cycle; a person can always review.
+export async function review(dir:string,reviewer:Reviewer,notes:string,approved:boolean){
  const validation=await validate(dir);if(!validation.passed)throw Error('Corrigir validação antes de registrar revisão visual');
- const previous=await optionalJson(path.join(dir,'qa/visual-review.json'));const cycles=(previous?.cycles??0)+1;
- if(cycles>3&&reviewer!=='Diego')throw Error('Limite de três ciclos; revisão humana necessária');
- await writeJson(path.join(dir,'qa/visual-review.json'),{schema_version:1,render_hash:validation.render_hash,approved,reviewer,notes,cycles,created_at:new Date().toISOString()});
+ if(!reviewer.name.trim())throw Error('Informe quem revisou');
+ const previous=await optionalJson(path.join(dir,'qa/visual-review.json'));
+ const history:any[]=previous?.history??(previous?[{render_hash:previous.render_hash,approved:previous.approved,reviewer:previous.reviewer,kind:'human',notes:previous.notes,created_at:previous.created_at}]:[]);
+ const lastHuman=history.findLastIndex(h=>h.kind==='human');
+ const agentRenders=new Set(history.slice(lastHuman+1).filter(h=>h.kind==='agent').map(h=>h.render_hash));
+ const max=(await loadConfig()).qa.max_auto_revision_cycles;
+ if(reviewer.kind==='agent'&&!agentRenders.has(validation.render_hash)&&agentRenders.size>=max)throw Error(`Limite de ${max} ciclos automáticos atingido; revisão humana necessária (review --human).`);
+ const cycles=reviewer.kind==='agent'?new Set([...agentRenders,validation.render_hash]).size:0;
+ const entry={render_hash:validation.render_hash,approved,reviewer:reviewer.name,kind:reviewer.kind,notes,created_at:new Date().toISOString()};
+ await writeJson(path.join(dir,'qa/visual-review.json'),{schema_version:2,...entry,cycles,history:[...history,entry]});
 }
-export async function exportProject(dir:string){
+export function exportProject(dir:string){return withLock(dir,()=>exportUnlocked(dir));}
+async function exportUnlocked(dir:string){
  const v=await validate(dir);if(!v.passed)throw Error(v.errors.join('\n'));
  const review=await optionalJson(path.join(dir,'qa/visual-review.json'));
  if(!review?.approved||review.render_hash!==v.render_hash)throw Error('Revisão visual aprovada ausente ou desatualizada');

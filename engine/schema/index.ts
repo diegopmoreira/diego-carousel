@@ -5,6 +5,7 @@ const text = z.string().transform(v => v.normalize('NFC'));
 const id = z.string().regex(/^[a-z][a-z0-9_-]{3,63}$/);
 export const Family = z.enum(['cinematic_condensed', 'editorial_clean']);
 export const Composition = z.enum(['full_bleed', 'cinematic_fade', 'image_card', 'text_only', 'giant_statement', 'minimal_pause', 'quote', 'contrast']);
+export const IMAGE_COMPOSITIONS:readonly string[] = ['full_bleed', 'cinematic_fade', 'image_card'];
 export const Slide = z.object({
   id, narrative_role: text, headline: text.pipe(z.string().min(1)), body: text.nullable(),
   headline_type: text.default('statement'), adds: z.array(text).default([]),

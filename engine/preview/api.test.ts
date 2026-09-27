@@ -12,3 +12,14 @@ it('recusa ajustes antigos e fora dos limites sem alterar arquivos',async()=>{co
 it('versões compartilham copy e assets, preservam direção principal e mantêm backup ao promover',async()=>{const dir=await fixture(),original=await loadProject(dir),v=await createVariant(dir,'teste','cinematic_condensed');expect((await loadProject(v)).carousel).toEqual(original.carousel);expect((await loadProject(dir)).art).toEqual(original.art);await expect(readFile(path.join(v,'carousel.json'))).rejects.toThrow();await promoteVariant(dir,'teste');expect((await loadProject(dir)).art.family).toBe('cinematic_condensed');expect((await loadProject(dir)).carousel).toEqual(original.carousel);});
 it('recusa traversal e colisão de nome de versão',async()=>{const dir=await fixture();await expect(createVariant(dir,'../fora')).rejects.toThrow();await createVariant(dir,'nova');await expect(createVariant(dir,'nova')).rejects.toThrow();});
 it('um ajuste visual não muda a copy',async()=>{const dir=await fixture(),p=await loadProject(dir),before=await readFile(path.join(dir,'carousel.json'),'utf8');await adjust(dir,{revision:await revision(dir),id:p.carousel.slides[2].id,params:{headline_size_delta:6},align:'center'});expect(await readFile(path.join(dir,'carousel.json'),'utf8')).toBe(before);expect((await loadProject(dir)).tweaks.slides[p.carousel.slides[2].id].params.headline_size_delta).toBe(6);});
+it('salvar um ajuste preserva a exigência de imagem e só grava o que mudou',async()=>{
+ const dir=await fixture(),p=await loadProject(dir),id=p.carousel.slides[2].id;
+ const a=await readJson(path.join(dir,'art-direction.json'));a.slides[id].composition='image_card';a.slides[id].image.need=true;a.slides[id].image.placeholder=true;await writeJson(path.join(dir,'art-direction.json'),a);
+ const artBefore=await readFile(path.join(dir,'art-direction.json'),'utf8');
+ await adjust(dir,{revision:await revision(dir),id,params:{headline_size_delta:4}});
+ expect(await readFile(path.join(dir,'art-direction.json'),'utf8')).toBe(artBefore);
+ await adjust(dir,{revision:await revision(dir),id,composition:'cinematic_fade'});
+ let now=await loadProject(dir);expect(now.art.slides[id].composition).toBe('image_card');expect(now.tweaks.slides[id].composition).toBe('cinematic_fade');expect(now.tweaks.slides[id].params.headline_size_delta).toBe(4);
+ await adjust(dir,{revision:await revision(dir),id,asset_id:null});
+ now=await loadProject(dir);expect(now.art.slides[id].image.need).toBe(true);expect(now.art.slides[id].image.placeholder).toBe(true);expect(now.art.slides[id].image.asset_id).toBeUndefined();
+});
