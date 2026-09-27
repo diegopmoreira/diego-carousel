@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { watch } from 'node:fs';
 import { readFile, realpath, writeFile } from 'node:fs/promises';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
@@ -18,13 +19,13 @@ const STATIC:[RegExp,'design'|'dir'|'base'][]=[
  [/^\/project\/(html\/slide-\d{2}\.html|qa\/render\/\d{2}\.png|qa\/contact-sheet\.png|preview\/index\.html)$/,'dir'],
  [/^\/project\/(assets\/processed\/k[a-f0-9]{10}\.png)$/,'base'],
 ];
-const CSP="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+const CSP="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'";
 const same=(a:string,b:string)=>a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
 async function body(req:http.IncomingMessage){const chunks:Buffer[]=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>28*1024*1024)throw Error('Arquivo muito grande');chunks.push(chunk);}return JSON.parse(Buffer.concat(chunks).toString('utf8'));}
 export async function serve(initialDir:string|null,port=0,editable=false){
  const initialBase=initialDir?await contentDir(initialDir):null,token=randomBytes(24).toString('hex');let busy=false;
  const server=http.createServer(async(req,res)=>{
-  const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':CSP,'X-Frame-Options':'DENY','Referrer-Policy':'no-referrer'};
+  const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':CSP,'X-Frame-Options':'SAMEORIGIN','Referrer-Policy':'no-referrer'};
   const send=(status:number,value:unknown)=>{res.writeHead(status,{...headers,'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(value));};
   const notFound=()=>{res.writeHead(404,{...headers,'Content-Type':'text/plain; charset=utf-8'});res.end('Não encontrado');};
   try{
@@ -44,6 +45,21 @@ export async function serve(initialDir:string|null,port=0,editable=false){
    if(pathname.startsWith('/api/')){
     if(!editable){send(404,{error:'Preview somente leitura'});return;}
     if(req.method==='GET'&&pathname==='/api/state'){send(200,{...(dir?await state(dir):await emptyState()),token,busy});return;}
+    // Server-sent events: one "change" per burst of writes to the project's documents or render.
+    if(req.method==='GET'&&pathname==='/api/events'){
+     if(!same(url.searchParams.get('token')??'',token)){send(403,{error:'Requisição não autorizada'});return;}
+     if(!dir){send(404,{error:'Nenhum projeto aberto'});return;}
+     res.writeHead(200,{...headers,'Content-Type':'text/event-stream; charset=utf-8',Connection:'keep-alive'});res.write('retry: 3000\n\n');
+     let timer:NodeJS.Timeout|undefined;
+     const relevant=(f:string|null)=>!!f&&/(^|[\\/])(carousel|art-direction|tweaks|render-manifest|approvals)\.json$|assets[\\/]manifest\.json$|qa[\\/]visual-review\.json$/.test(f);
+     const fire=(f:string|null)=>{if(!relevant(f))return;clearTimeout(timer);timer=setTimeout(()=>res.write(`event: change\ndata: ${JSON.stringify({file:f})}\n\n`),250);};
+     // Directory watches (not recursive): documents are replaced by atomic renames, which per-file watches lose.
+     const folders=[...new Set([dir,path.join(dir,'qa'),base!,path.join(base!,'assets')])];
+     const watchers=folders.flatMap(d=>{try{return [watch(d,(_e,f)=>fire(f?path.join(path.relative(dir,d),String(f)):null))];}catch{return [];}});
+     const ping=setInterval(()=>res.write(': ping\n\n'),25000);
+     req.on('close',()=>{clearInterval(ping);clearTimeout(timer);watchers.forEach(w=>w.close());});
+     return;
+    }
     if(req.method==='GET'&&pathname==='/api/download'){
      if(!same(url.searchParams.get('token')??'',token)){send(403,{error:'Requisição não autorizada'});return;}
      if(!dir)throw Error('Nenhum projeto aberto');
@@ -101,5 +117,5 @@ export async function serve(initialDir:string|null,port=0,editable=false){
   }catch(e){send(e instanceof LockedError?409:400,{error:e instanceof Error?e.message:String(e)});}
  });
  await new Promise<void>((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});
- return {url:`http://127.0.0.1:${(server.address() as import('node:net').AddressInfo).port}`,token,close:()=>new Promise<void>((resolve,reject)=>server.close(e=>e?reject(e):resolve()))};
+ return {url:`http://127.0.0.1:${(server.address() as import('node:net').AddressInfo).port}`,token,close:()=>new Promise<void>((resolve,reject)=>{server.close(e=>e?reject(e):resolve());server.closeAllConnections();})};
 }

@@ -1,6 +1,6 @@
 (() => {
  const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],form=$('#adjust-form');
- let data,index=0,dirty=false,working=false,file,grid=false,poll,initial={};
+ let data,index=0,dirty=false,working=false,file,grid=false,poll,initial={},view='slide',events;
  const search=new URLSearchParams(location.search),variant=search.get('variant'),project=search.get('project');
  const endpoint=p=>{const q=new URLSearchParams();if(project)q.set('project',project);if(variant)q.set('variant',variant);return p+(q.size?'?'+q:'');};
  const navigateVariant=v=>{const q=new URLSearchParams();if(project)q.set('project',project);if(v)q.set('variant',v);location.search=q.toString();};
@@ -36,11 +36,49 @@
   $('#copy-headline').textContent=s.headline;$('#copy-body').textContent=s.body??'Sem corpo de texto.';
   const fitSummary=$('#fit-summary');fitSummary.classList.toggle('error',!render?.passed||!data.render_current);
   fitSummary.textContent=!data.render_current?'Há alterações ainda não renderizadas. Atualiza antes de exportar.':!render?.passed?(render?.errors.join(' · ')??'Render pendente'):fit?'✓ Cabe no slide · título '+fit.blocks.headline.size+' px'+(fit.blocks.body?' · corpo '+fit.blocks.body.size+' px':'')+(render.warnings?.length?' · ⚠ '+render.warnings.join(' · '):''):'Aguardando render';
+  hideLive();if(view==='instagram')drawInstagram();
   if(grid)drawGrid();
  }
+ // Live preview: the frozen slide HTML in an iframe, with the inspector values applied as they change.
+ // Line breaks stay frozen, so it is an approximation; saving runs the real fit and render.
+ const LIVE=['headline_size_delta','body_size_delta','block_gap','image_scale','focal_x','focal_y','align','position'];
+ const htmlUrl=n=>endpoint('/project/html/slide-'+String(n+1).padStart(2,'0')+'.html');
+ function scaleLive(){const frame=$('#live-frame'),box=$('#frame');frame.style.transform='scale('+(box.clientWidth/1080)+')';}
+ function hideLive(){$('#live').hidden=true;}
+ function applyLive(){
+  const doc=$('#live-frame').contentDocument;if(!doc||!doc.querySelector('.slide'))return;
+  const s=data.carousel.slides[index],fit=data.fits[s.id],t=data.tweaks.slides[s.id]?.params??{};
+  const h1=doc.querySelector('h1'),p=doc.querySelector('p[data-role="body"]'),num=n=>Number(field(n).value);
+  if(h1&&fit)h1.style.fontSize=Math.max(Number(h1.dataset.floor),fit.blocks.headline.size+num('headline_size_delta')-(t.headline_size_delta??0))+'px';
+  if(p&&fit?.blocks.body)p.style.fontSize=Math.max(36,fit.blocks.body.size+num('body_size_delta')-(t.body_size_delta??0))+'px';
+  const copy=doc.querySelector('.copy');if(copy)copy.style.gap=num('block_gap')+'px';
+  doc.documentElement.style.setProperty('--image-scale',String(num('image_scale')));
+  const img=doc.querySelector('img.scene');if(img)img.style.objectPosition=num('focal_x')+'% '+num('focal_y')+'%';
+  const body=doc.body;body.classList.remove('align-left','align-center','position-top','position-center','position-bottom');body.classList.add('align-'+field('align').value,'position-'+field('position').value);
+ }
+ function showLive(){
+  const frame=$('#live-frame'),url=htmlUrl(index);$('#live').hidden=false;scaleLive();
+  if(frame.dataset.src!==url){frame.dataset.src=url;frame.onload=()=>{scaleLive();applyLive();};frame.src=url;}else applyLive();
+ }
+ new ResizeObserver(()=>{if(!$('#live').hidden)scaleLive();}).observe($('#frame'));
+ $('#safe-area').onchange=e=>{$('#safe-overlay').hidden=!e.target.checked;};
+ // Instagram: the exported PNGs as a feed post, with the caption.
+ let igIndex=0;
+ function drawInstagram(){
+  const n=data.carousel.slides.length;igIndex=Math.min(igIndex,n-1);
+  $$('.ig-handle').forEach(el=>el.textContent=(data.handle??'odiego.moreira').replace(/^@/,''));
+  $('#ig-image').src=imageUrl(igIndex);$('.ig-count').textContent=(igIndex+1)+'/'+n;
+  $('.ig-dots').replaceChildren(...Array.from({length:n},(_,i)=>{const d=document.createElement('i');if(i===igIndex)d.className='on';return d;}));
+  $('#ig-caption-text').textContent=data.carousel.editorial.caption||data.carousel.slides[0].headline;
+  $('.ig-prev').hidden=igIndex===0;$('.ig-next').hidden=igIndex===n-1;
+ }
+ $('.ig-prev').onclick=()=>{igIndex--;drawInstagram();};$('.ig-next').onclick=()=>{igIndex++;drawInstagram();};
+ function setView(v){view=v;$$('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===v)));$('#frame').hidden=v!=='slide';$('#instagram').hidden=v!=='instagram';if(v==='instagram'){igIndex=index;drawInstagram();}}
+ $$('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
  function drawGrid(){$('#grid').replaceChildren(...data.carousel.slides.map((s,n)=>{const button=document.createElement('button'),im=document.createElement('img'),label=document.createElement('span');im.src=imageUrl(n);im.alt=s.headline;label.textContent='Slide '+(n+1);button.append(im,label);button.onclick=()=>{changeIndex(n);toggleGrid();};return button;}));}
  function toggleGrid(){grid=!grid;$('#stage').hidden=grid;$('#grid').hidden=!grid;$('#grid-toggle').setAttribute('aria-pressed',String(grid));$('#grid-toggle').textContent=grid?'Slide':'Grade';if(grid)drawGrid();}
- form.oninput=e=>{if(e.target.name==='headline_size_delta')field('fit').value='preferred';dirty=true;rangeLabels();$('#save').textContent='Salvar alterações';};
+ form.onchange=e=>{if(LIVE.includes(e.target.name)&&view==='slide'&&data.fits[data.carousel.slides[index].id])showLive();};
+ form.oninput=e=>{if(e.target.name==='headline_size_delta')field('fit').value='preferred';dirty=true;rangeLabels();$('#save').textContent='Salvar alterações';if(LIVE.includes(e.target.name)&&view==='slide'&&data.fits[data.carousel.slides[index].id])showLive();};
  const PARAMS=['headline_size_delta','body_size_delta','block_gap','image_scale'];
  function changes(){
   const changed=n=>String(field(n).value)!==initial[n],payload={id:data.carousel.slides[index].id},params={};
@@ -69,5 +107,14 @@
  $('#upload-file').onchange=e=>{file=e.target.files[0];if(!file)return;if(file.size>20*1024*1024){notice('Usa uma imagem de até 20 MB.',true);return;}$('#upload-name').textContent=file.name;$('#upload-dialog').showModal();};
  $('#upload-form').onsubmit=async e=>{e.preventDefault();const rights=e.target.elements.rights.value;$('#upload-dialog').close();const reader=new FileReader();reader.onload=async()=>{try{const result=await action('asset',{id:data.carousel.slides[index].id,rights,data:String(reader.result).split(',')[1]});if(result.warning)notice(result.warning,true);else notice('Imagem adicionada ao slide.');}catch{}};reader.readAsDataURL(file);};
  window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
- load().then(()=>{poll=setInterval(async()=>{if(working||document.hidden)return;try{const latest=await request('state');if(latest.busy)return;if(latest.revision!==data.revision||latest.manifest?.render_hash!==data.manifest?.render_hash||latest.render_current!==data.render_current){if(dirty){notice('O projeto mudou fora desta janela. Salva só depois de recarregar.',true);return;}data=latest;draw();}}catch{}},12000);}).catch(()=>{$('#offline-note').textContent='Preview estático. Para editar, abre este projeto com o comando preview.';});
+ // Changes made elsewhere (CLI, Claude, another window) arrive as server events; polling is only the fallback.
+ async function refresh(){if(working)return;try{const latest=await request('state');if(latest.busy)return;if(latest.revision!==data.revision||latest.manifest?.render_hash!==data.manifest?.render_hash||latest.render_current!==data.render_current){if(dirty){notice('O projeto mudou fora desta janela. Salva só depois de recarregar.',true);return;}data=latest;draw();}}catch{}}
+ function listen(){
+  if(!window.EventSource||data.empty){poll=setInterval(()=>{if(!document.hidden)refresh();},12000);return;}
+  const q=new URLSearchParams(endpoint('').slice(1));q.set('token',data.token);
+  events=new EventSource('/api/events?'+q);events.addEventListener('change',()=>refresh());
+  // EventSource reconnects by itself; polling covers the time it stays closed.
+  events.onerror=()=>{if(events.readyState===EventSource.CLOSED&&!poll)poll=setInterval(()=>{if(!document.hidden)refresh();},12000);};
+ }
+ load().then(listen).catch(()=>{$('#offline-note').textContent='Preview estático. Para editar, abre este projeto com o comando preview.';});
 })();

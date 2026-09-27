@@ -4,6 +4,7 @@ import { readdir } from 'node:fs/promises';
 import { ArtDirection, Family, Composition, Tweaks, IMAGE_COMPOSITIONS } from '../schema/index.js';
 import { projectsDir, contentDir, loadProject, jsonHash, writeJson, optionalJson, log } from '../project/io.js';
 import { listVariants } from '../project/variants.js';
+import { loadConfig } from '../project/config.js';
 export async function revision(dir:string){const p=await loadProject(dir);return jsonHash(p);}
 export const Adjustment=z.object({revision:z.string(),id:z.string(),family:Family.optional(),composition:Composition.optional(),align:z.enum(['left','center']).optional(),position:z.enum(['top','center','bottom']).optional(),fit:z.enum(['fill','preferred']).optional(),asset_id:z.string().nullable().optional(),focal_x:z.number().min(0).max(1).optional(),focal_y:z.number().min(0).max(1).optional(),params:Tweaks.shape.slides.valueType.shape.params.optional()}).strict();
 // Patch semantics: only fields present in the request change. The studio sends the fields the user touched.
@@ -43,5 +44,5 @@ export async function state(dir:string){
  const p=await loadProject(dir),manifest=await optionalJson(path.join(dir,'render-manifest.json')),review=await optionalJson(path.join(dir,'qa/visual-review.json'));
  const {renderInputs}=await import('../render/render.js');const current=await renderInputs(dir);
  const projects=await listProjects();
- return {projects,project_name:path.basename(await contentDir(dir)),revision:jsonHash(p),title:p.carousel.source.title,...p,variants:await listVariants(dir),active_variant:path.basename(path.dirname(dir))==='variants'?path.basename(dir):null,render_current:manifest?.project_hash===current.project_hash,review_current:!!review?.approved&&review.render_hash===manifest?.render_hash&&manifest?.project_hash===current.project_hash,manifest,fits:Object.fromEntries(await Promise.all(p.carousel.slides.map(async s=>[s.id,await optionalJson(path.join(dir,`fit/${s.id}.json`))]))),lint:await optionalJson(path.join(dir,'qa/editorial-lint.json'))};
+ return {projects,handle:(await loadConfig()).branding.handle,project_name:path.basename(await contentDir(dir)),revision:jsonHash(p),title:p.carousel.source.title,...p,variants:await listVariants(dir),active_variant:path.basename(path.dirname(dir))==='variants'?path.basename(dir):null,render_current:manifest?.project_hash===current.project_hash,review_current:!!review?.approved&&review.render_hash===manifest?.render_hash&&manifest?.project_hash===current.project_hash,manifest,fits:Object.fromEntries(await Promise.all(p.carousel.slides.map(async s=>[s.id,await optionalJson(path.join(dir,`fit/${s.id}.json`))]))),lint:await optionalJson(path.join(dir,'qa/editorial-lint.json'))};
 }
