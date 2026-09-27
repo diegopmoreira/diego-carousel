@@ -40,7 +40,7 @@ export async function serve(initialDir:string|null,port=0,editable=false){
    if(!context.has('project')&&!context.has('variant')&&req.headers.referer&&url.pathname.startsWith('/project/')){try{const ref=new URL(req.headers.referer);if(ref.origin===origin)context=ref.searchParams;}catch{}}
    const pathname=decodeURIComponent(url.pathname),variant=context.get('variant'),requestedProject=context.get('project');
    const base=requestedProject?safeChild(projectsDir(),variantName(requestedProject)):initialBase;
-   if(requestedProject&&base&&await realpath(base)!==base)throw Error('Projeto inválido');
+   if(requestedProject&&base&&await realpath(base)!==path.join(await realpath(projectsDir()),path.basename(base)))throw Error('Projeto inválido');
    const dir=base&&(variant?path.join(base,'variants',variantName(variant)):requestedProject?base:initialDir);
    if(pathname==='/'){
     if(!editable){res.writeHead(302,{...headers,Location:'/project/preview/index.html'});res.end();return;}
