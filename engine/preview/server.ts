@@ -12,6 +12,9 @@ import { parseCopy } from '../source/copy.js';
 import { addAsset } from '../project/assets.js';
 import { loadConfig } from '../project/config.js';
 import { workbenchHtml } from './page.js';
+import { startAgent, stopAgent, chooseThesis, readAgentState, readOptions } from '../agent/editorial.js';
+import { mkdtemp, rm } from 'node:fs/promises';
+import os from 'node:os';
 const types:Record<string,string>={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.png':'image/png','.woff2':'font/woff2'};
 // Static files are served from an exact allowlist. ZIPs, original uploads and project JSON go through the API only.
 const STATIC:[RegExp,'design'|'dir'|'base'][]=[
@@ -55,7 +58,7 @@ export async function serve(initialDir:string|null,port=0,editable=false){
      if(!dir){send(404,{error:'Nenhum projeto aberto'});return;}
      res.writeHead(200,{...headers,'Content-Type':'text/event-stream; charset=utf-8',Connection:'keep-alive'});res.write('retry: 3000\n\n');
      let timer:NodeJS.Timeout|undefined;
-     const relevant=(f:string|null)=>!!f&&/(^|[\\/])(carousel|art-direction|tweaks|render-manifest|approvals)\.json$|assets[\\/]manifest\.json$|qa[\\/](visual-review|voice-proposal|edit-proposal)\.json$/.test(f);
+     const relevant=(f:string|null)=>!!f&&/(^|[\\/])(carousel|art-direction|tweaks|render-manifest|approvals)\.json$|assets[\\/]manifest\.json$|qa[\\/](visual-review|voice-proposal|edit-proposal|agent|thesis-options|thesis-choice)\.json$|(^|[\\/])editorial-report\.md$/.test(f);
      const fire=(f:string|null)=>{if(!relevant(f))return;clearTimeout(timer);timer=setTimeout(()=>res.write(`event: change\ndata: ${JSON.stringify({file:f})}\n\n`),250);};
      // Directory watches (not recursive): documents are replaced by atomic renames, which per-file watches lose.
      const folders=[...new Set([dir,path.join(dir,'qa'),base!,path.join(base!,'qa'),path.join(base!,'assets')])];
@@ -75,18 +78,49 @@ export async function serve(initialDir:string|null,port=0,editable=false){
     if(req.method!=='POST'){send(405,{error:'Método não permitido'});return;}
     if(req.headers.origin!==origin||!same(String(req.headers['x-carousel-token']??''),token)){send(403,{error:'Requisição não autorizada'});return;}
     if(busy){send(409,{error:'Há uma atualização em andamento. Aguarda terminar.'});return;}
+    // While the editorial agent writes this project, the studio only watches it (and can stop it).
+    const agentPath=pathname.startsWith('/api/agent/');
+    if(dir&&base&&!agentPath&&pathname!=='/api/create'&&(await readAgentState(base).catch(()=>null))?.status==='running'){send(409,{error:'O agente editorial está trabalhando neste projeto. Espera terminar ou interrompe.'});return;}
     busy=true;
     try{
      const input=await body(req);
      const {render,review,exportProject,buildPreview}=await import('../render/render.js');
      if(pathname==='/api/create'){
-      const creation=z.object({revision:z.string().optional(),slug:z.string().max(60),copy:z.string().min(1).max(60000),family:z.enum(['editorial_clean','cinematic_condensed'])}).strict().parse(input);
+      const creation=z.object({revision:z.string().optional(),slug:z.string().max(60),source:z.enum(['copy','transcript']).default('copy'),copy:z.string().max(60000).optional(),transcript:z.string().max(800_000).optional(),corpus_id:z.string().max(64).optional(),confirm_public:z.boolean().optional(),by:z.string().trim().max(80).optional(),family:z.enum(['auto','editorial_clean','cinematic_condensed'])}).strict().parse(input);
+      // From a transcript: the project keeps the transcript and the editorial agent writes the copy (Skill phases).
+      if(creation.source==='transcript'){
+       const corpus=creation.corpus_id?.trim(),pasted=creation.transcript?.trim()??'';
+       if(!corpus&&pasted.length<300)throw Error('Cola a transcrição inteira (ou informa o ID do vídeo no Corpus)');
+       // A pasted transcript has no Corpus record to check: Diego confirms it is his public video, without supervision.
+       if(!corpus&&!creation.confirm_public)throw Error('Confirma que é um vídeo público de Diego, sem supervisão nem conversa com terceiros');
+       let out:string;
+       if(corpus)out=await createProject(creation.slug,`corpus:${corpus}`,{confirmPublic:!!creation.confirm_public});
+       else{const tmp=await mkdtemp(path.join(os.tmpdir(),'carousel-paste-'));try{const file=path.join(tmp,'transcricao-colada.txt');await writeFile(file,pasted);out=await createProject(creation.slug,file);}finally{await rm(tmp,{recursive:true,force:true});}}
+       if(creation.family!=='auto'){const art=await readJson(path.join(out,'art-direction.json'));art.family=creation.family;await writeJson(path.join(out,'art-direction.json'),art);}
+       let warning;try{await startAgent(out,{family:creation.family,by:creation.by??''});}catch(e){warning=e instanceof Error?e.message:String(e);}
+       send(200,{project:path.basename(out),warning});return;
+      }
+      if(!creation.copy?.trim())throw Error('Cola a copy pronta');
       const {slides:range}=await loadConfig();
       const panels=parseCopy(creation.copy);if(panels.length<range.min||panels.length>range.max)throw Error(`A copy precisa de ${range.min} a ${range.max} painéis`);if(panels[0].body)throw Error('A capa deve conter só o título');
-      const out=await createProject(creation.slug,'copy'),source=path.join(out,'source/input-copy.md');await writeFile(source,creation.copy);await importCopy(out,source);const art=await readJson(path.join(out,'art-direction.json'));art.family=creation.family;await writeJson(path.join(out,'art-direction.json'),art);await buildPreview(out,panels.length);
+      const out=await createProject(creation.slug,'copy'),source=path.join(out,'source/input-copy.md');await writeFile(source,creation.copy);await importCopy(out,source);const art=await readJson(path.join(out,'art-direction.json'));art.family=creation.family==='auto'?'editorial_clean':creation.family;await writeJson(path.join(out,'art-direction.json'),art);await buildPreview(out,panels.length);
       let warning;try{await render(out);}catch(e){warning=e instanceof Error?e.message:String(e);}send(200,{project:path.basename(out),warning});return;
      }
      if(!dir||!base)throw Error('Nenhum projeto aberto');
+     // The editorial agent (main project only): start or retry the next stage, Diego's thesis choice, stop.
+     if(agentPath){
+      if(dir!==base)throw Error('O agente trabalha no projeto principal: volta para a versão principal');
+      if(pathname==='/api/agent/start'){z.object({revision:z.string().optional()}).strict().parse(input);await startAgent(base);}
+      else if(pathname==='/api/agent/choose'){
+       const pick=z.object({revision:z.string().optional(),options_hash:z.string(),thesis:z.string(),hook:z.string().nullable().optional(),hook_text:z.string().max(220).optional(),note:z.string().max(2000).optional(),by:z.string().trim().min(2).max(80)}).strict().parse(input);
+       const {jsonHash}=await import('../project/io.js'),options=await readOptions(base);
+       // Only the options Diego read: if the agent rewrote them after the page showed them, nothing starts.
+       if(!options||jsonHash(options)!==pick.options_hash){send(409,{error:'As opções de tese mudaram depois que foram abertas. Confere de novo.'});return;}
+       await chooseThesis(base,{thesis:pick.thesis,hook:pick.hook??null,hook_text:pick.hook_text,note:pick.note,by:pick.by});await startAgent(base,{stage:'write',by:pick.by});
+      }else if(pathname==='/api/agent/stop'){await stopAgent(base);}
+      else{send(404,{error:'Ação desconhecida'});return;}
+      send(200,{...await state(dir),token,busy:false});return;
+     }
      if(input.revision!==await revision(dir)){send(409,{error:'O projeto mudou em outra janela. Recarrega antes de salvar.'});return;}
      let warning:string|undefined;
      const done=await withLock(dir,async()=>{

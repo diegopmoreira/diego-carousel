@@ -48,13 +48,21 @@ export function emphasis(text:string){
  // Each capitalised word is marked on its own, then neighbours are joined back into one run.
  return text.split(/(\*\*.*?\*\*)/s).map(part=>part.startsWith('**')?part:part.replace(/(?<![\p{L}\p{N}])\p{Lu}{2,}(?![\p{L}\p{N}])/gu,m=>ACRONYMS.has(m)?m:`**${m}**`).replace(/\*\*([ \t]+)\*\*/g,'$1')).join('');
 }
-// YouTube's "copy transcript" glues the timestamp and its spoken duration to the text:
-// "0:099 segundoscomo é…", "1:011 minuto e 1 segundoQuem…", "7:007 minutosEu…". Strip that prefix,
-// standalone timestamp lines and the "Sincronizar com o momento do vídeo" footer; keep chapter titles.
-const YT_PREFIX=/^\s*(?:\d{1,2}:)?\d{1,2}:\d{2}(?:\d+\s+(?:horas?|minutos?)(?:\s+e\s+\d+\s+(?:minutos?|segundos?))*|\d+\s+segundos?)?/i;
+// YouTube's "copy transcript" puts each time on its own line or glues it, with its spoken duration, to the text:
+// "0:099 segundoscomo é…", "1:011 minuto e 1 segundoQuem…", "7:007 minutosEu…". The time stays as a [m:ss] marker
+// (the Corpus working transcript has the same), so the source map can say where an idea is and a frame of the video
+// can be taken there. Duration lines and the "Sincronizar com o momento do vídeo" footer go; chapter titles stay.
+const DURATION='\\d+\\s+(?:horas?|minutos?|segundos?)(?:\\s+e\\s+\\d+\\s+(?:minutos?|segundos?))*';
+const YT_TIME=new RegExp(`^((?:\\d{1,2}:)?\\d{1,2}:\\d{2})(?:${DURATION})?`,'i'),YT_DURATION=new RegExp(`^${DURATION}$`,'i');
 export function cleanTranscript(text:string){
- return normalizeSource(text).split('\n')
-  .filter(l=>!/^\s*(?:(?:\d{1,2}:)?\d{1,2}:\d{2}|\d+\s+segundos?)\s*$/i.test(l)&&!/^\s*Sincronizar com o momento do vídeo\s*$/i.test(l))
-  .map(l=>l.replace(YT_PREFIX,'').trimStart())
-  .join('\n').trim();
+ const out:string[]=[];let time:string|null=null;
+ for(const raw of normalizeSource(text).split('\n')){
+  const line=raw.trim();
+  if(!line){out.push('');continue;}
+  if(YT_DURATION.test(line)||/^Sincronizar com o momento do vídeo$/i.test(line))continue;
+  const m=line.match(YT_TIME);
+  if(m){const rest=line.slice(m[0].length).trim();if(!rest){time=m[1];continue;}out.push(`[${m[1]}] ${rest}`);time=null;continue;}
+  out.push(time?`[${time}] ${line}`:line);time=null;
+ }
+ return out.join('\n').replace(/\n{3,}/g,'\n\n').trim();
 }

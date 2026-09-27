@@ -7,7 +7,7 @@ describe('importação',()=>{
  it('aceita Slide N e título na linha do marcador',()=>expect(parseCopy('Slide 1: Tu sabe ouvir\n\nSlide 2\nTu pode tentar\nCorpo.')).toHaveLength(2));
  it('aceita o formato Figma e normaliza NFC sem mudar maiúsculas',()=>{const p=parseCopy('AÇÃO começa aqui\n\nOutra frase inteira\nCorpo');expect(p[0].headline).toBe('AÇÃO começa aqui');expect(parseCopy(toCopy(p))).toEqual(p);});
  it('rejeita vazio e numeração com lacunas',()=>{expect(()=>parseCopy('')).toThrow();expect(()=>parseCopy('P1\nTítulo\nP3\nOutro')).toThrow();});
- it('limpa só linhas de timestamps e preserva capítulos',()=>expect(cleanTranscript('0:32\nCapítulo 2\n32 segundos\nUma frase com 10 segundos.')).toBe('Capítulo 2\nUma frase com 10 segundos.'));
+ it('tempos viram marcas [m:ss]; durações somem; capítulos e frases com números ficam',()=>expect(cleanTranscript('0:32\nCapítulo 2\n32 segundos\nUma frase com 10 segundos.\n\nOutro parágrafo.')).toBe('[0:32] Capítulo 2\nUma frase com 10 segundos.\n\nOutro parágrafo.'));
  it('escapa HTML de entrada',()=>expect(escapeHtml('<script>"&')).toBe('&lt;script&gt;&quot;&amp;'));
  it('impede tweaks fora dos limites e propriedades desconhecidas',()=>{expect(Tweaks.safeParse({schema_version:1,slides:{k123:{params:{headline_size_delta:-100}}}}).success).toBe(false);expect(Tweaks.safeParse({schema_version:1,slides:{k123:{params:{css:'url(remote)'}}}}).success).toBe(false);});
 });
@@ -21,6 +21,6 @@ it('sigla não vira ênfase; marcada com ** vira',()=>{expect(emphasis('O TDAH N
 
  it('limpa o copiar-colar de transcrição do YouTube com tempo grudado no texto',()=>{
   const raw='Capítulo 1: Introdução\n0:00Olha só, o negócio.\n0:099 segundoscomo é que tá o volume.\n1:011 minuto e 1 segundoQuem segura a espada.\n7:007 minutoseu realmente.\n12:1712 minutos e 17 segundosaquele cara.\nSincronizar com o momento do vídeo';
-  expect(cleanTranscript(raw)).toBe('Capítulo 1: Introdução\nOlha só, o negócio.\ncomo é que tá o volume.\nQuem segura a espada.\neu realmente.\naquele cara.');
+  expect(cleanTranscript(raw)).toBe('Capítulo 1: Introdução\n[0:00] Olha só, o negócio.\n[0:09] como é que tá o volume.\n[1:01] Quem segura a espada.\n[7:00] eu realmente.\n[12:17] aquele cara.');
  });
 });

@@ -10,6 +10,24 @@ imagens reais pelo Higgsfield (o MCP precisa ser autorizado com `/mcp` numa sess
 carrossel real de Diego exportado sem ajuste fora do estúdio e o `npm run eval` completo com os
 vídeos escolhidos. Até lá, a V1 não pode ser declarada pronta pelos critérios do §93.
 
+## Transcrição → carrossel pelo estúdio (agente editorial)
+
+- **Novo → Da transcrição** (padrão): cola a transcrição ou informa o ID do Corpus. O estúdio cria o
+  projeto e chama o **agente editorial**: o Claude Code do computador rodando a Skill sem conversa
+  (`claude -p`, Bash só `npm run carousel`, edição só no projeto). **Novo → Copy pronta** continua.
+- **Duas etapas com o checkpoint da tese** (`editorial.checkpoint_after_thesis`): a etapa 1 faz
+  mapa, diagnóstico, teses e hooks e grava as opções (`thesis-options`, validadas); Diego escolhe a
+  tese e o hook na tela (ou pede hooks novos para outra tese, com nota); a etapa 2 **retoma a mesma
+  sessão do Claude** e vai da spine ao render com revisão automática. Sem checkpoint, etapa única.
+- **Progresso no estúdio:** fases concluídas (lidas dos arquivos do projeto), atividade atual,
+  registro (`qa/agent.log`), interromper e tentar de novo. O processo roda destacado: fechar o
+  estúdio não para o agente; um processo morto aparece como erro, não como "rodando" para sempre.
+- **CLI:** `agent start|choose|status|stop <projeto>`; `doctor` confere o Claude Code.
+  `config.json` → `agent` (modelo, teto de gasto e tempo por etapa).
+- **Testes:** um `claude` falso (`scripts/fake-claude.mjs`) no teste unitário e no E2E do estúdio
+  (transcrição → teses → escolha na tela → slides); execução real do `claude -p` conferida na nuvem
+  com uma transcrição sintética.
+
 ## Sessão local (27/09) — feito no Mac de Diego
 
 - **Corpus:** formato real do `v1.json` (segmentos só com tempos; texto nas `palavras`) e catálogo

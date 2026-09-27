@@ -56,6 +56,15 @@ referência.
 Diego: dizer quais desses (ou outros) foram os que mais performaram — eles viram os exemplos
 preferidos na Fase 4 da Skill.
 
+## Novo: carrossel a partir da transcrição pelo estúdio
+
+`npm run preview` → **Novo** → **Da transcrição**: colar a transcrição (a do YouTube serve) ou o ID
+do vídeo no Corpus, marcar que é vídeo público de Diego e criar. O agente editorial roda com o
+Claude Code deste Mac (precisa estar instalado e logado; `npm run carousel -- doctor` confere) e
+mostra o progresso na tela. Quando as teses ficam prontas, escolher a tese e o hook ali mesmo; a
+segunda etapa segue sozinha até o render. Para usar o Opus nessas execuções:
+`config.json` → `agent.model: "opus"`.
+
 ## 3. Três carrosséis `full` de verdade (critério da Rodada 1)
 
 Rodar um de cada vez, com o checkpoint após a tese ligado (`config.json`). Antes das imagens,

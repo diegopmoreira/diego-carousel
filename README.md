@@ -37,6 +37,13 @@ npm run preview            # abre o projeto mais recente (ou um vazio) em http:/
 npm run preview -- projects/AAAA-MM-DD-slug
 ```
 
+**Novo → Da transcrição:** cola a transcrição (a do YouTube serve) ou informa o ID do vídeo no Corpus.
+O agente editorial (o teu Claude Code rodando a Skill, sem conversa) faz o mapa da fonte, o
+diagnóstico, as teses e os hooks; tu escolhe a tese na tela; ele escreve a spine e a copy, faz o
+teste cego, sugere as cenas e renderiza. O progresso aparece no estúdio. Precisa do Claude Code
+instalado e logado neste computador (`doctor` confere). **Novo → Copy pronta** diagrama copy já
+escrita.
+
 Criar projeto colando copy, ajustar cada slide com **prévia ao vivo**, trocar imagem entre
 alternativas, enviar fotos, ver como **post do Instagram** (e o recorte 3:4 da grade), ligar a
 **área segura**, criar versões, aprovar propostas de voz/edição e exportar o ZIP (a exportação
@@ -53,6 +60,7 @@ npm run carousel -- lint|spine [--blind]|status <projeto>        # status: próx
 npm run carousel -- render|validate|export <projeto>
 npm run carousel -- fit-probe <projeto> <slide-id> | autofit <projeto>
 npm run carousel -- composition <projeto> <slide-id> <composição> | image <projeto> <slide-id> --need|--none
+npm run carousel -- agent start|choose|status|stop <projeto>   # agente editorial: transcrição → copy → render
 npm run carousel -- asset request|add|candidates|choose|frame ...
 npm run carousel -- voice|edit ... ; approve <projeto> voice|edit --by Diego
 npm run carousel -- gallery | calibrate <projeto> --slide n --ref <png> | migrate <projeto>

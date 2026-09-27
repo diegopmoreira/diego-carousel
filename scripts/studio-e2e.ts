@@ -1,6 +1,6 @@
 import { launchChromium } from '../engine/render/browser.js';
 import assert from 'node:assert/strict';
-import { mkdtemp,mkdir,readFile,rm,readdir } from 'node:fs/promises';
+import { mkdtemp,mkdir,readFile,rm,readdir,writeFile,chmod } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import http from 'node:http';
 import path from 'node:path';import os from 'node:os';
@@ -55,7 +55,7 @@ try{
  await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:path.join(shots,'studio-mobile.png')});
  // Creating a project from pasted copy must open a usable editor without shell steps.
  const slug='teste-interface-'+Date.now();const created=path.join(process.env.CAROUSEL_PROJECTS_DIR!,new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())+'-'+slug);
- await page.setViewportSize({width:1440,height:1000});await page.locator('#new-project').click();await page.locator('#create-form [name="slug"]').fill(slug);await page.locator('#create-form [name="copy"]').fill(await readFile(path.join(ROOT,'fixtures/copy-pronta.md'),'utf8'));await page.locator('#create-form button[type="submit"]').click();await page.waitForURL('**/*project=*');await page.locator('#studio').waitFor({state:'visible'});assert.equal(await page.locator('#slides button').count(),10);
+ await page.setViewportSize({width:1440,height:1000});await page.locator('#new-project').click();await page.locator('#create-form input[name="source"][value="copy"]').check();await page.locator('#create-form [name="slug"]').fill(slug);await page.locator('#create-form [name="copy"]').fill(await readFile(path.join(ROOT,'fixtures/copy-pronta.md'),'utf8'));await page.locator('#create-form button[type="submit"]').click();await page.waitForURL('**/*project=*');await page.locator('#studio').waitFor({state:'visible'});assert.equal(await page.locator('#slides button').count(),10);
  await page.locator('#upload-file').setInputFiles(path.join(ROOT,'design/brand/avatar-source.png'));await page.locator('#upload-form textarea').fill('Imagem do template local, usada somente neste teste.');await page.locator('#upload-form button[type="submit"]').click();await page.waitForFunction(()=>document.querySelector('#notice')?.textContent==='Imagem adicionada ao slide.');
  assert.equal((await loadProject(created)).assets.assets.length,1);assert.equal((await loadProject(created)).carousel.slides.length,10);
  // A composition carries the image decision: a text layout takes the image out (kept as an alternative) and an image
@@ -76,7 +76,7 @@ try{
  const emptyProjects=path.join(dir,'empty-projects');process.env.CAROUSEL_PROJECTS_DIR=emptyProjects;
  const empty=await serve(null,0,true);try{
   const p2=await browser!.newPage({viewport:{width:1440,height:1000}});await p2.goto(empty.url);await p2.locator('#create-dialog').waitFor({state:'visible'});
-  await p2.locator('#create-form [name="slug"]').fill('primeiro');await p2.locator('#create-form [name="copy"]').fill((await readFile(path.join(ROOT,'fixtures/copy-pronta.md'),'utf8')).replace('Tu não precisa vencer','Você não precisa vencer'));
+  await p2.locator('#create-form input[name="source"][value="copy"]').check();await p2.locator('#create-form [name="slug"]').fill('primeiro');await p2.locator('#create-form [name="copy"]').fill((await readFile(path.join(ROOT,'fixtures/copy-pronta.md'),'utf8')).replace('Tu não precisa vencer','Você não precisa vencer'));
   await p2.locator('#create-form button[type="submit"]').click();await p2.waitForURL('**/*project=*');await p2.locator('#studio').waitFor({state:'visible'});
   assert.equal(await p2.locator('#slides button').count(),10);
   // A voice proposal waits in the studio; Diego approves it on screen and the copy changes only then.
@@ -92,5 +92,34 @@ try{
   assert.equal((await loadProject(created)).carousel.slides[0].headline,'Tu não precisa vencer toda discussão');
   assert.equal((await readJson(path.join(created,'approvals.json'))).approvals[0].by,'Diego');await p2.close();
  }finally{await empty.close();process.env.CAROUSEL_PROJECTS_DIR=path.join(dir,'projects');}
- console.log('Estúdio E2E aprovado: UI, prévia ao vivo, Instagram, área segura, eventos do servidor, estúdio vazio, aprovação de proposta, ajuste isolado, composição com a decisão de imagem, copy preservada, versão, proteção de escrita, revisão e ZIP íntegro.');
+ // From a transcript: the editorial agent (here a stand-in for claude -p with the fixture) writes the copy, and Diego
+ // picks the thesis on screen between the two stages.
+ const agentProjects=path.join(dir,'agent-projects'),fake=path.join(dir,'claude');process.env.CAROUSEL_PROJECTS_DIR=agentProjects;
+ await writeFile(fake,`#!/bin/sh\nexec "${process.execPath}" "${path.join(ROOT,'scripts/fake-claude.mjs')}" "$@"\n`);await chmod(fake,0o755);
+ process.env.CAROUSEL_CLAUDE_BIN=fake;process.env.CAROUSEL_TEST_NODE=process.execPath;
+ const agentServer=await serve(null,0,true);try{
+  const p3=await browser!.newPage({viewport:{width:1440,height:1000}});p3.on('pageerror',e=>errors.push(e.message));
+  await p3.goto(agentServer.url);await p3.locator('#create-dialog').waitFor({state:'visible'});
+  assert.equal(await p3.locator('#create-form [name="transcript"]').isVisible(),true,'a transcrição é o ponto de partida padrão');
+  const transcript=['[0:00] Texto sintético de teste: alguém fala sobre a diferença entre sede e água salgada.','[0:20] Quem sente falta procura alívio rápido, e o alívio rápido aumenta a falta.','[0:40] Atenção não é vínculo; intensidade não é profundidade.','[1:00] A virada é escolher onde beber, não deixar de ter sede.','[1:20] Fecho: carência não se cura, se educa.'].join('\n').repeat(2);
+  await p3.locator('#create-form [name="slug"]').fill('da-transcricao');await p3.locator('#create-form [name="transcript"]').fill(transcript);
+  await p3.locator('#create-form button[type="submit"]').click();await p3.waitForFunction(()=>document.querySelector('#notice')?.textContent?.includes('vídeo público'));
+  await p3.locator('#create-form [name="confirm_public"]').check();await p3.locator('#create-form button[type="submit"]').click();
+  await p3.waitForURL('**/*project=*');await p3.locator('#agent-view').waitFor({state:'visible'});
+  await p3.locator('#thesis-form').waitFor({state:'visible',timeout:60_000});
+  assert.equal(await p3.locator('#thesis-options .option').count(),3);assert.equal(await p3.locator('#hook-options input:checked').getAttribute('value'),'h1');
+  await p3.screenshot({path:path.join(shots,'studio-agent-thesis.png'),fullPage:true});
+  // The hooks on offer belong to the recommended thesis: another thesis disables them.
+  await p3.locator('#thesis-options input[value="t2"]').check();assert.equal(await p3.locator('#hook-options input[value="h2"]').isDisabled(),true);
+  await p3.locator('#thesis-options input[value="t1"]').check();await p3.locator('#hook-options input[value="h2"]').check();
+  await p3.locator('#thesis-form [name="note"]').fill('Fecha mais seco.');await p3.locator('#thesis-form [name="by"]').fill('Diego');
+  await p3.locator('#thesis-form button[type="submit"]').click();
+  await p3.locator('.workspace').waitFor({state:'visible',timeout:150_000});
+  assert.equal(await p3.locator('#slides button').count(),10);
+  const project=path.join(agentProjects,(await readdir(agentProjects))[0]),choice=await readJson(path.join(project,'qa/thesis-choice.json'));
+  assert.equal(choice.by,'Diego');assert.equal(choice.hook,'h2');assert.equal(choice.note,'Fecha mais seco.');
+  assert.equal((await readJson(path.join(project,'qa/agent.json'))).status,'done');
+  await p3.screenshot({path:path.join(shots,'studio-agent-done.png')});await p3.close();assert.equal(errors.length,0,errors.join('\n'));
+ }finally{await agentServer.close();process.env.CAROUSEL_PROJECTS_DIR=path.join(dir,'projects');delete process.env.CAROUSEL_CLAUDE_BIN;}
+ console.log('Estúdio E2E aprovado: UI, prévia ao vivo, Instagram, área segura, eventos do servidor, estúdio vazio, transcrição → agente → escolha da tese → slides, aprovação de proposta, ajuste isolado, composição com a decisão de imagem, copy preservada, versão, proteção de escrita, revisão e ZIP íntegro.');
 }finally{await browser?.close();await server?.close();await rm(dir,{recursive:true,force:true});}

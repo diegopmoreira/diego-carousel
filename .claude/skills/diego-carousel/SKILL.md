@@ -5,7 +5,9 @@ description: Transformar transcrições públicas de Diego Moreira (arquivo ou C
 
 # Sistema de carrosséis Diego Moreira
 
-Trabalhar na raiz do projeto. Plano em vigor: `docs/plano-v2.md`; estado: `docs/STATUS.md`.
+Trabalhar na raiz do projeto: todo caminho citado aqui (`editorial/…`, `visual/…`, `genetic-library/…`,
+`fixtures/…`) é relativo à raiz (onde está `package.json`), não à pasta desta Skill. Plano em vigor:
+`docs/plano-v2.md`; estado: `docs/STATUS.md`.
 Não confundir capacidade planejada com comando disponível: `npm run carousel -- help` lista o que
 existe. Todo comando abaixo é `npm run carousel -- <comando>`.
 
@@ -19,6 +21,11 @@ existe. Todo comando abaixo é `npm run carousel -- <comando>`.
 | "faz no estilo B", "outra capa" | `variant` | Variantes |
 
 "Outra capa" é ambíguo (outro hook? outra imagem? outra estratégia?): perguntar antes.
+
+Carrossel novo sem material: pedir a **transcrição** (arquivo, texto colado ou `corpus:<id>`), nunca a
+copy; a copy é o trabalho do modo full. Copy pronta só quando Diego a oferece. Transcrição colada na
+conversa: salvar num `.txt` e usar `new <slug> --source <arquivo.txt>` (os tempos do YouTube são
+limpos).
 
 ## Invariantes
 
@@ -143,6 +150,22 @@ configurado). `preview <projeto>` abre o estúdio em 127.0.0.1:4321: ajuste com 
 visão Instagram (com o recorte 3:4 da grade), área segura, versões e exportação (que registra a
 revisão humana). Não chamar de "publicável" com placeholder, lint com erro, render antigo ou revisão
 pendente.
+
+## Execução pelo estúdio (agente editorial, sem conversa)
+
+O estúdio ("Novo" → "Da transcrição") e `agent start <projeto>` rodam esta Skill pelo Claude Code
+sem conversa (`claude -p`), no projeto já criado com a transcrição. O prompt diz a etapa:
+- **Etapa 1 (checkpoint da tese):** Fases 1–3 no relatório; escrever a tese recomendada, 2
+  alternativas e os hooks dela num JSON e gravar com `thesis-options <projeto> <arquivo.json>` (o
+  comando valida o formato: corrigir e repetir se recusar). Parar aí: Diego escolhe na tela.
+- **Etapa 2:** retoma a mesma conversa com a escolha de Diego (tese, hook ou "refazer hooks", nota).
+  Registrar a escolha no relatório, mandar as teses que sobraram para o backlog e seguir das Fases 4
+  a 9. Fase 8 só como roteiro de cenas; nada de gerar imagens. Revisão com `review --reviewer
+  Claude`; nunca exportar.
+- **Etapa única** quando `editorial.checkpoint_after_thesis` é `false`.
+Nunca fazer perguntas nessas execuções (ninguém responde): decidir pelos guias e registrar as dúvidas
+no relatório. Terminar com um resumo curto (tese, número de painéis, pendências). Estado e registro:
+`agent status <projeto>` (`qa/agent.json`, `qa/agent.log`).
 
 ## Copy pronta (design-only)
 

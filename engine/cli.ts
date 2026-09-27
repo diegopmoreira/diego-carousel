@@ -24,10 +24,11 @@ import { calibrate } from './render/calibrate.js';
 import { fitProbe, autofit } from './render/fitprobe.js';
 import { migrate, migrateAll } from './project/migrate.js';
 import { setComposition } from './project/direction.js';
+import { startAgent, stopAgent, agentView, chooseThesis, saveThesisOptions, claudeBin, AgentStage, readAgentState } from './agent/editorial.js';
 const args=process.argv.slice(2),command=args.shift();
 const flag=(name:string)=>{const i=args.indexOf('--'+name);return i<0?undefined:args[i+1];};
 // Positional arguments, skipping flags and their values (boolean flags listed so their neighbour stays positional).
-const BOOLEAN=new Set(['--need','--none','--json','--approved','--human','--blind','--reset-art','--render','--allow-other','--allow-conversation','--alternative','--all','--dry-run']);
+const BOOLEAN=new Set(['--need','--none','--json','--approved','--human','--blind','--reset-art','--render','--allow-other','--allow-conversation','--allow-unlisted','--confirm-public','--alternative','--all','--dry-run','--wait','--no-start']);
 const positionals=()=>args.filter((a,i)=>!a.startsWith('--')&&!(i>0&&args[i-1].startsWith('--')&&!BOOLEAN.has(args[i-1])));
 const required=(v:string|undefined,usage:string)=>{if(!v||v.startsWith('--'))throw Error(usage);return v;};
 const project=()=>path.resolve(required(args[0],'Informe o caminho do projeto'));
@@ -67,6 +68,10 @@ npm run carousel -- <comando>
   asset frame <projeto> <video> --at mm:ss [--slide id]   frame do próprio vídeo (ffmpeg)
   asset cancel <projeto> <pedido> | asset list <projeto>
   migrate <projeto> | migrate --all       atualiza projetos antigos aos contratos atuais
+  agent start <projeto> [--stage thesis|write|full] [--family f] [--wait]   agente editorial (Claude Code) da transcrição ao render
+  agent choose <projeto> --thesis t1 [--hook h1 | --hook-text t] [--note t] --by <nome> [--no-start] [--wait]
+  agent status|stop <projeto>             progresso, log e parada do agente
+  thesis-options <projeto> <arquivo.json>  (usado pelo agente) grava as opções de tese do checkpoint
   log <projeto> <TAG> <mensagem>
   doctor
 
@@ -84,6 +89,18 @@ try{
   else if(sub==='move')print(await slideMove(dir,required(args[1],'slide move <projeto> <id> --to <posição>'),Number(required(flag('to'),'Informe --to'))));
   else if(sub==='rm')print(await slideRemove(dir,required(args[1],'slide rm <projeto> <id>')));
   else throw Error('Disponíveis: slide add|move|rm');
+  break;
+ }
+ case 'thesis-options':print(await saveThesisOptions(project(),path.resolve(required(args[1],'thesis-options <projeto> <arquivo.json>'))));break;
+ case 'agent':{
+  // The editorial agent from the terminal; the studio does the same through its buttons.
+  const sub=args.shift(),dir=project(),wait=args.includes('--wait');
+  if(sub==='start'){const stage=flag('stage'),family=flag('family');print(await startAgent(dir,{stage:stage?AgentStage.parse(stage):undefined,family:family?z.enum(['auto','editorial_clean','cinematic_condensed']).parse(family):undefined,by:flag('by')??''}));}
+  else if(sub==='choose'){print(await chooseThesis(dir,{thesis:required(flag('thesis'),'Informe --thesis t1'),hook:flag('hook')??null,hook_text:flag('hook-text'),note:flag('note'),by:required(flag('by'),'Informe --by com o nome de quem escolheu')}));if(!args.includes('--no-start'))print(await startAgent(dir,{stage:'write',by:flag('by')}));}
+  else if(sub==='status'){print(await agentView(dir));break;}
+  else if(sub==='stop'){print(await stopAgent(dir));break;}
+  else throw Error('Disponíveis: agent start|choose|status|stop <projeto>');
+  if(wait){let last='';for(;;){const s=await readAgentState(dir);if(!s)break;if(s.activity!==last){last=s.activity;console.log(`… ${s.activity}`);}if(s.status!=='running'){print(await agentView(dir));if(s.status==='failed')process.exitCode=1;break;}await new Promise(r=>setTimeout(r,2000));}}
   break;
  }
  case 'composition':print(await setComposition(project(),required(args[1],'composition <projeto> <slide-id> <composição>'),required(args[2],'Informe a composição (full_bleed, cinematic_fade, image_card, text_only, giant_statement, minimal_pause, quote, contrast)')));break;
@@ -153,6 +170,8 @@ try{
   for(const file of ['design/fonts/manifest.json','engine/schema/generated/carousel.schema.json']){try{await access(path.join(ROOT,file));checks.push({check:file,ok:true});}catch{checks.push({check:file,ok:false});}}
   try{await access(chromiumPath());checks.push({check:'Chromium instalado',ok:true,detail:`${await chromiumVersion()} · ${chromiumPath()}`});}catch{checks.push({check:'Chromium instalado',ok:false});}
   const config=await loadConfig();checks.push({check:'Avatar oficial',ok:!!config.branding.avatar,optional:true});
+  // Optional: only the studio's "from a transcript" flow (and npm run eval) needs Claude Code on this machine.
+  const bin=await claudeBin();checks.push({check:'Claude Code (transcrição → carrossel pelo estúdio)',ok:!!bin,optional:true,detail:bin??'instalar o Claude Code ou definir CAROUSEL_CLAUDE_BIN'});
   print({passed:checks.every(c=>c.ok||c.optional),checks});if(checks.some(c=>!c.ok&&!c.optional))process.exitCode=1;break;
  }
  case undefined:case 'help':case '--help':print(help);break;

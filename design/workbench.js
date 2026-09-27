@@ -6,17 +6,24 @@
  const navigateVariant=v=>{const q=new URLSearchParams();if(project)q.set('project',project);if(v)q.set('variant',v);location.search=q.toString();};
  const imageUrl=(n)=>endpoint('/project/qa/render/'+String(n+1).padStart(2,'0')+'.png')+(variant||project?'&':'?')+'v='+(data.manifest?.slides.find(s=>s.id===data.carousel.slides[n].id)?.png_hash??Date.now());
  function notice(message,error=false){const el=$('#notice');el.textContent=message;el.hidden=false;el.classList.toggle('error',error);clearTimeout(notice.timer);if(!error)notice.timer=setTimeout(()=>el.hidden=true,5000);}
- function busy(on){working=on;document.body.classList.toggle('working',on);$$('button,select,input,textarea').forEach(el=>el.disabled=on);$('#save').textContent=on?'Atualizando…':'Salvar e atualizar slide';if(!on&&data)$('#export').disabled=!(data.render_current&&data.manifest?.slides.every(s=>s.passed));}
+ function busy(on){working=on;document.body.classList.toggle('working',on);$$('button,select,input,textarea').forEach(el=>el.disabled=on);$('#save').textContent=on?'Atualizando…':'Salvar e atualizar slide';if(!on&&data)$('#export').disabled=!(data.render_current&&data.manifest?.slides.every(s=>s.passed));if(!on&&agentMode()){lockEditor();syncHooks();}}
+ // No copy yet, or the editorial agent at work: the agent view replaces the editor.
+ const agentMode=()=>!!data&&!data.empty&&(!data.carousel.slides.length||['running','waiting'].includes(data.agent?.state?.status));
+ function lockEditor(){['#refresh','#new-version','#export','#grid-toggle','#promote'].forEach(s=>$(s).disabled=true);}
  async function request(url,payload){const r=await fetch(endpoint('/api/'+url),payload?{method:'POST',headers:{'Content-Type':'application/json','X-Carousel-Token':data.token},body:JSON.stringify({revision:data.revision,...payload})}:{});const result=await r.json();if(!r.ok)throw Error(result.error??'Falha na atualização');return result;}
  async function load(){data=await request('state');if(data.empty){drawEmpty();return;}index=Math.min(index,data.carousel.slides.length-1);draw();}
- function drawEmpty(){$('#studio').hidden=false;$('#fallback').hidden=true;$('#project-select').replaceChildren(new Option('Nenhum carrossel ainda',''));$('#status').textContent='Sem projeto';['#refresh','#new-version','#export','#grid-toggle','#save','#upload-button'].forEach(s=>$(s).disabled=true);$('#create-dialog').showModal();}
+ function drawEmpty(){$('#studio').hidden=false;$('#fallback').hidden=true;$('#project-select').replaceChildren(new Option('Nenhum carrossel ainda',''));$('#status').textContent='Sem projeto';['#refresh','#new-version','#export','#grid-toggle','#save','#upload-button'].forEach(s=>$(s).disabled=true);openCreate();}
  async function action(name,payload={}){busy(true);try{const result=await request(name,payload);if(result.revision){data=result;dirty=false;draw();}return result;}catch(e){notice(e.message,true);try{data=await request('state');dirty=false;draw();}catch{}throw e;}finally{busy(false);}}
  function field(name){return form.elements.namedItem(name);}
  function changeIndex(n){if(dirty&&!confirm('Descartar os ajustes ainda não salvos?'))return;index=(n+data.carousel.slides.length)%data.carousel.slides.length;dirty=false;draw();}
  function rangeLabels(){$$('output[data-for]').forEach(el=>{const name=el.dataset.for,value=Number(field(name).value);el.textContent=name==='image_scale'?value.toFixed(2)+'×':name.startsWith('focal_')?value+'%':(name.endsWith('_delta')&&value>0?'+':'')+value+' px';});}
  function draw(){
-  if(!data.carousel.slides.length){notice('Este projeto ainda não possui slides. Importa a copy antes de abrir o estúdio.',true);return;}
   $('#studio').hidden=false;$('#fallback').hidden=true;$('#title').textContent=data.title.replaceAll('-',' ');$('#count').textContent=data.carousel.slides.length;
+  const st=data.agent?.state,finished=agentStatus==='running'&&st?.status==='done';agentStatus=st?.status;
+  $('#agent-view').hidden=!agentMode();$('.workspace').hidden=agentMode();
+  if(agentMode()){const projects=data.projects??[];$('#project-select').replaceChildren(...[...new Set([data.project_name,...projects])].map(p=>new Option(p===data.project_name?data.title.replaceAll('-',' '):p.replace(/^\d{4}-\d{2}-\d{2}-/,'').replaceAll('-',' '),p)));$('#project-select').value=data.project_name;lockEditor();drawAgent();return;}
+  index=Math.max(0,Math.min(index,data.carousel.slides.length-1));if(!working)['#refresh','#new-version','#grid-toggle','#promote'].forEach(s=>$(s).disabled=false);
+  if(finished)notice('O agente terminou: '+(st.summary??'carrossel pronto para revisar')+(st.warning?' · ⚠ '+st.warning:''),!!st.warning);
   const projects=data.projects??[];$('#project-select').replaceChildren(...[...new Set([data.project_name,...projects])].map(p=>new Option(p===data.project_name?data.title.replaceAll('-',' '):p.replace(/^\d{4}-\d{2}-\d{2}-/,'').replaceAll('-',' '),p)));$('#project-select').value=data.project_name;
   const editorialErrors=data.lint?.issues?.filter(i=>i.severity==='error')??[];if(editorialErrors.length)notice(editorialErrors.map(i=>i.message).join(' · '),true);
   const passed=data.render_current&&data.manifest?.slides.every(s=>s.passed);
@@ -42,6 +49,40 @@
   const pending=data.pending??[];$('#pending').hidden=!pending.length;if(pending.length)$('#pending-text').textContent=pending.map(p=>p.type==='voice'?'Proposta de voz (você → tu) aguardando tua aprovação':'Proposta de edição da copy aguardando tua aprovação').join(' · ');
   if(grid)drawGrid();
  }
+ // The editorial agent: progress (phases read from the project's files), Diego's thesis choice, stop and retry.
+ const AGENT_TITLE={running:'O agente está escrevendo o carrossel',waiting:'Escolhe a tese para o agente seguir',failed:'O agente parou com um erro',stopped:'O agente foi interrompido',done:'O agente terminou'};
+ let agentStatus,drawnOptions='';
+ function drawAgent(){
+  const a=data.agent,st=a?.state,full=data.carousel.project.mode==='full';
+  $('#status').textContent=!st?'Sem copy':st.status==='running'?'Agente trabalhando':st.status==='waiting'?'Escolher a tese':st.status==='failed'?'Agente com erro':'Agente parado';$('#status').classList.add('pending');
+  $('#agent-title').textContent=st?AGENT_TITLE[st.status]:full?'Este projeto tem a transcrição e ainda não tem copy':'Este projeto ainda não tem copy';
+  $('#agent-activity').textContent=st?.activity||(!full?'Importa a copy pelo CLI (import-copy) ou cria um projeto novo.':data.agent_available?'O agente lê a transcrição e segue a metodologia da Skill: tese, hooks, spine, copy, teste cego e render.':'Claude Code não encontrado neste computador: instala o Claude Code (comando claude) ou define CAROUSEL_CLAUDE_BIN.');
+  $('#agent-activity').classList.toggle('running',st?.status==='running');agentMeta();
+  const phases=a?.phases??[];
+  $('#agent-phases').replaceChildren(...phases.map((p,i)=>{const li=document.createElement('li');li.textContent=p.label;li.className=p.done?'done':st?.status==='running'&&phases.slice(0,i).every(x=>x.done)?'current':'';return li;}));
+  const error=st?.status==='failed'?st.error:'';$('#agent-error').hidden=!error;$('#agent-error').textContent=error??'';
+  $('#agent-stop').hidden=st?.status!=='running';$('#agent-retry').hidden=!(st&&['failed','stopped'].includes(st.status));$('#agent-start').hidden=!(full&&!st&&data.agent_available);
+  $('#agent-log').textContent=(a?.log??[]).join('\n');
+  const waiting=st?.status==='waiting'&&!!a.options;$('#thesis-form').hidden=!waiting;
+  if(waiting&&drawnOptions!==a.options_hash)drawThesis(a);
+ }
+ function agentMeta(){const st=data?.agent?.state;if(!st){$('#agent-meta').textContent='';return;}const min=Math.max(0,Math.round(((st.finished_at?Date.parse(st.finished_at):Date.now())-Date.parse(st.started_at))/60000));$('#agent-meta').textContent=(st.stage==='thesis'?'Etapa 1 de 2 · até as teses':st.stage==='write'?'Etapa 2 de 2 · da tese ao render':'Etapa única · da transcrição ao render')+' · '+(st.status==='running'?'há ':'')+min+' min'+(st.cost_usd?' · ≈ US$ '+st.cost_usd.toFixed(2)+' (estimado)':'');}
+ setInterval(()=>{if(!$('#agent-view').hidden)agentMeta();},15000);
+ function option(name,value,title,detail,badge,checked){const label=document.createElement('label');label.className='option';const input=document.createElement('input');input.type='radio';input.name=name;input.value=value;input.checked=checked;const text=document.createElement('span'),strong=document.createElement('strong');strong.textContent=title;text.append(strong);if(detail){const small=document.createElement('small');small.textContent=detail;text.append(small);}label.append(input,text);if(badge){const em=document.createElement('em');em.textContent=badge;label.append(em);}return label;}
+ function drawThesis(a){
+  drawnOptions=a.options_hash;const o=a.options,f=$('#thesis-form');
+  $('#thesis-options').replaceChildren(...o.theses.map(t=>option('thesis',t.id,t.text,t.why,t.id===o.recommended.thesis?'recomendada':'',t.id===o.recommended.thesis)));
+  $('#hook-options').replaceChildren(...o.hooks.map(h=>option('hook',h.id,h.text,h.family,h.id===o.recommended.hook?'recomendado':'',h.id===o.recommended.hook)));
+  try{f.elements.by.value||=localStorage.getItem('carousel-reviewer')??'';}catch{}
+  syncHooks();
+ }
+ // The hooks on offer belong to the recommended thesis: another thesis sends the agent back to Fase 3 for it.
+ function syncHooks(){const o=data?.agent?.options,f=$('#thesis-form');if(!o||f.hidden||!f.elements.thesis)return;const other=f.elements.thesis.value!==o.recommended.thesis;$('#hooks-note').hidden=!other;$$('#hook-options input').forEach(i=>{i.disabled=other;});$('#hook-options').classList.toggle('disabled',other);}
+ $('#thesis-form').onchange=e=>{if(e.target.name==='thesis')syncHooks();};
+ $('#thesis-form').onsubmit=async e=>{e.preventDefault();const f=e.target,o=data.agent.options,other=f.elements.thesis.value!==o.recommended.thesis,by=f.elements.by.value.trim();try{localStorage.setItem('carousel-reviewer',by);}catch{}
+  try{await action('agent/choose',{options_hash:data.agent.options_hash,thesis:f.elements.thesis.value,hook:other?null:(f.elements.hook.value||null),hook_text:f.elements.hook_text.value.trim()||undefined,note:f.elements.note.value.trim()||undefined,by});notice('Tese escolhida. O agente segue da spine ao render.');}catch{}};
+ $('#agent-stop').onclick=async()=>{if(!confirm('Interromper o agente? O que ele já escreveu fica no projeto.'))return;try{await action('agent/stop');}catch{}};
+ $('#agent-retry').onclick=$('#agent-start').onclick=async()=>{try{await action('agent/start');notice('Agente iniciado.');}catch{}};
  // Live preview: the frozen slide HTML in an iframe, with the inspector values applied as they change.
  // Line breaks stay frozen, so it is an approximation; saving runs the real fit and render.
  const LIVE=['headline_size_delta','body_size_delta','block_gap','image_scale','focal_x','focal_y','align','position'];
@@ -107,10 +148,19 @@
  }
  form.onsubmit=async e=>{e.preventDefault();const payload=changes();if(Object.keys(payload).length===1){dirty=false;notice('Nada mudou neste slide.');return;}try{await action('adjust',payload);notice('Ajustes salvos. Preview atualizado.');}catch{}};
  $('#previous').onclick=()=>changeIndex(index-1);$('#next').onclick=()=>changeIndex(index+1);$('#grid-toggle').onclick=toggleGrid;
- document.addEventListener('keydown',e=>{if(working||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)||$$('dialog[open]').length)return;if(e.key==='ArrowRight')changeIndex(index+1);if(e.key==='ArrowLeft')changeIndex(index-1);});
+ document.addEventListener('keydown',e=>{if(working||agentMode()||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)||$$('dialog[open]').length)return;if(e.key==='ArrowRight')changeIndex(index+1);if(e.key==='ArrowLeft')changeIndex(index-1);});
  $('#refresh').onclick=async()=>{if(dirty&&!confirm('Descartar os ajustes ainda não salvos?'))return;try{await action('render');notice('Carrossel atualizado.');}catch{}};
- $('#new-project').onclick=()=>{if(dirty){notice('Salva os ajustes antes de criar outro carrossel.',true);return;}$('#create-dialog').showModal();};
- $('#create-form').onsubmit=async e=>{e.preventDefault();const f=e.target;$('#create-dialog').close();try{const result=await action('create',{slug:f.elements.slug.value,copy:f.elements.copy.value,family:f.elements.family.value});location.href='/?project='+encodeURIComponent(result.project);}catch{}};
+ // New carousel: from a transcript (the editorial agent writes the copy) or from ready copy.
+ function syncSource(){const f=$('#create-form'),t=f.elements.source.value==='transcript';f.querySelector('[data-source="transcript"]').hidden=!t;f.querySelector('[data-source="copy"]').hidden=t;f.elements.copy.required=!t;f.elements.family.options[0].hidden=!t;if(!t&&f.elements.family.value==='auto')f.elements.family.value='editorial_clean';$('#agent-missing').hidden=!t||data?.agent_available!==false;f.querySelector('button[type="submit"]').textContent=t?'Criar e chamar o agente':'Criar e renderizar';}
+ function openCreate(){syncSource();$('#create-dialog').showModal();}
+ $('#create-form').onchange=e=>{if(e.target.name==='source')syncSource();};
+ $('#new-project').onclick=()=>{if(dirty){notice('Salva os ajustes antes de criar outro carrossel.',true);return;}openCreate();};
+ $('#create-form').onsubmit=async e=>{e.preventDefault();const f=e.target,t=f.elements.source.value==='transcript',corpus=f.elements.corpus_id.value.trim();
+  if(t&&!corpus&&f.elements.transcript.value.trim().length<300){notice('Cola a transcrição inteira (ou informa o ID do vídeo no Corpus).',true);return;}
+  if(t&&!corpus&&!f.elements.confirm_public.checked){notice('Confirma que é um vídeo público de Diego, sem supervisão nem conversa com terceiros.',true);return;}
+  $('#create-dialog').close();
+  try{const payload=t?{source:'transcript',slug:f.elements.slug.value,transcript:corpus?undefined:f.elements.transcript.value,corpus_id:corpus||undefined,confirm_public:f.elements.confirm_public.checked,family:f.elements.family.value}:{source:'copy',slug:f.elements.slug.value,copy:f.elements.copy.value,family:f.elements.family.value};
+   const result=await action('create',payload);location.href='/?project='+encodeURIComponent(result.project);}catch{}};
  $('#new-version').onclick=()=>{if(dirty){notice('Salva os ajustes antes de criar outra versão.',true);return;}$('#variant-dialog').showModal();};
  $('#variant-form').onsubmit=async e=>{e.preventDefault();const f=e.target;$('#variant-dialog').close();try{const result=await action('variant',{name:f.elements.name.value,family:f.elements.family.value});navigateVariant(result.variant);}catch{}};
  $('#project-select').onchange=e=>{if(dirty&&!confirm('Descartar ajustes não salvos?')){e.target.value=data.project_name;return;}location.href='/?project='+encodeURIComponent(e.target.value);};
@@ -124,7 +174,7 @@
  $('#upload-form').onsubmit=async e=>{e.preventDefault();const rights=e.target.elements.rights.value;$('#upload-dialog').close();const reader=new FileReader();reader.onload=async()=>{try{const result=await action('asset',{id:data.carousel.slides[index].id,rights,data:String(reader.result).split(',')[1]});if(result.warning)notice(result.warning,true);else notice('Imagem adicionada ao slide.');}catch{}};reader.readAsDataURL(file);};
  window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
  // Changes made elsewhere (CLI, Claude, another window) arrive as server events; polling is only the fallback.
- async function refresh(){if(working)return;try{const latest=await request('state');if(latest.busy)return;const pendingKey=d=>JSON.stringify((d.pending??[]).map(p=>[p.type,p.hash]));if(latest.revision!==data.revision||latest.manifest?.render_hash!==data.manifest?.render_hash||latest.render_current!==data.render_current||latest.review_current!==data.review_current||pendingKey(latest)!==pendingKey(data)){if(dirty){notice('O projeto mudou fora desta janela. Salva só depois de recarregar.',true);return;}data=latest;draw();}}catch{}}
+ async function refresh(){if(working)return;try{const latest=await request('state');if(latest.busy)return;const pendingKey=d=>JSON.stringify((d.pending??[]).map(p=>[p.type,p.hash])),agentKey=d=>JSON.stringify([d.agent?.state?.status,d.agent?.state?.activity,d.agent?.phases?.map(p=>p.done),d.agent?.options_hash,d.agent?.log?.length]);if(agentKey(latest)!==agentKey(data)&&agentMode()&&!dirty){data=latest;draw();return;}if(latest.revision!==data.revision||agentKey(latest)!==agentKey(data)||latest.manifest?.render_hash!==data.manifest?.render_hash||latest.render_current!==data.render_current||latest.review_current!==data.review_current||pendingKey(latest)!==pendingKey(data)){if(dirty){notice('O projeto mudou fora desta janela. Salva só depois de recarregar.',true);return;}data=latest;draw();}}catch{}}
  function listen(){
   if(!window.EventSource||data.empty){poll=setInterval(()=>{if(!document.hidden)refresh();},12000);return;}
   const q=new URLSearchParams(endpoint('').slice(1));q.set('token',data.token);

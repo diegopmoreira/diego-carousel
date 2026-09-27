@@ -6,6 +6,7 @@ import { ROOT, readJson, projectsDir, contentDir, loadProject, jsonHash, writeJs
 import { listVariants } from '../project/variants.js';
 import { loadConfig } from '../project/config.js';
 import { pendingProposals } from '../qa/voice.js';
+import { agentView, claudeBin } from '../agent/editorial.js';
 export async function revision(dir:string){const p=await loadProject(dir);return jsonHash(p);}
 export const Adjustment=z.object({revision:z.string(),id:z.string(),family:Family.optional(),composition:Composition.optional(),align:z.enum(['left','center']).optional(),position:z.enum(['top','center','bottom']).optional(),fit:z.enum(['fill','preferred']).optional(),asset_id:z.string().nullable().optional(),image_need:z.boolean().optional(),focal_x:z.number().min(0).max(1).optional(),focal_y:z.number().min(0).max(1).optional(),params:Tweaks.shape.slides.valueType.shape.params.optional()}).strict();
 // Patch semantics: only fields present in the request change. The studio sends the fields the user touched.
@@ -48,7 +49,7 @@ export async function adjust(dir:string,input:unknown){
 }
 export async function listProjects(){return (await readdir(projectsDir(),{withFileTypes:true}).catch(()=>[])).filter(e=>e.isDirectory()&&/^[a-z0-9-]+$/.test(e.name)).map(e=>e.name).sort().reverse();}
 // With no project yet the studio still opens, so the first carousel can be created from the screen.
-export async function emptyState(){return {empty:true,projects:await listProjects()};}
+export async function emptyState(){return {empty:true,projects:await listProjects(),agent_available:!!await claudeBin()};}
 export async function state(dir:string){
  const p=await loadProject(dir),manifest=await optionalJson(path.join(dir,'render-manifest.json')),review=await optionalJson(path.join(dir,'qa/visual-review.json'));
  const {renderInputs}=await import('../render/render.js');const current=await renderInputs(dir);
@@ -57,5 +58,7 @@ export async function state(dir:string){
  const base=await contentDir(dir),pending=await pendingProposals(base,p.carousel.slides.map(({headline,body})=>({headline,body})));
  // Default gap per family (the slider starts from what the slide really uses when there is no tweak).
  const tokens=await readJson(path.join(ROOT,'design/tokens.json')),family_gaps=Object.fromEntries(Object.entries<any>(tokens.families).map(([k,v])=>[k,v.gap]));
- return {pending,family_gaps,image_compositions:IMAGE_COMPOSITIONS,projects,handle:(await loadConfig()).branding.handle,project_name:path.basename(await contentDir(dir)),revision:jsonHash(p),title:p.carousel.source.title,...p,variants:await listVariants(dir),active_variant:path.basename(path.dirname(dir))==='variants'?path.basename(dir):null,render_current:manifest?.project_hash===current.project_hash,review_current:!!review?.approved&&review.render_hash===manifest?.render_hash&&manifest?.project_hash===current.project_hash,manifest,fits:Object.fromEntries(await Promise.all(p.carousel.slides.map(async s=>[s.id,await optionalJson(path.join(dir,`fit/${s.id}.json`))]))),lint:await optionalJson(path.join(dir,'qa/editorial-lint.json'))};
+ // The editorial agent of this project (transcript → copy), for the progress view and the thesis choice.
+ const agent=path.basename(path.dirname(dir))==='variants'?null:await agentView(dir).catch(()=>null);
+ return {pending,family_gaps,image_compositions:IMAGE_COMPOSITIONS,agent,agent_available:!!await claudeBin(),projects,handle:(await loadConfig()).branding.handle,project_name:path.basename(await contentDir(dir)),revision:jsonHash(p),title:p.carousel.source.title,...p,variants:await listVariants(dir),active_variant:path.basename(path.dirname(dir))==='variants'?path.basename(dir):null,render_current:manifest?.project_hash===current.project_hash,review_current:!!review?.approved&&review.render_hash===manifest?.render_hash&&manifest?.project_hash===current.project_hash,manifest,fits:Object.fromEntries(await Promise.all(p.carousel.slides.map(async s=>[s.id,await optionalJson(path.join(dir,`fit/${s.id}.json`))]))),lint:await optionalJson(path.join(dir,'qa/editorial-lint.json'))};
 }

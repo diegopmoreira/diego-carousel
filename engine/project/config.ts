@@ -16,6 +16,9 @@ export const Config=z.object({
  providers:z.record(z.string(),z.unknown()),
  preview:z.object({port:z.number().int()}),
  export:z.object({sync_dir:z.string().nullable()}),
+ // The editorial agent the studio starts for a transcript (Claude Code, headless). model null = the user's default;
+ // the budget and the timeout apply to each stage (thesis, then copy to render).
+ agent:z.object({model:z.string().nullable().default(null),max_budget_usd:z.number().positive().nullable().default(40),timeout_minutes:z.number().int().min(5).max(240).default(90)}).default({model:null,max_budget_usd:40,timeout_minutes:90}),
 });
 export type ConfigData=z.infer<typeof Config>;
 // CAROUSEL_CONFIG points tests at another config file.

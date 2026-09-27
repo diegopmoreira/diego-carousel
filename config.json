@@ -49,5 +49,10 @@
   },
   "export": {
     "sync_dir": null
+  },
+  "agent": {
+    "model": null,
+    "max_budget_usd": 40,
+    "timeout_minutes": 90
   }
 }
