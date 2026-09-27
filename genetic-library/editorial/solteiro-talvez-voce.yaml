@@ -1,0 +1,49 @@
+name: solteiro-talvez-voce
+published: post7:7
+family: editorial_clean
+thesis: "Se todo vínculo morre antes de nascer, o denominador comum é você: corpo, cabeça, presença, filtro e comodismo sabotam o amor."
+architecture: diagnosis
+hook_family: controlled_accusation
+cta: share_specific
+slides:
+  - n: 1
+    role: interruption
+    headline: "Mais de 25 anos e continua solteiro? Talvez você seja o problema."
+    body: null
+  - n: 2
+    role: conflict
+    headline: "A desculpa favorita é dizer que ninguém presta."
+    body: "Pode até ter gente confusa no mercado. Mas se todo encontro vira decepção, todo interesse some e todo vínculo morre antes de nascer, talvez o problema não esteja só nos outros."
+  - n: 3
+    role: revelation
+    headline: "O que seus fracassos amorosos têm em comum? Você mesmo."
+    body: "Essa pergunta dói porque acaba com o teatro. Será que o problema são sempre os outros? Ou teu filtro, teu corpo, tua cabeça e tua rotina sabotam qualquer chance real de vínculo?"
+  - n: 4
+    role: mechanism
+    headline: "Teu corpo pode estar contando uma história ruim."
+    body: "Sono destruído, sedentarismo, higiene ruim, baixa energia e vícios fáceis falam antes da tua boca. Às vezes você não é rejeitado por azar. É tua presença que está pedindo socorro."
+  - n: 5
+    role: mechanism
+    headline: "Tua cabeça pode estar fugindo do amor."
+    body: "Tem gente que chama medo de paz. Quando fica sério, foge. Quando alguém gosta, enjoa. Quando não respondem, surta. Apego, ansiedade e ressentimento viram sabotagem com nome bonito."
+  - n: 6
+    role: mechanism
+    headline: "Você pode estar invisível."
+    body: "Trabalho, casa, tela, cama. Repete isso por meses e reclama que não encontra ninguém. Você quer colher relacionamento num campo onde nunca pisa. Sem vida social, amor vira milagre estatístico."
+  - n: 7
+    role: mechanism
+    headline: "Sua estratégia de escolha pode ser burra."
+    body: "Você quer um Frankenstein amoroso: corpo de um, mente de outro, valores de outro, intensidade de outro. Ou escolhe sempre o mesmo tipo e finge surpresa quando o final se repete."
+  - n: 8
+    role: second_turn
+    headline: "“Estou solteiro por opção” pode ser comodismo com perfume."
+    body: "Às vezes é projeto real. Mas muitas vezes é defesa. Você não espera a pessoa certa; evita desconforto, sacrifício, frustração e responsabilidade. Chama de liberdade o que talvez seja imaturidade."
+  - n: 9
+    role: reorganization
+    headline: "Relacionamento exige sair do próprio umbigo."
+    body: "Amar não é encontrar alguém que tampe teu buraco afetivo. É servir, escolher, amadurecer e aceitar o custo de construir algo que presta. Amor sem desconforto é só mimo premium."
+  - n: 10
+    role: hammer
+    headline: "Se ninguém presta, investigue o denominador comum."
+    body: "Arrume o corpo. Trate a cabeça. Apareça no mundo. Mude o filtro. Pare de usar “mercado ruim” para proteger tua covardia. Talvez o amor não fuja de você; talvez você não esteja pronto. Se gostou do post, considere compartilhar, ok?"
+notes: "Diagnóstico clássico: sintoma (solteiro) → culpado habitual (ninguém presta) → denominador comum (P3) → gargalos corpo, cabeça, presença e escolha (P4–P7) → desculpa que mantém tudo (P8, 'comodismo com perfume') → responsabilidade (P9) → martelo com lista de ações (P10). Imagens concretas e irônicas: 'milagre estatístico', 'Frankenstein amoroso', 'mimo premium'. O CTA final é genérico ('considere compartilhar'), exatamente o que a spec pede para evitar. Mistura 'você' e 'teu/tua'. O slide 10 original é uma variação antiga com banner 'Me siga…' no topo."

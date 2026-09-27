@@ -1,0 +1,49 @@
+name: inteligencia-emocional
+published: post31:07
+family: cinematic_condensed
+thesis: "Inteligência emocional não é sentir menos: é perceber, nomear corretamente e confrontar a emoção com a realidade para escolher a resposta."
+architecture: map
+hook_family: affirmation
+cta: none
+slides:
+  - n: 1
+    role: interruption
+    headline: "INTELIGÊNCIA EMOCIONAL É SABER NOMEAR BEM SUAS EMOÇÕES."
+    body: null
+  - n: 2
+    role: conflict
+    headline: "QUEM NÃO SABE DIZER O QUE SENTE ACABA OBEDECENDO AO QUE SENTE."
+    body: "Você acorda “meio estranho”, passa o dia inquieto e tenta resolver com comida, celular ou distração. Emoção sem nome vira comando. Antes de governar o que sente, identifique o que está acontecendo."
+  - n: 3
+    role: revelation
+    headline: "O CORPO FALA QUANDO A BOCA NÃO ENCONTRA PALAVRAS."
+    body: "Choro, riso nervoso, irritação e aperto no peito podem comunicar algo ainda confuso. Isso não é fraqueza. É uma experiência dentro de você pedindo linguagem."
+  - n: 4
+    role: mechanism
+    headline: "NOMEAR NÃO É REPRIMIR; É TIRAR A EMOÇÃO DO NEVOEIRO."
+    body: "Quando você percebe “estou com medo”, a angústia ganha forma. Agora existem uma ameaça e uma escolha: fugir, enfrentar, pedir ajuda ou reconhecer que o perigo foi exagerado."
+  - n: 5
+    role: mechanism
+    headline: "AMOR, ÓDIO E DESEJO MOSTRAM COMO VOCÊ PERCEBE ALGO."
+    body: "Amor é reconhecer um bem e desejar união. Ódio é perceber algo como mal. Desejo é querer um bem ainda ausente. O caos começa quando você chama obsessão de amor e impulso de necessidade."
+  - n: 6
+    role: mechanism
+    headline: "ALEGRIA E TRISTEZA REVELAM PRESENÇA OU AUSÊNCIA."
+    body: "Alegria surge quando um bem está presente. Tristeza aparece quando ele foi perdido ou está ausente. Em vez de dizer apenas “estou mal”, pergunte: qual bem deveria estar aqui?"
+  - n: 7
+    role: contrast
+    headline: "AVERSÃO E MEDO NÃO SÃO A MESMA COISA."
+    body: "Aversão é o impulso de se afastar de um mal que se aproxima. Medo surge quando esse mal parece maior do que você. A ameaça é enorme ou você está se enxergando pequeno demais?"
+  - n: 8
+    role: mechanism
+    headline: "ESPERANÇA E DESESPERO DEPENDEM DO QUE VOCÊ CONSIDERA POSSÍVEL."
+    body: "Esperança é enxergar um bem difícil e ainda acreditar que pode alcançá-lo. Desespero é concluir que não existe caminho. Emoção saudável precisa respeitar a realidade."
+  - n: 9
+    role: second_turn
+    headline: "AUDÁCIA E IRA TAMBÉM PRECISAM DE DIREÇÃO."
+    body: "Audácia enfrenta um mal difícil. Ira reage ao que parece injusto para restaurar a ordem. Mas nem toda briga é sua, nem toda frustração é injustiça. Às vezes é apenas ego ferido."
+  - n: 10
+    role: hammer
+    headline: "INTELIGÊNCIA EMOCIONAL NÃO É SENTIR MENOS."
+    body: "É perceber o que sente, dar o nome correto, confrontar a emoção com a realidade e escolher a resposta adequada. Quem apenas sente reage. Quem sabe nomear consegue decidir."
+notes: "Arquitetura mapa: P2–P3 abrem o problema (emoção sem nome vira comando), P4 dá o princípio organizador (nomear tira do nevoeiro) e P5–P9 percorrem as paixões em pares (amor/ódio/desejo, alegria/tristeza, aversão/medo, esperança/desespero, audácia/ira). Cada headline de categoria é uma proposição, não um rótulo. P10 retoma a capa pelo contraste (não é sentir menos). Stills de filme sustentam o clima de cada emoção. Voz em 'você' (anterior à regra 'sempre tu')."

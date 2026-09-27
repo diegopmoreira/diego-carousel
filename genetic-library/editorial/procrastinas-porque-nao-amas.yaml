@@ -1,0 +1,49 @@
+name: procrastinas-porque-nao-amas
+published: post18:05
+family: editorial_clean
+thesis: "Procrastinação não é falta de técnica: é acídia, uma tristeza diante do bem; a saída é amor para fora, não amor próprio."
+architecture: deconstruction
+hook_family: affirmation
+cta: comment_keyword
+slides:
+  - n: 1
+    role: interruption
+    headline: "Procrastinas porque não amas: simples assim."
+    body: null
+  - n: 2
+    role: conflict
+    headline: "Tu acha que procrastinação é falta de técnica porque isso te deixa confortável."
+    body: "Aí procura pomodoro, dopamina, agenda, suplemento, aplicativo e método bonitinho. Tudo isso pode ajudar. Mas se a tarefa perdeu sentido por dentro, técnica nenhuma levanta um coração morto."
+  - n: 3
+    role: revelation
+    headline: "Amar alguma coisa é se mover em direção a ela."
+    body: "Tu vê um bem, teu afeto se inclina, tu age e depois se alegra quando alcança. A procrastinação quebra esse caminho no meio. Tu até diz que quer aquilo, mas não se move. O bem já não te puxa com força suficiente."
+  - n: 4
+    role: mechanism
+    headline: "O nome antigo disso é acídia."
+    body: "Não é só preguiça de levantar da cama. É uma tristeza diante do bem que deveria te mover. Tu olha para o projeto, o casamento, o trabalho, a vida espiritual, a saúde, e aquilo que antes brilhava começa a parecer pesado, distante e sem gosto."
+  - n: 5
+    role: escalation
+    headline: "A primeira filha da procrastinação é o desespero."
+    body: "Tu ainda lembra do que queria, mas já não acredita que chega lá. O projeto parece inútil, o casamento parece sem saída, a meta perde futuro. Antes de parar de agir, tu para de esperar."
+  - n: 6
+    role: escalation
+    headline: "Depois vem a alma pequena e a consciência anestesiada."
+    body: "Tu continua por inércia, mas sem fogo. Faz o mínimo, empurra com a barriga, vai murchando. Depois nem o dever pesa mais. Aquilo que deveria te chamar já não chama. Tu fica meio bêbado por dentro."
+  - n: 7
+    role: escalation
+    headline: "Então aparecem o rancor e a malícia."
+    body: "Quem tenta te puxar de volta vira inimigo. Amigo, terapeuta, cônjuge, família, todo mundo parece chato. Depois tu chuta o pau da barraca: “quer saber? agora eu largo tudo mesmo.” A fuga começa a virar vingança."
+  - n: 8
+    role: escalation
+    headline: "No fim, tu tenta preencher o vazio com qualquer anestesia."
+    body: "Tela, comida, bebida, prazer barato, distração, compulsão, barulho. Não é liberdade. É só um coração sem alegria tentando se entupir de estímulo. A procrastinação avançada não descansa; ela se intoxica."
+  - n: 9
+    role: second_turn
+    headline: "A saída não é amor próprio, é amor para fora."
+    body: "Amor próprio muitas vezes gira em circuito fechado. Mas acordar cedo para servir alguém que tu ama muda tudo. Quando existe um porquê vivo, o corpo obedece melhor. O amor arranca a ação de onde a técnica não alcança."
+  - n: 10
+    role: hammer
+    headline: "Quando a luz apagar, age como se ainda houvesse luz."
+    body: "Perseverança é dar o próximo passo quando o sentido sumiu da tua vista. Reza, trabalha, cumpre o dever pequeno e prova a alegria mínima de voltar ao bem.\n\nSe você quer uma masterclass + plano de ação + IA Clínica para te ajudar nisso, comenta “RSN” que tenho algo pra ti!"
+notes: "Desconstrução: crença popular (falta de técnica) → P3 princípio (amar é se mover) → P4 nome preciso (acídia) → P5–P8 escalada pelas 'filhas' da acídia (desespero, pusilanimidade, rancor, malícia, divagação), uma por painel. P9 é a segunda virada contra o discurso de amor próprio. P10 martelo + CTA de palavra-chave 'RSN' (funil ManyChat). Voz em 'tu', com o 'você' escapando só no CTA. Vocabulário tomista traduzido em imagem concreta ('meio bêbado por dentro', 'chuta o pau da barraca')."

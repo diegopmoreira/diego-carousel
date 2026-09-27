@@ -1,0 +1,49 @@
+name: manual-carentes-e-afetados
+published: post22:07
+family: editorial_clean
+thesis: "O problema não é ser carente: é não saber nomear a falta e tentar matar a sede em fontes que não saciam."
+architecture: map
+hook_family: manual
+cta: none
+slides:
+  - n: 1
+    role: interruption
+    headline: "O Manual Definitivo para Carentes e Afetados."
+    body: null
+  - n: 2
+    role: conflict
+    headline: "O problema não é você ser carente."
+    body: "Todo ser humano sente falta de algo: colo, pertencimento, intimidade, reconhecimento, proteção ou companhia. O desastre começa quando você sente sede, mas não sabe nomear do quê."
+  - n: 3
+    role: revelation
+    headline: "Quem não entende a própria falta aceita qualquer coisa."
+    body: "Uma mensagem vira esperança. Uma curtida vira afeto. Um elogio vira promessa. Você não escolhe porque encontrou algo bom. Escolhe porque estava desesperado para sentir qualquer coisa."
+  - n: 4
+    role: mechanism
+    headline: "Atenção barata não é amor."
+    body: "Responder rápido, reagir a stories e elogiar exige pouco. Amar custa presença, lealdade, responsabilidade e permanência quando a novidade acaba. O carente confunde ser notado com ser conhecido."
+  - n: 5
+    role: mechanism
+    headline: "Você está tentando matar sede com água salgada."
+    body: "Validação, exposição e relações rasas aliviam por minutos. Depois, o vazio volta maior. Não porque você precisa de mais atenção, mas porque continua procurando água limpa no lugar errado."
+  - n: 6
+    role: mechanism
+    headline: "Carência desordenada transforma pessoas em analgésicos."
+    body: "Você não se aproxima para amar. Aproxima-se para ser acalmado, confirmado e resgatado. O outro vira remédio contra o vazio. Quando o efeito passa, você cobra uma dose maior."
+  - n: 7
+    role: second_turn
+    headline: "Fingir autossuficiência deixa a carência mais covarde."
+    body: "Você precisa, mas finge que não. Ama, mas faz jogo. Quer proximidade, mas age com frieza. A armadura protege da rejeição e também impede qualquer intimidade."
+  - n: 8
+    role: reorganization
+    headline: "Carência madura sabe exatamente do que precisa."
+    body: "Ela consegue dizer: “preciso de companhia”, “quero pertencimento”, “sinto falta de intimidade”. Quando a necessidade ganha nome, você para de pedir tudo a qualquer pessoa."
+  - n: 9
+    role: reorganization
+    headline: "Escolha os poços onde vale a pena beber."
+    body: "Duas ou três relações verdadeiras alimentam mais que centenas de sinais digitais. Gente que conhece você, permanece quando aperta e não usa sua vulnerabilidade como arma."
+  - n: 10
+    role: hammer
+    headline: "Não deixe de ser carente; deixe de ser mendigo."
+    body: "Admita a sede. Descubra o que falta. Pare de beber em qualquer poça. Vulnerabilidade não é fraqueza. Fraqueza é fingir que não precisa de ninguém enquanto aceita migalhas."
+notes: "A metáfora organiza o carrossel inteiro: sede (falta legítima) → água salgada (validação rasa) → analgésico (o outro como remédio) → poços (relações verdadeiras) → poça (migalhas). P2 tira a culpa da necessidade e P3 entrega a primeira frase memorável; P7 é a segunda virada contra o extremo oposto (autossuficiência). O martelo retoma a capa com contraste (carente ≠ mendigo). É o exemplo de referência da spec para metáfora como modelo mental. Voz em 'você'."

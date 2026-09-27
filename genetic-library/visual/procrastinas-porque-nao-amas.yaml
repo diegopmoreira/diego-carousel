@@ -1,0 +1,7 @@
+name: procrastinas-porque-nao-amas
+family: editorial_clean
+cover: {composition: full_bleed, headline_position: bottom, align: center, footer: false, profile: centered_above_headline, swipe_cue: "Arrasta para o lado > centralizado sob a headline"}
+body: {composition: image_card, text_position: top, card: {width: 960, ratio: "2:1", radius: 32, shadow: false}, headline: "Inter ExtraBold, caixa de frase", body: "Inter, cinza #CBCBCB"}
+measures: {headline_px: 62, headline_lh: 1.2, body_px: 37, margin_x: 60, headline_top: 228}
+images: "stills de filme/série em card horizontal; em geral rosto ou dupla em cena"
+last_slide: "variação antiga: banner rosa 'Me siga para mais conteúdos como esse!' no topo + foto sangrando + texto embaixo"
