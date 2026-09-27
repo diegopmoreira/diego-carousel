@@ -11,7 +11,9 @@ import { render, validate, exportProject, review, renderInputs } from './render/
 import { serve } from './preview/server.js';
 import { listProjects } from './preview/api.js';
 import { createVariant, promoteVariant } from './project/variants.js';
-import { addAsset } from './project/assets.js';
+import { addAsset, chooseAsset } from './project/assets.js';
+import { requestAsset, cancelRequest, addFromRequest } from './project/requests.js';
+import { candidates } from './render/candidates.js';
 import { draft, slideAdd, slideMove, slideRemove } from './project/draft.js';
 import { proposeVoice, approveVoice } from './qa/voice.js';
 import { addIdea, listIdeas } from './project/backlog.js';
@@ -46,8 +48,11 @@ npm run carousel -- <comando>
   review <projeto> --reviewer <nome> --note <nota> [--approved] [--human]
   export <projeto>
   preview <projeto> [--port 4321]
-  asset add <projeto> <arquivo> --rights <licença/origem> [--slide id]
-  asset list <projeto>
+  asset add <projeto> <arquivo> --rights <licença/origem> [--slide id] [--alternative]
+  asset request <projeto> <slide-id> [--variants n] [--concept t]   ticket de geração (prompt, teto)
+  asset add <projeto> --request <pedido> (--url <u> | <arquivo>) [--seed s] [--model m] [--score n --rationale t]
+  asset candidates <projeto> <slide-id> | asset choose <projeto> <slide-id> <asset-id> [--score n --rationale t]
+  asset cancel <projeto> <pedido> | asset list <projeto>
   log <projeto> <TAG> <mensagem>
   doctor
 
@@ -86,10 +91,19 @@ try{
  case 'status':{const dir=project(),p=await renderInputs(dir),l=await optionalJson(path.join(dir,'qa/editorial-lint.json')),r=await optionalJson(path.join(dir,'render-manifest.json')),v=await optionalJson(path.join(dir,'qa/visual-review.json'));print({project:dir,mode:p.carousel.project.mode,slides:p.carousel.slides.length,lint_current:!!l?.passed&&l.content_hash===jsonHash(p.carousel),render_current:r?.project_hash===p.project_hash,visual_review_current:!!v?.approved&&v.render_hash===r?.render_hash,source:p.carousel.source});break;}
  case 'preview':{let dir:string|null=args[0]&&!args[0].startsWith('--')?path.resolve(args[0]):null;if(!dir){const projects=await listProjects();dir=projects.length?path.join(projectsDir(),projects[0]):null;}const config=await loadConfig();const server=await serve(dir,Number(flag('port')??config.preview.port),true);print(server.url);for(const sig of ['SIGINT','SIGTERM'] as const)process.on(sig,()=>void server.close().then(()=>process.exit(0)));break;}
  case 'asset':{
-  const sub=args.shift(),dir=project();
+  const sub=args.shift(),dir=project(),num=(v?:string)=>v===undefined?undefined:Number(v);
   if(sub==='list'){print((await loadProject(dir)).assets);break;}
-  if(sub!=='add')throw Error('Disponíveis: asset add|list');
-  const bytes=await readFile(path.resolve(required(args[1],'Informe o arquivo de imagem')));const result=await addAsset(dir,bytes,required(flag('rights'),'Informe --rights com origem e direitos'),flag('slide'));
+  if(sub==='request'){print(await requestAsset(dir,required(args[1],'asset request <projeto> <slide-id> [--variants n] [--concept texto]'),{variants:num(flag('variants')),concept:flag('concept'),provider:flag('provider'),model:flag('model')}));break;}
+  if(sub==='cancel'){print(await cancelRequest(dir,required(args[1],'asset cancel <projeto> <pedido>')));break;}
+  if(sub==='choose'){print(await chooseAsset(dir,required(args[1],'asset choose <projeto> <slide-id> <asset-id>'),required(args[2],'Informe o asset'),{score:num(flag('score')),rationale:flag('rationale')}));break;}
+  if(sub==='candidates'){print(await candidates(dir,required(args[1],'asset candidates <projeto> <slide-id>')));break;}
+  if(sub!=='add')throw Error('Disponíveis: asset add|request|cancel|choose|candidates|list');
+  const request=flag('request');
+  if(request){
+   const file=args[1]&&!args[1].startsWith('--')?path.resolve(args[1]):undefined;
+   print(await addFromRequest(dir,request,{url:flag('url'),bytes:file?await readFile(file):undefined},{seed:flag('seed'),model:flag('model'),params:flag('params')?JSON.parse(flag('params')!):undefined,score:num(flag('score')),rationale:flag('rationale')}));break;
+  }
+  const bytes=await readFile(path.resolve(required(args[1],'Informe o arquivo de imagem')));const result=await addAsset(dir,bytes,required(flag('rights'),'Informe --rights com origem e direitos'),flag('slide'),{alternative:args.includes('--alternative')});
   print(result);break;
  }
  case 'log':await log(project(),required(args[1],'Informe TAG'),required(args.slice(2).join(' '),'Informe mensagem'));break;

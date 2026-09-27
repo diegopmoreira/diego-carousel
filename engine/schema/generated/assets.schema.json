@@ -50,6 +50,56 @@
           "prompt": {
             "type": "string"
           },
+          "negative": {
+            "type": "string"
+          },
+          "seed": {
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "params": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "request_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{3,63}$"
+          },
+          "source_url": {
+            "type": "string"
+          },
+          "focal_point": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "y": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10
+          },
+          "rationale": {
+            "type": "string"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",

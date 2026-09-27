@@ -28,7 +28,9 @@
   $('#canvas').src=imageUrl(index);$('#canvas').alt='Slide '+(index+1)+': '+s.headline;$('#canvas').onerror=()=>{$('#missing').hidden=false;};$('#canvas').onload=()=>{$('#missing').hidden=true;};$('#slide-label').textContent=String(index+1).padStart(2,'0')+' / '+String(data.carousel.slides.length).padStart(2,'0');$('#inspector-title').textContent=index===0?'Capa':'Slide '+String(index+1).padStart(2,'0');
   const values={family:data.art.family,composition:data.tweaks.slides[s.id]?.composition??d.composition,align:d.layout.align,position:d.layout.headline_position,fit:d.fit.headline,headline_size_delta:t.headline_size_delta??0,body_size_delta:t.body_size_delta??0,block_gap:t.block_gap??44,image_scale:t.image_scale??1,focal_x:Math.round(d.image.focal_point.x*100),focal_y:Math.round(d.image.focal_point.y*100)};
   for(const [name,value]of Object.entries(values))field(name).value=value;
-  field('asset_id').replaceChildren(new Option(d.image.need?'Sem imagem (pendente)':'Sem imagem',''),...data.assets.assets.map((a,i)=>new Option('Imagem '+(i+1)+' · '+a.rights.slice(0,30),a.id)));field('asset_id').value=d.image.asset_id??'';rangeLabels();
+  // Current image first, then this slide's alternatives, then the rest of the library.
+  const alternatives=new Set(d.image.alternatives??[]),rank=a=>a.id===d.image.asset_id?0:alternatives.has(a.id)?1:2,label=a=>(rank(a)===0?'Atual':rank(a)===1?'Alternativa':'Biblioteca')+' · '+(a.origin==='generated'?'gerada':'enviada')+(a.score!==undefined?' · nota '+a.score:'')+' · '+a.id.slice(-4);
+  field('asset_id').replaceChildren(new Option(d.image.need?'Sem imagem (pendente)':'Sem imagem',''),...[...data.assets.assets].sort((a,b)=>rank(a)-rank(b)).map(a=>new Option(label(a),a.id)));field('asset_id').value=d.image.asset_id??'';rangeLabels();
   // Snapshot of what the form shows; saving sends only the fields that differ from it.
   initial=Object.fromEntries([...Object.keys(values),'asset_id'].map(n=>[n,String(field(n).value)]));
   $('#copy-headline').textContent=s.headline;$('#copy-body').textContent=s.body??'Sem corpo de texto.';

@@ -54,3 +54,4 @@ export async function withLock<T>(dir:string,fn:()=>Promise<T>):Promise<T>{
  try{return await held.run(new Set([...(mine??[]),file]),fn);}finally{await rm(file,{force:true});}
 }
 export class LockedError extends Error{constructor(pid?:number){super(`Projeto em uso por outro processo${pid?` (pid ${pid})`:''}. Aguarda terminar.`);}}
+export const escapeXml=(t:string)=>t.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]!));

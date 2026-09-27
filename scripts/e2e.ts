@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
 import {mkdtemp,readFile,writeFile,rm,mkdir} from 'node:fs/promises';
 import os from 'node:os';import path from 'node:path';
-import {ROOT,readJson,writeJson,hash} from '../engine/project/io.js';
+import {ROOT,readJson,writeJson,hash,loadProject} from '../engine/project/io.js';
 import {render,validate,exportProject,review} from '../engine/render/render.js';
 import {importCopy,createProject} from '../engine/project/create.js';
 import {draft} from '../engine/project/draft.js';
+import {requestAsset,addFromRequest} from '../engine/project/requests.js';
+import {candidates} from '../engine/render/candidates.js';
+import {listVariants} from '../engine/project/variants.js';
+import sharp from 'sharp';
 const dir=await mkdtemp(path.join(os.tmpdir(),'diego-carousel-e2e-'));
 try{
  for(const name of ['source','qa','assets'])await mkdir(path.join(dir,name),{recursive:true});
@@ -55,6 +59,12 @@ try{
  await writeFile(path.join(fullDir,'editorial-report.md'),await readFile(path.join(ROOT,'fixtures/full/editorial-report.md'),'utf8'));
  await draft(fullDir,path.join(ROOT,'fixtures/full/copy.md'),path.join(ROOT,'fixtures/full/editorial.json'));
  const fullRender=await render(fullDir);assert.ok(fullRender.slides.every((s:any)=>s.passed),JSON.stringify(fullRender.slides.filter((s:any)=>!s.passed)));
+ // Images: a cover ticket, two results (current + alternative) and the candidates sheet with the real headline.
+ const cover=(await loadProject(fullDir)).carousel.slides[0].id,ticket=await requestAsset(fullDir,cover,{variants:2,concept:'a glass of water on a dark table'});
+ for(const color of ['#2a3140','#40302a'])await addFromRequest(fullDir,ticket.id,{bytes:await sharp({create:{width:1088,height:1360,channels:3,background:color}}).png().toBuffer()});
+ const sheet=await candidates(fullDir,cover);assert.equal(sheet.images.length,2);assert.equal((await sharp(sheet.sheet).metadata()).width,2*(432+16)+16);
+ assert.deepEqual(await listVariants(fullDir),[],'temporary candidate variants are removed');
+ const withCover=await render(fullDir);assert.ok(withCover.slides.every((s:any)=>s.passed));
  const fullValidation=await validate(fullDir);assert.ok(!fullValidation.passed&&fullValidation.errors.every((e:string)=>/placeholder/.test(e)),JSON.stringify(fullValidation.errors));
  console.log('E2E aprovado: duas famílias, oito composições, gate de revisão, hashes, rerender isolado, overflow sem reescrita, fonte fallback detectada e fluxo full (Corpus → draft → render).');
 }finally{await rm(dir,{recursive:true,force:true});}

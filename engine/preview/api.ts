@@ -20,7 +20,9 @@ export async function adjust(dir:string,input:unknown){
  if(patch.asset_id!==undefined){
   if(patch.asset_id&&!p.assets.assets.some(x=>x.id===patch.asset_id))throw Error('Imagem desconhecida');
   // Removing the image never removes the requirement: a needed image falls back to a declared placeholder.
-  if(patch.asset_id){d.image.asset_id=patch.asset_id;d.image.placeholder=false;}else{delete d.image.asset_id;d.image.placeholder=d.image.need;}
+  // Choosing another image keeps the previous one among the slide's alternatives.
+  const previous=d.image.asset_id;
+  if(patch.asset_id){d.image.asset_id=patch.asset_id;d.image.placeholder=false;d.image.alternatives=[...new Set([...d.image.alternatives,...(previous?[previous]:[])])].filter(a=>a!==patch.asset_id);}else{delete d.image.asset_id;d.image.placeholder=d.image.need;if(previous)d.image.alternatives=[...new Set([...d.image.alternatives,previous])];}
  }
  if(patch.focal_x!==undefined)d.image.focal_point.x=patch.focal_x;if(patch.focal_y!==undefined)d.image.focal_point.y=patch.focal_y;
  const comp=p.tweaks.slides[patch.id]?.composition??d.composition;
