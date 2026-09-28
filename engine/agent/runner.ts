@@ -7,7 +7,13 @@ import readline from 'node:readline';
 import { spawn, type ChildProcess } from 'node:child_process';
 // The studio may itself run inside a Claude Code session (started from the terminal of one): the agent is an
 // independent run, so it must not inherit the markers that make claude refuse to start nested.
-export function agentEnv(env:NodeJS.ProcessEnv=process.env){const out={...env};for(const k of Object.keys(out))if(k==='CLAUDECODE'||k.startsWith('CLAUDE_CODE_'))delete out[k];return out;}
+export function agentEnv(env:NodeJS.ProcessEnv=process.env){
+ const out={...env},nested=!!env.CLAUDECODE;
+ for(const k of Object.keys(out))if(k==='CLAUDECODE'||k.startsWith('CLAUDE_CODE_')||k==='CLAUDE_PID'||k==='CLAUDE_EFFORT'||k.startsWith('CLAUDE_AGENT_SDK'))delete out[k];
+ // Inside a session the API endpoint belongs to that session's host (it authenticates for it); the agent uses Diego's own login.
+ if(nested)delete out.ANTHROPIC_BASE_URL;
+ return out;
+}
 import { randomUUID } from 'node:crypto';
 import { appendFile } from 'node:fs/promises';
 import { ROOT, readJson, writeJson, loadProject, log, optionalJson } from '../project/io.js';
