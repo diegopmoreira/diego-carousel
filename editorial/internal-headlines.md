@@ -64,9 +64,17 @@ npm run carousel -- spine <projeto> --blind    # só as headlines, para o teste 
 
 Um subagente recebe **apenas** a saída de `spine --blind` (sem tese, sem relatório, sem bodies) e
 responde: (1) qual é a tese em uma frase; (2) o argumento avança a cada painel? onde tropeça?
-(3) qual painel poderia sair. Registrar em `## Teste cego` do relatório: a tese reconstruída, a
-comparação com `central_thesis` e o veredito (`aprovado` / `corrigir`). Se a tese reconstruída não
-bate, corrigir a spine e repetir. Nunca declarar que houve teste cego sem ter rodado.
+(3) algum painel poderia sair sem perda? ("nenhum" é uma resposta válida). Registrar em
+`## Teste cego` do relatório: a tese reconstruída, a comparação com `central_thesis` e o veredito
+(`aprovado` / `corrigir`).
+
+- O veredito depende da tese: se a reconstruída bate e o argumento avança, é `aprovado`.
+- A resposta (3) é um sinal, não uma ordem. Cortar só quando um painel repete o anterior de verdade
+  (anti-filler); antes de cortar, tentar fundir ou afiar a headline. Nunca ficar abaixo do mínimo de
+  painéis (`config.json` → `slides.min`); crítica de gosto não é motivo de corte.
+- No máximo **duas rodadas**: a primeira e, se a tese não bateu ou algo repetia, uma depois da
+  correção. Registrar as duas e seguir.
+- Nunca declarar que houve teste cego sem ter rodado.
 
 ## Exemplo de spine (arquitetura base, tese da especificação)
 

@@ -55,7 +55,7 @@
  function drawAgent(){
   const a=data.agent,st=a?.state,full=data.carousel.project.mode==='full';
   $('#status').textContent=!st?'Sem copy':st.status==='running'?'Agente trabalhando':st.status==='waiting'?'Escolher a tese':st.status==='failed'?'Agente com erro':'Agente parado';$('#status').classList.add('pending');
-  $('#agent-title').textContent=st?AGENT_TITLE[st.status]:full?'Este projeto tem a transcrição e ainda não tem copy':'Este projeto ainda não tem copy';
+  $('#agent-title').textContent=st?(st.status==='running'&&st.stage==='thesis'?'O agente está lendo a transcrição e buscando a tese':AGENT_TITLE[st.status]):full?'Este projeto tem a transcrição e ainda não tem copy':'Este projeto ainda não tem copy';
   $('#agent-activity').textContent=st?.activity||(!full?'Importa a copy pelo CLI (import-copy) ou cria um projeto novo.':data.agent_available?'O agente lê a transcrição e segue a metodologia da Skill: tese, hooks, spine, copy, teste cego e render.':'Claude Code não encontrado neste computador: instala o Claude Code (comando claude) ou define CAROUSEL_CLAUDE_BIN.');
   $('#agent-activity').classList.toggle('running',st?.status==='running');agentMeta();
   const phases=a?.phases??[];
@@ -66,7 +66,7 @@
   const waiting=st?.status==='waiting'&&!!a.options;$('#thesis-form').hidden=!waiting;
   if(waiting&&drawnOptions!==a.options_hash)drawThesis(a);
  }
- function agentMeta(){const st=data?.agent?.state;if(!st){$('#agent-meta').textContent='';return;}const min=Math.max(0,Math.round(((st.finished_at?Date.parse(st.finished_at):Date.now())-Date.parse(st.started_at))/60000));$('#agent-meta').textContent=(st.stage==='thesis'?'Etapa 1 de 2 · até as teses':st.stage==='write'?'Etapa 2 de 2 · da tese ao render':'Etapa única · da transcrição ao render')+' · '+(st.status==='running'?'há ':'')+min+' min'+(st.cost_usd?' · ≈ US$ '+st.cost_usd.toFixed(2)+' (estimado)':'');}
+ function agentMeta(){const st=data?.agent?.state;if(!st){$('#agent-meta').textContent='';return;}const min=Math.max(0,Math.round(((st.finished_at?Date.parse(st.finished_at):Date.now())-Date.parse(st.started_at))/60000));$('#agent-meta').textContent=(st.stage==='thesis'?'Etapa 1 de 2 · até as teses':st.stage==='write'?'Etapa 2 de 2 · da tese ao render':'Etapa única · da transcrição ao render')+' · '+(st.status==='running'?(min<1?'começou agora':'há '+min+' min'):'durou '+Math.max(1,min)+' min')+(st.cost_usd?' · ≈ US$ '+st.cost_usd.toFixed(2)+' (estimado)':'');}
  setInterval(()=>{if(!$('#agent-view').hidden)agentMeta();},15000);
  function option(name,value,title,detail,badge,checked){const label=document.createElement('label');label.className='option';const input=document.createElement('input');input.type='radio';input.name=name;input.value=value;input.checked=checked;const text=document.createElement('span'),strong=document.createElement('strong');strong.textContent=title;text.append(strong);if(detail){const small=document.createElement('small');small.textContent=detail;text.append(small);}label.append(input,text);if(badge){const em=document.createElement('em');em.textContent=badge;label.append(em);}return label;}
  function drawThesis(a){

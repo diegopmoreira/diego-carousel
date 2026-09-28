@@ -119,11 +119,12 @@ export function agentPrompt(dir:string,stage:Stage,{choice,family='auto'}:{choic
   options,
   'Pare aí: não escreva a spine nem a copy, não rode draft e não mande teses para o backlog (isso vem depois da escolha). Diego escolhe a tese no estúdio e a etapa 2 continua desta conversa.',
   'Termine com uma linha: a tese recomendada e o hook recomendado.'].join('\n\n');
- if(stage==='full')return [...head,'Sem checkpoint da tese: siga as Fases 1 a 9 da Skill do começo ao fim.',...visual].join('\n\n');
+ if(stage==='full')return [...head,'Sem checkpoint da tese: siga as Fases 1 a 9 da Skill do começo ao fim.','Teste cego: no máximo duas rodadas; aprovado quando a tese reconstruída bate e o argumento avança. A pergunta sobre qual painel sobra é sinal, não ordem: corte só repetição real e nunca fique abaixo do mínimo de painéis do config.json.',...visual].join('\n\n');
  if(!choice)throw Error('Etapa 2 sem a escolha de Diego (qa/thesis-choice.json)');
  return [...head,
   `Etapa 2 de 2. Diego escolheu no estúdio (vale como o checkpoint da tese):\n- Tese: ${quote(choice.thesis_text)} (${choice.thesis})\n- Hook: ${choice.hook_text?quote(choice.hook_text):'nenhum dos propostos: refaça ## Hooks para esta tese antes de seguir'}${choice.note?`\n- Nota de Diego: ${quote(choice.note)}`:''}`,
   'Registre a escolha no editorial-report.md e continue: as teses que sobraram vão para o backlog (idea add); Fases 4 a 7 (spine, teste cego com subagente, copy.md + editorial.json, draft, lint, direção de arte).',
+  'Teste cego: no máximo duas rodadas; aprovado quando a tese reconstruída bate e o argumento avança. A pergunta sobre qual painel sobra é sinal, não ordem: corte só repetição real e nunca fique abaixo do mínimo de painéis do config.json.',
   ...visual].join('\n\n');
 }
 // Starts (or restarts) a stage in a detached runner. The stage defaults to what comes next for the project.

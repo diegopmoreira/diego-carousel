@@ -79,9 +79,11 @@ defensabilidade + progressão. Registrar em `## Hooks`.
 a regra atual é sempre "tu". Escrever só as headlines + `next_question` + `adds`. Registrar em
 `## Spine`.
 **Teste cego:** depois do draft (Fase 5), rodar `spine <projeto> --blind` e passar SÓ essa saída a
-um subagente com a pergunta: "Qual é a tese em uma frase? O argumento avança a cada painel? Qual
-painel sobra?". Registrar a resposta literal, a comparação com a tese e o veredito em
-`## Teste cego`. Se não bater, corrigir a spine antes dos bodies. Nunca inventar o resultado.
+um subagente com a pergunta: "Qual é a tese em uma frase? O argumento avança a cada painel? Algum
+painel poderia sair sem perda? (pode ser 'nenhum')". Registrar a resposta literal, a comparação com
+a tese e o veredito em `## Teste cego`. Aprovado quando a tese reconstruída bate e o argumento
+avança; a resposta sobre cortes é sinal, não ordem (cortar só repetição real, preferir fundir ou
+afiar, nunca abaixo de `slides.min`). No máximo duas rodadas. Nunca inventar o resultado.
 
 **Fase 5 — Bodies e estrutura.** `language-style.md`. Escrever `copy.md` (formato P1…Pn) e um
 `editorial.json` com `editorial` (briefing, tese, hook, candidatos, CTA, legenda), `art` (família,

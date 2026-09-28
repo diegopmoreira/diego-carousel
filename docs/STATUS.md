@@ -25,8 +25,15 @@ vídeos escolhidos. Até lá, a V1 não pode ser declarada pronta pelos critéri
 - **CLI:** `agent start|choose|status|stop <projeto>`; `doctor` confere o Claude Code.
   `config.json` → `agent` (modelo, teto de gasto e tempo por etapa).
 - **Testes:** um `claude` falso (`scripts/fake-claude.mjs`) no teste unitário e no E2E do estúdio
-  (transcrição → teses → escolha na tela → slides); execução real do `claude -p` conferida na nuvem
-  com uma transcrição sintética.
+  (transcrição → teses → escolha na tela → slides).
+- **Execução real na nuvem** (`claude -p`, Sonnet 5, transcrição sintética de ~4,6 mil caracteres):
+  etapa 1 em ~4 min (3 teses, 10 hooks, opções validadas); etapa 2 em ~21 min, retomando a sessão:
+  spine, teste cego, copy de 8 painéis em "tu", roteiro de cenas, render sem falhas e revisão
+  automática; custo estimado ~US$ 7. Ela revelou um laço: a pergunta "qual painel sobra?" fazia o
+  agente cortar a cada rodada do teste cego (5 rodadas, 10 → 8 painéis). Agora a pergunta aceita
+  "nenhum", cortar é só para repetição real, nunca abaixo de `slides.min`, e são no máximo duas
+  rodadas (`editorial/internal-headlines.md`, Skill e prompt). Também: o backlog só depois da escolha
+  de Diego, leitura por Read/Glob/Grep e medição da copy por draft + lint.
 
 ## Sessão local (27/09) — feito no Mac de Diego
 
