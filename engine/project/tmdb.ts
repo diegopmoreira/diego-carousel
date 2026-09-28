@@ -41,10 +41,11 @@ type Still={n:number;file_path:string;width:number;height:number;language:string
 export type Search={id:string;query:string;tmdb_id:number;type:TitleType;title:string;year:string;season?:number;slide?:string;created_at:string;stills:Still[];sheets:string[]};
 // Backdrops of the title (no-language ones first: they have no title card or logo). With a season, also the stills
 // of each episode, which are real scenes.
-export async function searchStills(dir:string,query:string,{type,year,season,limit=36,slide}:{type?:TitleType;year?:number;season?:number;limit?:number;slide?:string}={}){
+export async function searchStills(dir:string,query:string,{type,year,season,episode,limit=36,slide}:{type?:TitleType;year?:number;season?:number;episode?:number;limit?:number;slide?:string}={}){
  const base=await contentDir(dir),p=await loadProject(dir);
  if(slide&&!p.art.slides[slide])throw Error('Slide desconhecido');
  if(season!==undefined&&type==='movie')throw Error('--season só vale para séries');
+ if(episode!==undefined&&season===undefined)throw Error('--episode precisa de --season');
  const found=await findTitles(query,{type:season!==undefined?'tv':type,year});
  if(!found.length)throw Error(`Nada encontrado no TMDB para "${query}"${year?` (${year})`:''}`);
  const t=found[0];
@@ -53,15 +54,22 @@ export async function searchStills(dir:string,query:string,{type,year,season,lim
  let raw:Omit<Still,'n'>[]=(images.backdrops??[]).sort((a:any,b:any)=>rank(a)-rank(b)).map((i:any)=>({file_path:i.file_path,width:i.width,height:i.height,language:i.iso_639_1??null,votes:i.vote_count??0,vote_average:i.vote_average??0}));
  if(season!==undefined){
   const s=await api(`/tv/${t.tmdb_id}/season/${season}`);
-  for(const e of s.episodes??[]){
+  // One still per episode per round, so a long season doesn't fill the sheet with its first episodes; backdrops
+  // alternate with the stills (they are the series' best shots).
+  const perEpisode:Omit<Still,'n'>[][]=[];
+  for(const e of (s.episodes??[]).filter((e:any)=>episode===undefined||e.episode_number===episode)){
    const shots=await api(`/tv/${t.tmdb_id}/season/${season}/episode/${e.episode_number}/images`);
-   for(const i of shots.stills??[])raw.push({file_path:i.file_path,width:i.width,height:i.height,language:i.iso_639_1??null,votes:i.vote_count??0,vote_average:i.vote_average??0,episode:`T${season}E${e.episode_number}`});
+   perEpisode.push((shots.stills??[]).map((i:any)=>({file_path:i.file_path,width:i.width,height:i.height,language:i.iso_639_1??null,votes:i.vote_count??0,vote_average:i.vote_average??0,episode:`T${season}E${e.episode_number}`})));
   }
-  raw=[...raw.filter(r=>r.episode),...raw.filter(r=>!r.episode)];
+  if(episode!==undefined&&!perEpisode.length)throw Error(`T${season}E${episode} não existe no TMDB`);
+  const stills:Omit<Still,'n'>[]=[];
+  for(let round=0;perEpisode.some(l=>l[round]);round++)for(const l of perEpisode)if(l[round])stills.push(l[round]);
+  const backdrops=episode!==undefined?[]:raw;raw=[];
+  for(let i=0;i<Math.max(stills.length,backdrops.length);i++){if(stills[i])raw.push(stills[i]);if(backdrops[i])raw.push(backdrops[i]);}
  }
  const seen=new Set<string>(),stills:Still[]=raw.filter(r=>!seen.has(r.file_path)&&!!seen.add(r.file_path)).slice(0,limit).map((r,i)=>({n:i+1,...r}));
  if(!stills.length)throw Error(`"${t.title}" não tem imagens de fundo no TMDB`);
- const slug=`${t.type}-${t.tmdb_id}${season!==undefined?`-t${season}`:''}`,out=path.join(base,'assets/search',slug);
+ const slug=`${t.type}-${t.tmdb_id}${season!==undefined?`-t${season}`:''}${episode!==undefined?`e${episode}`:''}`,out=path.join(base,'assets/search',slug);
  await mkdir(out,{recursive:true});
  const previews=await Promise.all(stills.map(async s=>({s,bytes:await downloadImage(`${IMAGES()}/w780${s.file_path}`).catch(()=>null)})));
  const sheets:string[]=[];

@@ -30,8 +30,9 @@ propõe **cenas de filmes ou séries** — não imagens genéricas:
    npm run carousel -- asset search <projeto> "<filme ou série>" [--year aaaa] [--type movie|tv] [--season n] --slide <id>
    ```
    Gera folhas numeradas (`assets/search/<busca>/folha-N.jpg`, 12 imagens cada). As sem idioma vêm
-   primeiro (não trazem título nem logo). Em série, `--season n` acrescenta os stills de cada
-   episódio, que são cenas reais. Conferir `other_matches` quando o título for ambíguo.
+   primeiro (não trazem título nem logo). Em série, `--season n` intercala as imagens de fundo com os stills dos
+   episódios (cenas reais, um por episódio a cada rodada); `--episode n` busca só aquele episódio
+   (ex.: o funeral de Succession, T4E9). Conferir `other_matches` quando o título for ambíguo.
 3. **Olhar cada folha** (Read) e escolher até 3 por slot, nesta ordem de critério:
    - **close ou plano médio** do personagem, rosto legível e expressão que carrega o drama do painel
      (plano aberto de paisagem ou grupo sem foco só serve para ambiente);

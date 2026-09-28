@@ -16,8 +16,12 @@ beforeEach(async()=>{
  server=http.createServer((req,res)=>{
   const u=new URL(req.url!,'http://x');calls.push(u.pathname+u.search);
   if(u.pathname==='/3/search/movie')return json(res,{results:[{id:550,title:'Clube da Luta',original_title:'Fight Club',release_date:'1999-10-15',popularity:80}]});
-  if(u.pathname==='/3/search/tv')return json(res,{results:[]});
   if(u.pathname==='/3/movie/550/images')return json(res,{backdrops:[{file_path:'/logo.jpg',width:3840,height:2160,iso_639_1:'en',vote_count:9},{file_path:'/a.jpg',width:3840,height:2160,iso_639_1:null,vote_count:5},{file_path:'/b.jpg',width:1920,height:1080,iso_639_1:null,vote_count:2}]});
+  if(u.pathname==='/3/search/tv')return json(res,{results:[{id:7,name:'Serie',original_name:'Serie',first_air_date:'2020-01-01',popularity:9}]});
+  if(u.pathname==='/3/tv/7/images')return json(res,{backdrops:[{file_path:'/bd1.jpg',width:3840,height:2160,iso_639_1:null},{file_path:'/bd2.jpg',width:3840,height:2160,iso_639_1:null}]});
+  if(u.pathname==='/3/tv/7/season/1')return json(res,{episodes:[{episode_number:1},{episode_number:2}]});
+  if(u.pathname==='/3/tv/7/season/1/episode/1/images')return json(res,{stills:[{file_path:'/e1a.jpg',width:1920,height:1080},{file_path:'/e1b.jpg',width:1920,height:1080}]});
+  if(u.pathname==='/3/tv/7/season/1/episode/2/images')return json(res,{stills:[{file_path:'/e2a.jpg',width:1920,height:1080}]});
   if(u.pathname.startsWith('/img/')){res.writeHead(200,{'Content-Type':'image/jpeg'});return res.end(jpg);}
   res.writeHead(404);res.end();
  });
@@ -40,6 +44,14 @@ describe('stills do TMDB',()=>{
   expect(d.image.alternatives).toHaveLength(1);expect(d.image.focal_point).toEqual({x:.3,y:.4});
   await expect(pickStills(dir,'movie-550',[9])).rejects.toThrow(/#9/);
   await expect(pickStills(dir,'../x',[1])).rejects.toThrow();
+ });
+ it('temporada: um still por episódio a cada rodada, intercalado com as imagens de fundo; --episode filtra',async()=>{
+  const dir=await full();
+  await searchStills(dir,'Serie',{season:1});
+  const order=()=>calls.filter(c=>c.startsWith('/img/w780')).map(c=>c.slice(9));
+  expect(order()).toEqual(['/e1a.jpg','/bd1.jpg','/e2a.jpg','/bd2.jpg','/e1b.jpg']);
+  calls=[];const r=await searchStills(dir,'Serie',{season:1,episode:2});
+  expect(r.search).toBe('tv-7-t1e2');expect(order()).toEqual(['/e2a.jpg']);
  });
  it('sem chave explica onde criar',async()=>{
   process.env.TMDB_API_KEY='';const dir=await full();

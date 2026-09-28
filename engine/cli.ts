@@ -67,7 +67,7 @@ npm run carousel -- <comando>
   asset candidates <projeto> <slide-id> | asset choose <projeto> <slide-id> <asset-id> [--score n --rationale t]
   image <projeto> <slide-id> --need|--none   o slide exige imagem ou não usa imagem
   asset frame <projeto> <video> --at mm:ss [--slide id]   frame do próprio vídeo (ffmpeg)
-  asset search <projeto> "<filme ou série>" [--year aaaa] [--type movie|tv] [--season n] [--slide id] [--limit 36]
+  asset search <projeto> "<filme ou série>" [--year aaaa] [--type movie|tv] [--season n [--episode n]] [--slide id] [--limit 36]
                                           imagens de fundo do TMDB numa folha numerada (assets/search/…)
   asset pick <projeto> <busca> <n> [n…] [--slide id] [--focal x,y] [--alternative] [--rationale t]
                                           baixa as escolhidas; a primeira vira a imagem, as outras alternativas
@@ -158,7 +158,7 @@ try{
   if(sub==='cancel'){print(await cancelRequest(dir,required(args[1],'asset cancel <projeto> <pedido>')));break;}
   if(sub==='choose'){print(await chooseAsset(dir,required(args[1],'asset choose <projeto> <slide-id> <asset-id>'),required(args[2],'Informe o asset'),{score:num(flag('score')),rationale:flag('rationale')}));break;}
   if(sub==='frame'){print(await addVideoFrame(dir,path.resolve(required(args[1],'asset frame <projeto> <video> --at mm:ss [--slide id]')),required(flag('at'),'Informe --at mm:ss'),flag('slide')));break;}
-  if(sub==='search'){const t=flag('type');if(t&&t!=='movie'&&t!=='tv')throw Error('--type movie|tv');print(await searchStills(dir,required(positionals()[1],'asset search <projeto> "<filme ou série>" [--year aaaa] [--type movie|tv] [--season n] [--slide id]'),{type:t as 'movie'|'tv'|undefined,year:num(flag('year')),season:num(flag('season')),limit:num(flag('limit')),slide:flag('slide')}));break;}
+  if(sub==='search'){const t=flag('type');if(t&&t!=='movie'&&t!=='tv')throw Error('--type movie|tv');print(await searchStills(dir,required(positionals()[1],'asset search <projeto> "<filme ou série>" [--year aaaa] [--type movie|tv] [--season n] [--slide id]'),{type:t as 'movie'|'tv'|undefined,year:num(flag('year')),season:num(flag('season')),episode:num(flag('episode')),limit:num(flag('limit')),slide:flag('slide')}));break;}
   if(sub==='pick'){const [,search,...ns]=positionals(),f=flag('focal')?.split(',').map(Number);if(f&&(f.length!==2||f.some(v=>!(v>=0&&v<=1))))throw Error('--focal x,y entre 0 e 1');print(await pickStills(dir,required(search,'asset pick <projeto> <busca> <n> [n…] [--slide id]'),ns.map(Number).filter(n=>Number.isInteger(n)),{slide:flag('slide'),alternative:args.includes('--alternative'),focal:f?{x:f[0],y:f[1]}:undefined,rationale:flag('rationale')}));break;}
   if(sub==='candidates'){print(await candidates(dir,required(args[1],'asset candidates <projeto> <slide-id>')));break;}
   if(sub!=='add')throw Error('Disponíveis: asset add|search|pick|request|cancel|choose|candidates|frame|list');
