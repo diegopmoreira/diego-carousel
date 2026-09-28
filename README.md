@@ -23,6 +23,11 @@ Node 24 vem como dependência local (nada global muda). Fontes Anton SC, Montser
 locais (OFL, com hashes). Avatar: `design/brand/avatar.png` (`npm run brand` o regenera a partir
 de `avatar-source.png`).
 
+Stills de filmes e séries (opcional): criar uma chave gratuita em themoviedb.org → Configurações →
+API, copiar `.env.example` para `.env` e preencher `TMDB_API_KEY`. Com ela, `asset search/pick`
+busca as imagens de fundo do título e registra as escolhidas com a origem. This product uses the TMDB
+API but is not endorsed or certified by TMDB.
+
 ## Usar pelo Claude Code
 
 - "Faz um carrossel do vídeo `corpus:<id>`" ou "…desta transcrição" → modo `full`.
@@ -61,6 +66,7 @@ npm run carousel -- render|validate|export <projeto>
 npm run carousel -- fit-probe <projeto> <slide-id> | autofit <projeto>
 npm run carousel -- composition <projeto> <slide-id> <composição> | image <projeto> <slide-id> --need|--none
 npm run carousel -- agent start|choose|status|stop <projeto>   # agente editorial: transcrição → copy → render
+npm run carousel -- asset search <projeto> "<filme>" --slide <id> | asset pick <projeto> <busca> <n…>   # stills do TMDB
 npm run carousel -- asset request|add|candidates|choose|frame ...
 npm run carousel -- voice|edit ... ; approve <projeto> voice|edit --by Diego
 npm run carousel -- gallery | calibrate <projeto> --slide n --ref <png> | migrate <projeto>

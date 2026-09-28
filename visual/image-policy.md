@@ -20,23 +20,48 @@ propõe **cenas de filmes ou séries** — não imagens genéricas:
 4. **Hierarquia de escolha:** filme muito famoso **e** personagem sexy que comunica o drama >
    filme muito famoso que comunica o drama > personagem sexy de filme famoso que comunica o drama.
 
-### Fluxo
+### Fluxo (stills do TMDB — decisão de Diego, 27/09)
 
-- Na Fase 8, escrever em `image.concept` de cada slot a sugestão no formato
-  `FILME: <título (ano)> — cena: <momento/personagem> — por quê: <o drama que ela carrega>`, com
-  1–3 opções, e `image.strategy: manual`.
-- Entregar a Diego um **roteiro de cenas** (o `editorial-report.md` ganha a seção `## Cenas`).
-  Diego tira os frames e manda; registrar cada um com
-  `asset add <projeto> <arquivo> --rights "still de <filme>, fornecido por Diego" --slide <id>`.
-- O sistema **não baixa** frames de filme por conta própria (§56): material protegido só entra quando
-  Diego fornece. Buscar/sugerir a cena, sim; coletar o arquivo, não.
+1. Na Fase 8, escrever em `image.concept` de cada slot a sugestão no formato
+   `FILME: <título (ano)> — cena: <momento/personagem> — por quê: <o drama que ela carrega>`, com
+   1–3 opções, e `image.strategy: manual`. O `editorial-report.md` ganha a seção `## Cenas`.
+2. Buscar as **imagens de fundo** do título no TMDB (o mesmo que "Mídia → Imagens de fundo" no site):
+   ```sh
+   npm run carousel -- asset search <projeto> "<filme ou série>" [--year aaaa] [--type movie|tv] [--season n] --slide <id>
+   ```
+   Gera folhas numeradas (`assets/search/<busca>/folha-N.jpg`, 12 imagens cada). As sem idioma vêm
+   primeiro (não trazem título nem logo). Em série, `--season n` acrescenta os stills de cada
+   episódio, que são cenas reais. Conferir `other_matches` quando o título for ambíguo.
+3. **Olhar cada folha** (Read) e escolher até 3 por slot, nesta ordem de critério:
+   - **close ou plano médio** do personagem, rosto legível e expressão que carrega o drama do painel
+     (plano aberto de paisagem ou grupo sem foco só serve para ambiente);
+   - **capital erótico** quando o tema permite: o ator ou atriz no seu momento mais magnético
+     (adultos, sem nudez explícita);
+   - **espaço para o texto**: em `cinematic_fade` o sujeito na metade de cima; na capa 4:5 o recorte
+     central do 16:9 perde as laterais, então o rosto precisa estar perto do centro (ou usar `--focal`);
+   - nitidez; descartar imagens com título, logo, legenda ou marca d'água;
+   - variar: não repetir o mesmo plano em slides vizinhos.
+4. Registrar as escolhidas (baixa o original e grava origem, crédito e URL):
+   ```sh
+   npm run carousel -- asset pick <projeto> <busca> <n> [n…] --slide <id> [--focal x,y] --rationale "…"
+   ```
+   A primeira vira a imagem do slide, as outras ficam como alternativas.
+5. `asset candidates` para ver o slide renderizado com cada uma e `asset choose` na melhor; Diego troca
+   com um clique no estúdio (seletor de imagem: atual, alternativas, biblioteca).
+6. Sem chave (`TMDB_API_KEY` no `.env`), ou quando o TMDB não tem a cena, cair no roteiro de cenas:
+   Diego manda o frame e registra com `asset add <projeto> <arquivo> --rights "still de <filme>,
+   fornecido por Diego" --slide <id>`.
+
+- Os stills pertencem aos estúdios: o registro guarda a origem (`provider: tmdb`, `source_url`,
+  crédito) e nunca presume licença. O TMDB é só o catálogo — crédito "This product uses the TMDB API
+  but is not endorsed or certified by TMDB" no README.
 - **Geração por IA (Higgsfield) é o plano B**: quando não há cena que sirva, ou para objetos e
   ambientes (armadura, poço, cadeira de juiz). A geração evoca o clima de cinema e nunca imita
   atores ou pessoas reais.
 
 ## Prioridade (spec §56, ajustada ao processo de Diego)
 
-1. stills de filme/série escolhidos pelo roteiro de cenas e fornecidos por Diego → 2. fotos e
+1. stills de filme/série do roteiro de cenas (TMDB via `asset search/pick`, ou frames fornecidos por Diego) → 2. fotos e
 assets de Diego → 3. biblioteca própria (`library/images/`) → 4. frames do próprio vídeo →
 5. geradas por IA → 6. licenciadas/busca externa permitida.
 

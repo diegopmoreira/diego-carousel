@@ -116,9 +116,16 @@ o campo `composition` à mão.
 no imaginário (de preferência atuais), com personagem que vive o drama do painel e, quando serve ao
 tema, capital erótico; um filme-âncora dá unidade (ver os top `post10:03` e `post30:03` na
 biblioteca). Gravar em `image.concept` (`FILME: … — cena: … — por quê: …`), escrever `## Cenas` no
-relatório e pedir os frames a Diego; nunca baixar frames de filme por conta própria. Geração é o
-plano B (objetos, ambientes ou quando nenhuma cena serve), sem imitar atores.
-Prioridade: fornecido por Diego → biblioteca → frame do próprio vídeo (`asset frame <projeto>
+relatório. Depois buscar os stills no TMDB (imagens de fundo; em série `--season n` traz os stills
+dos episódios): `asset search <projeto> "<título>" [--year aaaa] [--type movie|tv] --slide <id>`,
+**abrir cada folha** (`assets/search/<busca>/folha-N.jpg`) e escolher até 3 por slot — close ou plano
+médio com a expressão do drama, capital erótico quando o tema permite, sujeito perto do centro na capa
+e na metade de cima no `cinematic_fade`, sem título/logo/legenda, sem repetir plano entre vizinhos —
+e registrar com `asset pick <projeto> <busca> <n> [n…] --slide <id> [--focal x,y] --rationale "…"`.
+Conferir com `asset candidates` e `asset choose`. Sem `TMDB_API_KEY` no `.env` (ver `doctor`) ou sem
+a cena no TMDB, pedir o frame a Diego. Geração é o plano B (objetos, ambientes ou quando nenhuma cena
+serve), sem imitar atores.
+Prioridade: stills do TMDB / fornecidos por Diego → biblioteca → frame do próprio vídeo (`asset frame <projeto>
 <video> --at mm:ss --slide <id>`) → licenciado → gerado. Registrar arquivo com
 `asset add <projeto> <arquivo> --rights <origem> --slide <id>`.
 Para gerar: `asset request <projeto> <slide-id> --concept "<cena concreta em inglês>"` (prompt canônico
@@ -162,7 +169,7 @@ sem conversa (`claude -p`), no projeto já criado com a transcrição. O prompt 
   comando valida o formato: corrigir e repetir se recusar). Parar aí: Diego escolhe na tela.
 - **Etapa 2:** retoma a mesma conversa com a escolha de Diego (tese, hook ou "refazer hooks", nota).
   Registrar a escolha no relatório, mandar as teses que sobraram para o backlog e seguir das Fases 4
-  a 9. Fase 8 só como roteiro de cenas; nada de gerar imagens. Revisão com `review --reviewer
+  a 9. Fase 8: roteiro de cenas + stills do TMDB (`asset search/pick`); nada de gerar imagens. Revisão com `review --reviewer
   Claude`; nunca exportar.
 - **Etapa única** quando `editorial.checkpoint_after_thesis` é `false`.
 Nunca fazer perguntas nessas execuções (ninguém responde): decidir pelos guias e registrar as dúvidas
