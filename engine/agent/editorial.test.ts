@@ -1,4 +1,5 @@
-import { it, expect, beforeAll, afterAll } from 'vitest';
+import { agentEnv } from './runner.js';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { mkdtemp, rm, writeFile, chmod, readFile } from 'node:fs/promises';
 import path from 'node:path'; import os from 'node:os';
 import { ROOT, writeJson, loadProject } from '../project/io.js';
@@ -60,3 +61,9 @@ it('falha, sessão perdida, parada e processo morto aparecem no estado',async()=
  expect((await readAgentState(dir))?.status).toBe('failed');
  process.env.FAKE_CLAUDE='';
 },180_000);
+describe('ambiente do agente',()=>{
+ it('não herda as marcas de uma sessão do Claude Code (senão o claude recusa rodar aninhado)',()=>{
+  const env=agentEnv({PATH:'/bin',HOME:'/h',CLAUDECODE:'1',CLAUDE_CODE_ENTRYPOINT:'cli',CAROUSEL_CLAUDE_BIN:'/x'});
+  expect(env).toEqual({PATH:'/bin',HOME:'/h',CAROUSEL_CLAUDE_BIN:'/x'});
+ });
+});

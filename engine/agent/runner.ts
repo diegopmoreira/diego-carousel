@@ -5,6 +5,9 @@
 import path from 'node:path';
 import readline from 'node:readline';
 import { spawn, type ChildProcess } from 'node:child_process';
+// The studio may itself run inside a Claude Code session (started from the terminal of one): the agent is an
+// independent run, so it must not inherit the markers that make claude refuse to start nested.
+export function agentEnv(env:NodeJS.ProcessEnv=process.env){const out={...env};for(const k of Object.keys(out))if(k==='CLAUDECODE'||k.startsWith('CLAUDE_CODE_'))delete out[k];return out;}
 import { randomUUID } from 'node:crypto';
 import { appendFile } from 'node:fs/promises';
 import { ROOT, readJson, writeJson, loadProject, log, optionalJson } from '../project/io.js';
@@ -59,7 +62,7 @@ function run(bin:string,prompt:string,config:ConfigData):Promise<Run>{return new
   ...(s.resume?['--resume',s.session_id]:['--session-id',s.session_id]),...(config.agent.model?['--model',config.agent.model]:[]),
   ...(config.agent.max_budget_usd?['--max-budget-usd',String(config.agent.max_budget_usd)]:[]),...(outside?['--add-dir',dir]:[])];
  let result:any=null,stderr='';
- child=spawn(bin,args,{cwd:ROOT,env:process.env,stdio:['ignore','pipe','pipe']});
+ child=spawn(bin,args,{cwd:ROOT,env:agentEnv(),stdio:['ignore','pipe','pipe']});
  readline.createInterface({input:child.stdout!}).on('line',l=>{let e:any;try{e=JSON.parse(l);}catch{return;}if(e?.type==='result')result=e;else handle(e);});
  child.stderr!.on('data',d=>{stderr=(stderr+String(d)).slice(-4000);});
  const timer=setTimeout(()=>{timedOut=true;child?.kill('SIGTERM');},config.agent.timeout_minutes*60_000);
