@@ -11,3 +11,5 @@ library/images/
 .playwright/
 gallery/
 eval/
+/run.log
+/qa/

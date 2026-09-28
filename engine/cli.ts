@@ -73,7 +73,7 @@ npm run carousel -- <comando>
                                           baixa as escolhidas; a primeira vira a imagem, as outras alternativas
   asset cancel <projeto> <pedido> | asset list <projeto>
   migrate <projeto> | migrate --all       atualiza projetos antigos aos contratos atuais
-  agent start <projeto> [--stage thesis|write|full] [--family f] [--wait]   agente editorial (Claude Code) da transcrição ao render
+  agent start <projeto> [--stage thesis|write|full] [--family f] [--slides n|livre] [--wait]   agente editorial (Claude Code) da transcrição ao render
   agent choose <projeto> --thesis t1 [--hook h1 | --hook-text t] [--note t] --by <nome> [--no-start] [--wait]
   agent status|stop <projeto>             progresso, log e parada do agente
   thesis-options <projeto> <arquivo.json>  (usado pelo agente) grava as opções de tese do checkpoint
@@ -100,7 +100,7 @@ try{
  case 'agent':{
   // The editorial agent from the terminal; the studio does the same through its buttons.
   const sub=args.shift(),dir=project(),wait=args.includes('--wait');
-  if(sub==='start'){const stage=flag('stage'),family=flag('family');print(await startAgent(dir,{stage:stage?AgentStage.parse(stage):undefined,family:family?z.enum(['auto','editorial_clean','cinematic_condensed']).parse(family):undefined,by:flag('by')??''}));}
+  if(sub==='start'){const stage=flag('stage'),family=flag('family'),n=flag('slides');print(await startAgent(dir,{stage:stage?AgentStage.parse(stage):undefined,family:family?z.enum(['auto','editorial_clean','cinematic_condensed']).parse(family):undefined,slides:n===undefined?undefined:n==='livre'?null:z.coerce.number().int().min(6).max(15).parse(n),by:flag('by')??''}));}
   else if(sub==='choose'){print(await chooseThesis(dir,{thesis:required(flag('thesis'),'Informe --thesis t1'),hook:flag('hook')??null,hook_text:flag('hook-text'),note:flag('note'),by:required(flag('by'),'Informe --by com o nome de quem escolheu')}));if(!args.includes('--no-start'))print(await startAgent(dir,{stage:'write',by:flag('by')}));}
   else if(sub==='status'){print(await agentView(dir));break;}
   else if(sub==='stop'){print(await stopAgent(dir));break;}

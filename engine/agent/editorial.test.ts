@@ -1,10 +1,9 @@
-import { agentEnv } from './runner.js';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { mkdtemp, rm, writeFile, chmod, readFile } from 'node:fs/promises';
 import path from 'node:path'; import os from 'node:os';
 import { ROOT, writeJson, loadProject } from '../project/io.js';
 import { createProject } from '../project/create.js';
-import { agentPrompt, startAgent, stopAgent, readAgentState, agentView, chooseThesis, ThesisOptions } from './editorial.js';
+import { agentPrompt, startAgent, stopAgent, readAgentState, agentView, chooseThesis, ThesisOptions, agentEnv } from './editorial.js';
 // The agent runs against a stand-in for `claude -p` (scripts/fake-claude.mjs): same protocol, fixture content.
 let work='';
 beforeAll(async()=>{
@@ -66,5 +65,13 @@ describe('ambiente do agente',()=>{
   const env=agentEnv({PATH:'/bin',HOME:'/h',CLAUDECODE:'1',CLAUDE_CODE_ENTRYPOINT:'cli',CLAUDE_PID:'9',ANTHROPIC_BASE_URL:'http://host',CAROUSEL_CLAUDE_BIN:'/x'});
   expect(env).toEqual({PATH:'/bin',HOME:'/h',CAROUSEL_CLAUDE_BIN:'/x'});
   expect(agentEnv({PATH:'/bin',ANTHROPIC_BASE_URL:'https://proxy'})).toEqual({PATH:'/bin',ANTHROPIC_BASE_URL:'https://proxy'});
+ });
+});
+describe('número de painéis',()=>{
+ it('o prompt fixa o número escolhido; sem escolha, fica livre na faixa do config',async()=>{
+  const {agentPrompt}=await import('./editorial.js');
+  expect(agentPrompt('/p','thesis',{slides:10})).toMatch(/exatamente 10/);
+  expect(agentPrompt('/p','full',{slides:12})).toMatch(/exatamente 12/);
+  expect(agentPrompt('/p','thesis',{slides:null})).toMatch(/livre dentro da faixa/);
  });
 });

@@ -5,20 +5,11 @@
 import path from 'node:path';
 import readline from 'node:readline';
 import { spawn, type ChildProcess } from 'node:child_process';
-// The studio may itself run inside a Claude Code session (started from the terminal of one): the agent is an
-// independent run, so it must not inherit the markers that make claude refuse to start nested.
-export function agentEnv(env:NodeJS.ProcessEnv=process.env){
- const out={...env},nested=!!env.CLAUDECODE;
- for(const k of Object.keys(out))if(k==='CLAUDECODE'||k.startsWith('CLAUDE_CODE_')||k==='CLAUDE_PID'||k==='CLAUDE_EFFORT'||k.startsWith('CLAUDE_AGENT_SDK'))delete out[k];
- // Inside a session the API endpoint belongs to that session's host (it authenticates for it); the agent uses Diego's own login.
- if(nested)delete out.ANTHROPIC_BASE_URL;
- return out;
-}
 import { randomUUID } from 'node:crypto';
 import { appendFile } from 'node:fs/promises';
 import { ROOT, readJson, writeJson, loadProject, log, optionalJson } from '../project/io.js';
 import { loadConfig, type ConfigData } from '../project/config.js';
-import { AGENT_FILES, AgentState, ALLOWED_TOOLS, agentPrompt, claudeBin, readChoice, readOptions, type AgentStateData } from './editorial.js';
+import { AGENT_FILES, AgentState, ALLOWED_TOOLS, agentPrompt, claudeBin, readChoice, readOptions, type AgentStateData, agentEnv } from './editorial.js';
 const dir=path.resolve(process.argv[2]??'.'),stateFile=path.join(dir,AGENT_FILES.state),logFile=path.join(dir,AGENT_FILES.log);
 const STAGES={thesis:'1 (até as opções de tese)',write:'2 (da tese escolhida ao render)',full:'única (da transcrição ao render)'};
 let state:AgentStateData|undefined,child:ChildProcess|undefined,stopping=false,timedOut=false,lastWrite=0,pending:NodeJS.Timeout|undefined;
@@ -108,7 +99,7 @@ async function main(){
  state=AgentState.parse(await readJson(stateFile));state.pid=process.pid;await saveNow();
  const config=await loadConfig(),bin=await claudeBin();
  if(!bin)throw Error('Claude Code não encontrado: instala o Claude Code (comando claude) ou define CAROUSEL_CLAUDE_BIN');
- const prompt=agentPrompt(dir,state.stage,{choice:state.stage==='write'?await readChoice(dir):null,family:state.family});
+ const prompt=agentPrompt(dir,state.stage,{choice:state.stage==='write'?await readChoice(dir):null,family:state.family,slides:state.slides});
  await line(`— Etapa ${STAGES[state.stage]} —`);
  let r=await run(bin,prompt,config);
  if(!stopping&&state.resume&&(r.result?.errors??[]).some((x:unknown)=>/no conversation found/i.test(String(x)))){

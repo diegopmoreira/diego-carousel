@@ -159,7 +159,7 @@
   if(t&&!corpus&&f.elements.transcript.value.trim().length<300){notice('Cola a transcrição inteira (ou informa o ID do vídeo no Corpus).',true);return;}
   if(t&&!corpus&&!f.elements.confirm_public.checked){notice('Confirma que é um vídeo público de Diego, sem supervisão nem conversa com terceiros.',true);return;}
   $('#create-dialog').close();
-  try{const payload=t?{source:'transcript',slug:f.elements.slug.value,transcript:corpus?undefined:f.elements.transcript.value,corpus_id:corpus||undefined,confirm_public:f.elements.confirm_public.checked,family:f.elements.family.value}:{source:'copy',slug:f.elements.slug.value,copy:f.elements.copy.value,family:f.elements.family.value};
+  try{const payload=t?{source:'transcript',slug:f.elements.slug.value,transcript:corpus?undefined:f.elements.transcript.value,corpus_id:corpus||undefined,confirm_public:f.elements.confirm_public.checked,family:f.elements.family.value,slides:f.elements.slides.value?Number(f.elements.slides.value):null}:{source:'copy',slug:f.elements.slug.value,copy:f.elements.copy.value,family:f.elements.family.value};
    const result=await action('create',payload);location.href='/?project='+encodeURIComponent(result.project);}catch{}};
  $('#new-version').onclick=()=>{if(dirty){notice('Salva os ajustes antes de criar outra versão.',true);return;}$('#variant-dialog').showModal();};
  $('#variant-form').onsubmit=async e=>{e.preventDefault();const f=e.target;$('#variant-dialog').close();try{const result=await action('variant',{name:f.elements.name.value,family:f.elements.family.value});navigateVariant(result.variant);}catch{}};

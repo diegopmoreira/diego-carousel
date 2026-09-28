@@ -76,14 +76,16 @@ defensabilidade + progressão. Registrar em `## Hooks`.
 `continuity.md` e 2–3 exemplos publicados: `library list --architecture <arquitetura>` (ou
 `--family`) mostra tese e spine de cada um; ler o YAML completo em `genetic-library/editorial/` e as
 `notes`, que dizem o que o exemplo ensina e o que evitar. Os publicados misturam "você" e "teu":
-a regra atual é sempre "tu". Escrever só as headlines + `next_question` + `adds`. Registrar em
-`## Spine`.
+a regra atual é sempre "tu". **Número de painéis: 10 por padrão** (`slides.default` no
+`config.json`); outro número só quando Diego pedir (no estúdio ele escolhe ao criar) ou quando o
+argumento claramente não cabe, registrando o porquê. Escrever só as headlines + `next_question` +
+`adds`. Registrar em `## Spine`.
 **Teste cego:** depois do draft (Fase 5), rodar `spine <projeto> --blind` e passar SÓ essa saída a
 um subagente com a pergunta: "Qual é a tese em uma frase? O argumento avança a cada painel? Algum
 painel poderia sair sem perda? (pode ser 'nenhum')". Registrar a resposta literal, a comparação com
 a tese e o veredito em `## Teste cego`. Aprovado quando a tese reconstruída bate e o argumento
 avança; a resposta sobre cortes é sinal, não ordem (cortar só repetição real, preferir fundir ou
-afiar, nunca abaixo de `slides.min`). No máximo duas rodadas. Nunca inventar o resultado.
+afiar, nunca abaixo de `slides.min` nem fora do número que Diego fixou). No máximo duas rodadas. Nunca inventar o resultado.
 
 **Fase 5 — Bodies e estrutura.** `language-style.md`. Escrever `copy.md` (formato P1…Pn) e um
 `editorial.json` com `editorial` (briefing, tese, hook, candidatos, CTA, legenda), `art` (família,

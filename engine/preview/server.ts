@@ -86,7 +86,7 @@ export async function serve(initialDir:string|null,port=0,editable=false){
      const input=await body(req);
      const {render,review,exportProject,buildPreview}=await import('../render/render.js');
      if(pathname==='/api/create'){
-      const creation=z.object({revision:z.string().optional(),slug:z.string().max(60),source:z.enum(['copy','transcript']).default('copy'),copy:z.string().max(60000).optional(),transcript:z.string().max(800_000).optional(),corpus_id:z.string().max(64).optional(),confirm_public:z.boolean().optional(),by:z.string().trim().max(80).optional(),family:z.enum(['auto','editorial_clean','cinematic_condensed'])}).strict().parse(input);
+      const creation=z.object({revision:z.string().optional(),slug:z.string().max(60),source:z.enum(['copy','transcript']).default('copy'),copy:z.string().max(60000).optional(),transcript:z.string().max(800_000).optional(),corpus_id:z.string().max(64).optional(),confirm_public:z.boolean().optional(),by:z.string().trim().max(80).optional(),family:z.enum(['auto','editorial_clean','cinematic_condensed']),slides:z.number().int().min(6).max(15).nullable().optional()}).strict().parse(input);
       // From a transcript: the project keeps the transcript and the editorial agent writes the copy (Skill phases).
       if(creation.source==='transcript'){
        const corpus=creation.corpus_id?.trim(),pasted=creation.transcript?.trim()??'';
@@ -97,7 +97,7 @@ export async function serve(initialDir:string|null,port=0,editable=false){
        if(corpus)out=await createProject(creation.slug,`corpus:${corpus}`,{confirmPublic:!!creation.confirm_public});
        else{const tmp=await mkdtemp(path.join(os.tmpdir(),'carousel-paste-'));try{const file=path.join(tmp,'transcricao-colada.txt');await writeFile(file,pasted);out=await createProject(creation.slug,file);}finally{await rm(tmp,{recursive:true,force:true});}}
        if(creation.family!=='auto'){const art=await readJson(path.join(out,'art-direction.json'));art.family=creation.family;await writeJson(path.join(out,'art-direction.json'),art);}
-       let warning;try{await startAgent(out,{family:creation.family,by:creation.by??''});}catch(e){warning=e instanceof Error?e.message:String(e);}
+       let warning;try{await startAgent(out,{family:creation.family,slides:creation.slides,by:creation.by??''});}catch(e){warning=e instanceof Error?e.message:String(e);}
        send(200,{project:path.basename(out),warning});return;
       }
       if(!creation.copy?.trim())throw Error('Cola a copy pronta');

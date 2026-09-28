@@ -12,6 +12,15 @@ import { loadConfig } from '../project/config.js';
 // state, so a run survives a studio restart. With the thesis checkpoint on, it runs in two stages: `thesis` (phases
 // 1–3, then the options Diego chooses from) and `write` (the rest, resuming the same Claude session).
 export const AGENT_FILES={state:'qa/agent.json',log:'qa/agent.log',options:'qa/thesis-options.json',choice:'qa/thesis-choice.json'} as const;
+// The studio may itself run inside a Claude Code session (started from the terminal of one): the agent is an
+// independent run, so it must not inherit the markers that make claude refuse to start nested.
+export function agentEnv(env:NodeJS.ProcessEnv=process.env){
+ const out={...env},nested=!!env.CLAUDECODE;
+ for(const k of Object.keys(out))if(k==='CLAUDECODE'||k.startsWith('CLAUDE_CODE_')||k==='CLAUDE_PID'||k==='CLAUDE_EFFORT'||k.startsWith('CLAUDE_AGENT_SDK'))delete out[k];
+ // Inside a session the API endpoint belongs to that session's host (it authenticates for it); the agent uses Diego's own login.
+ if(nested)delete out.ANTHROPIC_BASE_URL;
+ return out;
+}
 export const AgentStage=z.enum(['thesis','write','full']);
 export type Stage=z.infer<typeof AgentStage>;
 export const AgentState=z.object({
@@ -21,6 +30,8 @@ export const AgentState=z.object({
  session_id:z.string().uuid(),
  resume:z.boolean().default(false),
  family:z.enum(['auto','editorial_clean','cinematic_condensed']).default('auto'),
+ // Number of panels Diego asked for (null: the agent decides within config.slides min–max).
+ slides:z.number().int().min(6).max(15).nullable().default(null),
  started_by:z.string().default(''),
  started_at:z.string(),
  finished_at:z.string().optional(),
@@ -103,8 +114,9 @@ export async function chooseThesis(dir:string,input:{thesis:string;hook?:string|
  return choice;
 }
 const quote=(t:string)=>`"${t.replace(/\s+/g,' ').trim()}"`;
-export function agentPrompt(dir:string,stage:Stage,{choice,family='auto'}:{choice?:ThesisChoiceData|null;family?:string}={}){
+export function agentPrompt(dir:string,stage:Stage,{choice,family='auto',slides=null}:{choice?:ThesisChoiceData|null;family?:string;slides?:number|null}={}){
  const cli='npm run carousel --';
+ const count=slides?`Número de painéis: exatamente ${slides}, escolhido por Diego no estúdio (capa + ${slides-1}). A spine, a copy e o draft têm ${slides} painéis; o teste cego não corta nem acrescenta painel, reorganiza dentro desse número.`:'Número de painéis: livre dentro da faixa do config.json (slides.min–max), conforme o argumento pedir.';
  const head=[`Use a skill diego-carousel no projeto ${dir} (modo full). A transcrição já está importada em ${path.join(dir,'source/transcript.txt')}: não crie outro projeto e não mexa em outros projetos.`,
   'Execução pelo estúdio, sem conversa: ninguém responde durante a execução. Não faça perguntas; decida pelos guias da Skill e registre as dúvidas no editorial-report.md. Os guias (editorial/, visual/, genetic-library/) ficam na raiz do repositório. Comente o que está fazendo em português, em frases curtas: Diego acompanha pelo estúdio.',
   `Ferramentas: Read, Glob e Grep para ler e procurar arquivos; o terminal só aceita \`${cli} …\` (outros comandos são negados). \`${cli} status ${dir}\` diz a próxima fase; \`${cli} idea list\` mostra o backlog.`];
@@ -115,20 +127,22 @@ export function agentPrompt(dir:string,stage:Stage,{choice,family='auto'}:{choic
   'Termine com um resumo de até 3 linhas: a tese, quantos painéis e o que ficou pendente (imagens, avisos).'];
  const options=`Escreva um JSON com a tese recomendada e 2 alternativas e os hooks da tese recomendada, e grave com \`${cli} thesis-options ${dir} <arquivo.json>\` (o comando valida; se recusar, corrija e repita). Formato: {"schema_version":1,"theses":[{"id":"t1","text":"…","why":"…"}],"hooks":[{"id":"h1","text":"…","family":"…"}],"recommended":{"thesis":"t1","hook":"h1"}} — 2 a 6 teses (a recomendada primeiro), 3 a 10 hooks de famílias diferentes.`;
  if(stage==='thesis')return [...head,
+  count,
   'Etapa 1 de 2 (checkpoint da tese): faça as Fases 1 a 3 no editorial-report.md do projeto (## Mapa da fonte, ## Diagnóstico, ## Teses, ## Hooks).',
   options,
   'Pare aí: não escreva a spine nem a copy, não rode draft e não mande teses para o backlog (isso vem depois da escolha). Diego escolhe a tese no estúdio e a etapa 2 continua desta conversa.',
   'Termine com uma linha: a tese recomendada e o hook recomendado.'].join('\n\n');
- if(stage==='full')return [...head,'Sem checkpoint da tese: siga as Fases 1 a 9 da Skill do começo ao fim.','Teste cego: no máximo duas rodadas; aprovado quando a tese reconstruída bate e o argumento avança. A pergunta sobre qual painel sobra é sinal, não ordem: corte só repetição real e nunca fique abaixo do mínimo de painéis do config.json.',...visual].join('\n\n');
+ if(stage==='full')return [...head,'Sem checkpoint da tese: siga as Fases 1 a 9 da Skill do começo ao fim.',count,'Teste cego: no máximo duas rodadas; aprovado quando a tese reconstruída bate e o argumento avança. A pergunta sobre qual painel sobra é sinal, não ordem: corte só repetição real e nunca fique abaixo do mínimo de painéis do config.json.',...visual].join('\n\n');
  if(!choice)throw Error('Etapa 2 sem a escolha de Diego (qa/thesis-choice.json)');
  return [...head,
   `Etapa 2 de 2. Diego escolheu no estúdio (vale como o checkpoint da tese):\n- Tese: ${quote(choice.thesis_text)} (${choice.thesis})\n- Hook: ${choice.hook_text?quote(choice.hook_text):'nenhum dos propostos: refaça ## Hooks para esta tese antes de seguir'}${choice.note?`\n- Nota de Diego: ${quote(choice.note)}`:''}`,
+  count,
   'Registre a escolha no editorial-report.md e continue: as teses que sobraram vão para o backlog (idea add); Fases 4 a 7 (spine, teste cego com subagente, copy.md + editorial.json, draft, lint, direção de arte).',
   'Teste cego: no máximo duas rodadas; aprovado quando a tese reconstruída bate e o argumento avança. A pergunta sobre qual painel sobra é sinal, não ordem: corte só repetição real e nunca fique abaixo do mínimo de painéis do config.json.',
   ...visual].join('\n\n');
 }
 // Starts (or restarts) a stage in a detached runner. The stage defaults to what comes next for the project.
-export function startAgent(dir:string,{stage,family,by=''}:{stage?:Stage;family?:AgentStateData['family'];by?:string}={}){return withLock(dir,async()=>{
+export function startAgent(dir:string,{stage,family,slides,by=''}:{stage?:Stage;family?:AgentStateData['family'];slides?:number|null;by?:string}={}){return withLock(dir,async()=>{
  if(await optionalJson(path.join(dir,'variant.json')))throw Error('O agente trabalha no projeto principal, não numa versão');
  const p=await loadProject(dir);
  if(p.carousel.project.mode!=='full'||p.carousel.project.copy_locked)throw Error('O agente escreve a copy a partir da transcrição: este projeto é de copy pronta');
@@ -142,7 +156,7 @@ export function startAgent(dir:string,{stage,family,by=''}:{stage?:Stage;family?
  // Stage 2 resumes the Claude session of stage 1 (the transcript and the analysis stay in context); a retry of stage 2
  // resumes the same conversation, which also holds the attempt that failed.
  const resume=next==='write'&&!!previous&&(previous.stage==='thesis'||previous.stage==='write');
- const state:AgentStateData=AgentState.parse({schema_version:1,status:'running',stage:next,session_id:resume?previous!.session_id:randomUUID(),resume,family:family??previous?.family??'auto',started_by:by||previous?.started_by||'',started_at:new Date().toISOString(),activity:'Iniciando o agente'});
+ const state:AgentStateData=AgentState.parse({schema_version:1,status:'running',stage:next,session_id:resume?previous!.session_id:randomUUID(),resume,family:family??previous?.family??'auto',slides:slides!==undefined?slides:previous?previous.slides:config.slides.default,started_by:by||previous?.started_by||'',started_at:new Date().toISOString(),activity:'Iniciando o agente'});
  await writeJson(file(dir,'state'),state);
  const child=spawn(process.execPath,['--import','tsx',path.join(ROOT,'engine/agent/runner.ts'),path.resolve(dir)],{cwd:ROOT,env:process.env,detached:true,stdio:'ignore'});
  child.unref();
