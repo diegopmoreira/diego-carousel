@@ -35,6 +35,17 @@ API but is not endorsed or certified by TMDB.
   teu aval).
 - "Aumenta o título do 4" → ajuste pontual; "faz no estilo B" → variante.
 
+## App para o Dock (Mac)
+
+```sh
+scripts/build-mac-app.sh        # cria ~/Applications/Carrosséis.app
+```
+
+Um clique abre o menu: ligar/desligar o estúdio, abrir no navegador, pasta dos carrosséis, atualizar
+(git pull + npm ci), diagnóstico, copiar relatório de erro (vai para a área de transferência e para a
+Mesa), log (`~/Library/Logs/DiegoCarousel/estudio.log`) e renovar o login do Claude. Os mesmos
+comandos rodam no terminal: `scripts/estudio.sh start|stop|status|update|doctor|report|log`.
+
 ## Estúdio
 
 ```sh
