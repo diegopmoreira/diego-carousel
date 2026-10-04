@@ -35,8 +35,8 @@ on run
 			set header to "Estúdio desligado"
 			set toggleItem to "⏻  Ligar o estúdio e abrir"
 		end if
-		set items to {toggleItem, "🌐  Abrir o estúdio no navegador", "📁  Abrir a pasta dos carrosséis", "⬇️  Atualizar o sistema", "🩺  Diagnóstico", "📋  Copiar relatório de erro (para o Claude)", "📄  Ver o log", "🔑  Renovar o login do Claude", "Sair"}
-		set choice to choose from list items with title "Carrosséis" with prompt header default items {item 1 of items} OK button name "Executar" cancel button name "Fechar"
+		set menuItems to {toggleItem, "🌐  Abrir o estúdio no navegador", "📁  Abrir a pasta dos carrosséis", "⬇️  Atualizar o sistema", "🩺  Diagnóstico", "📋  Copiar relatório de erro (para o Claude)", "📄  Ver o log", "🔑  Renovar o login do Claude", "Sair"}
+		set choice to choose from list menuItems with title "Carrosséis" with prompt header default items {item 1 of menuItems} OK button name "Executar" cancel button name "Fechar"
 		if choice is false then exit repeat
 		set c to item 1 of choice
 		if c is "Sair" then exit repeat
